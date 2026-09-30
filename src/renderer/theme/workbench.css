@@ -418,7 +418,6 @@
   margin-bottom: -1px;
   background: var(--bg-tab-inactive);
   color: var(--fg-muted);
-  border-left: 2px solid transparent;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   cursor: pointer;
@@ -430,7 +429,9 @@
   border-bottom-color: var(--bg-tab-active);
 }
 
-.editor-tab.is-active::before {
+/* Línea superior: color de entorno (2 px) o, sin entorno, el foco de la pestaña activa (1 px). */
+.editor-tab.is-active::before,
+.editor-tab.has-env::before {
   content: '';
   position: absolute;
   top: 0;
@@ -438,6 +439,11 @@
   right: 0;
   height: 1px;
   background: var(--border-focus);
+}
+
+.editor-tab.has-env::before {
+  height: 2px;
+  background: var(--tab-env);
 }
 
 .editor-tab.is-preview .editor-tab-label {

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useRef, useState } from 'react';
 import { Codicon } from '../../components/Codicon';
 import { IconButton } from '../../components/Button';
@@ -86,8 +87,9 @@ export function EditorTabs(): React.JSX.Element {
                 tab.preview ? 'is-preview' : '',
                 tab.dirty ? 'is-dirty' : '',
                 dragOver === tab.id ? 'is-drop-target' : '',
+                env ? 'has-env' : '',
               ].join(' ')}
-              style={{ borderLeftColor: env ? `var(--env-${env})` : 'transparent' }}
+              style={env ? ({ '--tab-env': `var(--env-${env})` } as CSSProperties) : undefined}
               onMouseDown={(e) => {
                 if (e.button === 0) activate(tab.id);
                 if (e.button === 1) e.preventDefault();

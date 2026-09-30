@@ -67,7 +67,7 @@ Usar exactamente estos valores (tomados de VS Code *Dark Modern* / *Light Modern
 | `warning` | `#CCA700` | `#BF8803` | Advertencias |
 | `success` | `#2EA043` | `#388A34` | OK, conexión activa |
 
-**Colores de entorno** (D10), usados en el punto de la conexión, borde izquierdo de 2 px de la pestaña del editor y el segmento izquierdo de la status bar:
+**Colores de entorno** (D10), usados en el punto de la conexión, borde superior de 2 px de la pestaña del editor y el segmento izquierdo de la status bar:
 
 | Entorno | Color |
 |---|---|
@@ -157,7 +157,7 @@ Siempre hay un espacio de trabajo abierto (ver `11`). Si está vacío: mensaje c
 ### Pestañas (35 px)
 - Pestaña: icono (16 px) + nombre + botón cerrar `codicon-close` (visible al hover o si está activa). Con cambios sin guardar: `●` en lugar de la ✕ (como VS Code).
 - Pestaña activa: fondo `bg.tabActive`, borde superior 1 px `border.focus`, texto `fg`. Inactiva: `bg.tabInactive`, texto `fg.muted`, separador derecho 1 px `border`.
-- **Borde izquierdo de 2 px** con el color de entorno de la conexión asociada.
+- **Borde superior de 2 px** con el color de entorno de la conexión asociada (reemplaza al borde `border.focus` de la pestaña activa; sin entorno se mantiene el de foco).
 - Tipos de pestaña y su icono: Script SQL (`codicon-file-code`), Objeto/tabla (`codicon-table`), Archivo no SQL (`codicon-file`), Preferencias (`codicon-settings`).
 - Nombre de pestaña: script = nombre del archivo (`Script-3.sql` se muestra como "Script-3"; todo script es un archivo, ver `11`); objeto = nombre de tabla. Tooltip: ruta o `conexión › base › esquema › tabla`.
 - Pestaña en cursiva = *preview* (se reemplaza al abrir otra desde el árbol, como VS Code); doble clic la fija.

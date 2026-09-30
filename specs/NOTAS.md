@@ -134,3 +134,7 @@ Completado. Criterios de aceptación verificados:
 ### Pendientes / avisos
 - La barra de estado, las pestañas y el editor siguen con datos de ejemplo (conexión "PayBox Prod" falsa) hasta M3, cuando las pestañas se asocien a conexiones reales.
 - Ctrl+P sigue buscando en objetos de ejemplo; la búsqueda real en la caché de metadatos llega en M6.
+
+## Ajuste visual (2026-09-30): color de entorno en la pestaña
+
+- A pedido del usuario, la línea de color de entorno de la pestaña del editor pasa del borde izquierdo al **borde superior** (2 px). En la pestaña activa con conexión reemplaza al borde de foco de 1 px; sin conexión se mantiene el borde de foco. Actualizado en `specs/04` (§ colores de entorno y § 8).
