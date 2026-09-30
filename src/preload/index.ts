@@ -40,6 +40,13 @@ const api: DbExplorerApi = {
   },
   meta: {
     children: invoke('meta:children'),
+    count: invoke('meta:count'),
+  },
+  query: {
+    execute: invoke('query:execute'),
+    fetchMore: invoke('query:fetch-more'),
+    cancel: invoke('query:cancel'),
+    closeSession: invoke('query:close-session'),
   },
   on<C extends IpcEventChannel>(channel: C, listener: (payload: IpcEventPayload<C>) => void) {
     if (!allowedEvents.includes(channel)) throw new Error(`Canal no permitido: ${String(channel)}`);

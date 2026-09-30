@@ -20,9 +20,14 @@ export const IPC_INVOKE_CHANNELS = [
   'conn:connect',
   'conn:disconnect',
   'meta:children',
+  'meta:count',
+  'query:execute',
+  'query:fetch-more',
+  'query:cancel',
+  'query:close-session',
 ] as const;
 
-export const IPC_EVENT_CHANNELS = ['app:db-host-restarted', 'app:window-state'] as const;
+export const IPC_EVENT_CHANNELS = ['app:db-host-restarted', 'app:window-state', 'query:event'] as const;
 
 export type IpcInvokeChannel = (typeof IPC_INVOKE_CHANNELS)[number];
 export type IpcEventChannel = (typeof IPC_EVENT_CHANNELS)[number];

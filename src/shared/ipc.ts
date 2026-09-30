@@ -5,6 +5,7 @@ import type { ServerInfo } from './connection';
 import { ConnectionConfigSchema } from './connection';
 import type { TreeNodeData } from './metadata';
 import { TreeNodeRefSchema } from './metadata';
+import type { ExecuteSummary, FetchMoreResult, QueryEvent } from './query';
 
 /**
  * Contrato IPC entre renderer y main. Cada canal de petición declara el
@@ -98,6 +99,27 @@ export const ConnectSchema = z.object({ id: Id, password: Password.optional() })
 
 export const ChildrenSchema = z.object({ connectionId: Id, ref: TreeNodeRefSchema });
 
+const Name = z.string().max(1000);
+export const CountRowsSchema = z.object({ connectionId: Id, database: Name, schema: Name, name: Name });
+
+const QueryId = z.string().min(1).max(100);
+
+export const ExecuteRequestSchema = z.object({
+  queryId: QueryId,
+  sessionId: z.string().min(1).max(4200),
+  connectionId: Id,
+  database: Name.optional(),
+  schema: Name.optional(),
+  statements: z.array(z.string().max(50_000_000)).min(1).max(100_000),
+  maxRows: z.number().int().positive().nullable(),
+});
+
+export const FetchMoreRequestSchema = z.object({
+  queryId: QueryId,
+  statementIndex: z.number().int().nonnegative(),
+  count: z.number().int().positive().nullable(),
+});
+
 export const ipcInvokeContract = {
   'app:ping': { request: PingRequestSchema, response: PingResultSchema },
   'app:get-ui-state': { request: Empty, response: UiStateSchema },
@@ -119,6 +141,11 @@ export const ipcInvokeContract = {
   'conn:connect': { request: ConnectSchema, response: ServerInfoResponse },
   'conn:disconnect': { request: z.object({ id: Id }), response: Empty },
   'meta:children': { request: ChildrenSchema, response: z.custom<TreeNodeData[]>() },
+  'meta:count': { request: CountRowsSchema, response: z.object({ count: z.number() }) },
+  'query:execute': { request: ExecuteRequestSchema, response: z.custom<ExecuteSummary>() },
+  'query:fetch-more': { request: FetchMoreRequestSchema, response: z.custom<FetchMoreResult>() },
+  'query:cancel': { request: z.object({ queryId: QueryId }), response: Empty },
+  'query:close-session': { request: z.object({ sessionId: z.string().min(1).max(4200) }), response: Empty },
 } as const satisfies Record<IpcInvokeChannel, { request: z.ZodType; response: z.ZodType }>;
 
 export const DbHostRestartedEventSchema = z.object({
@@ -128,6 +155,7 @@ export const DbHostRestartedEventSchema = z.object({
 export const ipcEventContract = {
   'app:db-host-restarted': DbHostRestartedEventSchema,
   'app:window-state': WindowStateSchema,
+  'query:event': z.custom<QueryEvent>(),
 } as const satisfies Record<IpcEventChannel, z.ZodType>;
 
 export type IpcRequest<C extends IpcInvokeChannel> = z.infer<(typeof ipcInvokeContract)[C]['request']>;
@@ -145,7 +173,11 @@ export type IpcErrorCode =
   | 'password-required'
   /** Error del motor de base de datos (mensaje del servidor). */
   | 'db-error'
-  | 'engine-unavailable';
+  | 'engine-unavailable'
+  /** La conexión no está abierta en el db-host (p. ej. tras reiniciarse). */
+  | 'not-connected'
+  /** La sesión ya está ejecutando otra consulta. */
+  | 'busy';
 
 export interface IpcError {
   code: IpcErrorCode;

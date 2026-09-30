@@ -36,6 +36,17 @@ export function createHandlers(
       return null;
     },
     'meta.children': ({ connectionId, ref }) => connections.children(connectionId, ref),
+    'meta.count': ({ connectionId, ...ref }) => connections.countRows(connectionId, ref),
+    'query.execute': (req) => connections.execute(req),
+    'query.fetchMore': (req) => connections.fetchMore(req),
+    'query.cancel': async ({ queryId }) => {
+      await connections.queries.cancel(queryId);
+      return null;
+    },
+    'session.close': async ({ sessionId }) => {
+      await connections.queries.closeSession(sessionId);
+      return null;
+    },
   };
 }
 

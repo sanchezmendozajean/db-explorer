@@ -25,6 +25,7 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   const dbHost = new DbHostClient(createUtilityTransport, {
     onRestart: (reason) => broadcast('app:db-host-restarted', { reason }),
+    onQueryEvent: (event) => broadcast('query:event', event),
   });
 
   app.on('second-instance', () => {

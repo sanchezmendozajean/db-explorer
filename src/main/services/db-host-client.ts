@@ -1,4 +1,5 @@
 import type { DbHostMethod, DbHostMethods, DbHostRequest } from '@shared/db-host-protocol';
+import type { QueryEvent } from '@shared/query';
 import { isDbHostOutgoing } from '@shared/db-host-protocol';
 
 /** Abstracción del canal hacia el db-host (permite probar sin Electron). */
@@ -37,7 +38,7 @@ export class DbHostRequestError extends Error {
 interface Pending {
   resolve: (value: unknown) => void;
   reject: (reason: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
+  timer: ReturnType<typeof setTimeout> | undefined;
 }
 
 export interface DbHostClientOptions {
@@ -48,6 +49,8 @@ export interface DbHostClientOptions {
   restartWindowMs?: number;
   /** Se invoca cada vez que el db-host se reinicia tras una caída. */
   onRestart?: (reason: string) => void;
+  /** Eventos de ejecución (filas, mensajes) emitidos por el db-host. */
+  onQueryEvent?: (event: QueryEvent) => void;
   now?: () => number;
 }
 
@@ -88,18 +91,27 @@ export class DbHostClient {
     return this.transport !== null;
   }
 
+  /**
+   * Envía una petición. `timeoutMs: null` la deja sin límite (ejecución de
+   * consultas: su duración la controla el usuario con Cancelar).
+   */
   request<M extends DbHostMethod>(
     method: M,
     params: DbHostMethods[M]['params'],
+    options: { timeoutMs?: number | null } = {},
   ): Promise<DbHostMethods[M]['result']> {
     const transport = this.transport;
     if (!transport) return Promise.reject(new DbHostUnavailableError());
     const id = this.nextId++;
+    const timeoutMs = options.timeoutMs === undefined ? this.timeoutMs : options.timeoutMs;
     return new Promise<DbHostMethods[M]['result']>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new DbHostTimeoutError(method));
-      }, this.timeoutMs);
+      const timer =
+        timeoutMs === null
+          ? undefined
+          : setTimeout(() => {
+              this.pending.delete(id);
+              reject(new DbHostTimeoutError(method));
+            }, timeoutMs);
       this.pending.set(id, { resolve: resolve as (value: unknown) => void, reject, timer });
       transport.postMessage({ kind: 'request', id, method, params });
     });
@@ -114,7 +126,12 @@ export class DbHostClient {
   }
 
   private handleMessage(message: unknown): void {
-    if (!isDbHostOutgoing(message) || message.kind !== 'response') return;
+    if (!isDbHostOutgoing(message)) return;
+    if (message.kind === 'query-event') {
+      this.options.onQueryEvent?.(message.event);
+      return;
+    }
+    if (message.kind !== 'response') return;
     const entry = this.pending.get(message.id);
     if (!entry) return;
     this.pending.delete(message.id);

@@ -27,10 +27,9 @@ export function toIpcError(err: unknown): IpcError {
   if (err instanceof DbHostUnavailableError) return { code: 'db-host-unavailable', message: err.message };
   if (err instanceof DbHostTimeoutError) return { code: 'timeout', message: err.message };
   if (err instanceof DbHostRequestError) {
-    return {
-      code: err.code === 'engine-unavailable' ? 'engine-unavailable' : 'db-error',
-      message: err.message,
-    };
+    const passthrough: readonly string[] = ['engine-unavailable', 'not-connected', 'busy'];
+    const code = err.code && passthrough.includes(err.code) ? (err.code as IpcErrorCode) : 'db-error';
+    return { code, message: err.message };
   }
   return { code: 'internal', message: err instanceof Error ? err.message : 'Error interno' };
 }

@@ -27,6 +27,13 @@ export interface DbExplorerApi {
   };
   meta: {
     children: Invoke<'meta:children'>;
+    count: Invoke<'meta:count'>;
+  };
+  query: {
+    execute: Invoke<'query:execute'>;
+    fetchMore: Invoke<'query:fetch-more'>;
+    cancel: Invoke<'query:cancel'>;
+    closeSession: Invoke<'query:close-session'>;
   };
   /** Suscribe a un evento de main. Devuelve la función para desuscribirse. */
   on<C extends IpcEventChannel>(channel: C, listener: (payload: IpcEventPayload<C>) => void): () => void;

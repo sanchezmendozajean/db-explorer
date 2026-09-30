@@ -126,4 +126,7 @@ export interface ServerInfo {
   version: string;
   /** Tiempo de conexión en ms (para "Probar conexión"). */
   latencyMs: number;
+  /** Base y esquema en los que queda la conexión (selectores del editor). */
+  defaultDatabase?: string;
+  defaultSchema?: string;
 }

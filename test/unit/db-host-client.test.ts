@@ -113,4 +113,23 @@ describe('DbHostClient', () => {
     expect(onRestart).not.toHaveBeenCalled();
     await expect(client.request('ping', { message: 'x' })).rejects.toBeInstanceOf(DbHostUnavailableError);
   });
+
+  it('las peticiones con timeoutMs null no vencen', async () => {
+    vi.useFakeTimers();
+    const { client, transports } = setup({ timeoutMs: 100 });
+    transports[0]!.autoRespond = false;
+    const pending = client.request('ping', { message: 'x' }, { timeoutMs: null });
+    vi.advanceTimersByTime(10_000);
+    const sent = transports[0]!.sent[0]!;
+    transports[0]!.emit({ kind: 'response', id: sent.id, ok: true, result: { echo: 'x' } });
+    await expect(pending).resolves.toMatchObject({ echo: 'x' });
+  });
+
+  it('entrega los eventos de ejecución', () => {
+    const onQueryEvent = vi.fn();
+    const { transports } = setup({ onQueryEvent });
+    const event = { type: 'message', queryId: 'q', index: 0, severity: 'notice', text: 'hola' };
+    transports[0]!.emit({ kind: 'query-event', event });
+    expect(onQueryEvent).toHaveBeenCalledWith(event);
+  });
 });

@@ -1,10 +1,41 @@
 import { readFile } from 'node:fs/promises';
 import pg from 'pg';
-import type { ClientConfig } from 'pg';
+import type { ClientConfig, FieldDef } from 'pg';
 import type { ConnectionConfig, ServerInfo } from '@shared/connection';
 import type { ColumnInfo, DbObject, DriverCapabilities, IndexInfo, ObjectKind } from '@shared/metadata';
-import type { DbDriver, ObjectRef, Scope } from '../types';
+import type { LogicalType, ResultColumn } from '@shared/query';
+import { qualifiedName } from '@shared/sql-quote';
+import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
+import { toDriverError } from './errors';
+import { PostgresSession } from './postgres-session';
+
+/** Tipo lógico por OID de tipo (specs/03). */
+const LOGICAL_BY_OID: Record<number, LogicalType> = {
+  20: 'integer',
+  21: 'integer',
+  23: 'integer',
+  26: 'integer',
+  1700: 'decimal',
+  790: 'decimal',
+  700: 'float',
+  701: 'float',
+  16: 'boolean',
+  25: 'text',
+  1043: 'text',
+  1042: 'text',
+  19: 'text',
+  18: 'text',
+  1082: 'date',
+  1083: 'time',
+  1266: 'time',
+  1114: 'datetime',
+  1184: 'datetimetz',
+  114: 'json',
+  3802: 'json',
+  17: 'binary',
+  2950: 'uuid',
+};
 
 const RELKIND: Partial<Record<ObjectKind, string[]>> = {
   table: ['r', 'p'],
@@ -44,14 +75,6 @@ function formatRows(estimate: number): string | undefined {
   return `${(estimate / 1_000_000).toLocaleString('es', { maximumFractionDigits: 1 })} M`;
 }
 
-/** Convierte errores de `pg`/red en mensajes presentables sin datos sensibles. */
-export function toDriverError(err: unknown): DriverError {
-  if (err instanceof DriverError) return err;
-  const e = err as { message?: string; code?: string };
-  const message = e?.message ?? String(err);
-  return new DriverError(message, e?.code);
-}
-
 export class PostgresDriver implements DbDriver {
   readonly engine = 'postgres' as const;
   readonly capabilities: DriverCapabilities = {
@@ -79,9 +102,20 @@ export class PostgresDriver implements DbDriver {
     const start = performance.now();
     const client = await this.client(this.defaultDatabase);
     const latencyMs = Math.round(performance.now() - start);
-    const { rows } = await client.query<{ server_version: string }>('SHOW server_version');
-    const version = (rows[0]?.server_version ?? '').split(' ')[0] ?? '';
-    return { product: `PostgreSQL ${version}`, version, latencyMs };
+    const { rows } = await client.query<{ version: string; database: string; schema: string | null }>(
+      `SELECT current_setting('server_version') AS version, current_database() AS database,
+              current_schema() AS schema`,
+    );
+    const row = rows[0];
+    const version = (row?.version ?? '').split(' ')[0] ?? '';
+    this.defaultDatabase = row?.database ?? this.defaultDatabase;
+    return {
+      product: `PostgreSQL ${version}`,
+      version,
+      latencyMs,
+      defaultDatabase: this.defaultDatabase,
+      defaultSchema: row?.schema ?? 'public',
+    };
   }
 
   async disconnect(): Promise<void> {
@@ -242,6 +276,94 @@ export class PostgresDriver implements DbDriver {
     return rows.map((r) => ({ name: r.name, unique: r.unique, primary: r.primary, columns: r.columns }));
   }
 
+  async countRows(ref: ObjectRef): Promise<number> {
+    const { rows } = await this.query<{ n: string }>(
+      ref.database,
+      `SELECT count(*)::text AS n FROM ${qualifiedName('postgres', { schema: ref.schema, name: ref.name })}`,
+    );
+    return Number(rows[0]?.n ?? 0);
+  }
+
+  async openSession(database: string | undefined, schema: string | undefined): Promise<DbSession> {
+    const db = database || this.defaultDatabase;
+    const client = await this.createClient(db, 'DB Explorer (editor)');
+    const cfg = this.config!;
+    try {
+      if (cfg.queryTimeoutSec > 0) {
+        await client.query("SELECT set_config('statement_timeout', $1, false)", [`${cfg.queryTimeoutSec}s`]);
+      }
+    } catch (err) {
+      void client.end().catch(() => undefined);
+      throw toDriverError(err);
+    }
+    // Un error de socket en la sesión no debe tumbar el proceso; la siguiente ejecución fallará con mensaje.
+    client.on('error', () => undefined);
+    const session = new PostgresSession(
+      client,
+      db,
+      (fields) => this.describeFields(db, fields),
+      async (pid) => {
+        await this.query(this.defaultDatabase, 'SELECT pg_cancel_backend($1)', [pid]);
+      },
+    );
+    await session.setSchema(schema);
+    return session;
+  }
+
+  /** Nombres de tipo por `oid:typmod`, cacheados por base. */
+  private readonly typeNames = new Map<string, string>();
+
+  /** Tipo nativo, tabla de origen y PK de las columnas de un resultado. */
+  private async describeFields(database: string, fields: FieldDef[]): Promise<ResultColumn[]> {
+    const columns: ResultColumn[] = fields.map((f) => ({
+      name: f.name,
+      nativeType: '',
+      logicalType: LOGICAL_BY_OID[f.dataTypeID] ?? 'other',
+    }));
+    try {
+      const missing = fields.filter((f) => !this.typeNames.has(`${database}:${f.dataTypeID}:${f.dataTypeModifier}`));
+      if (missing.length > 0) {
+        const { rows } = await this.query<{ oid: number; mod: number; name: string }>(
+          database,
+          `SELECT u.o::int AS oid, u.m AS mod, format_type(u.o, u.m) AS name
+             FROM unnest($1::oid[], $2::int4[]) AS u(o, m)`,
+          [missing.map((f) => f.dataTypeID), missing.map((f) => f.dataTypeModifier)],
+        );
+        for (const r of rows) this.typeNames.set(`${database}:${r.oid}:${r.mod}`, r.name);
+      }
+      const sourced = fields.map((f, i) => ({ f, i })).filter(({ f }) => f.tableID > 0 && f.columnID > 0);
+      const sources = new Map<number, { schema: string; table: string; column: string; pk: boolean }>();
+      if (sourced.length > 0) {
+        const { rows } = await this.query<{ i: number; schema: string; table: string; column: string; pk: boolean }>(
+          database,
+          `SELECT u.i::int AS i, n.nspname AS schema, c.relname AS table, a.attname AS column,
+                  EXISTS (SELECT 1 FROM pg_index x
+                           WHERE x.indrelid = c.oid AND x.indisprimary AND a.attnum = ANY (x.indkey)) AS pk
+             FROM unnest($1::int4[], $2::oid[], $3::int2[]) AS u(i, t, col)
+             JOIN pg_class c ON c.oid = u.t
+             JOIN pg_namespace n ON n.oid = c.relnamespace
+             JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = u.col`,
+          [sourced.map(({ i }) => i), sourced.map(({ f }) => f.tableID), sourced.map(({ f }) => f.columnID)],
+        );
+        for (const r of rows) sources.set(r.i, r);
+      }
+      fields.forEach((f, i) => {
+        const col = columns[i]!;
+        col.nativeType = this.typeNames.get(`${database}:${f.dataTypeID}:${f.dataTypeModifier}`) ?? '';
+        const src = sources.get(i);
+        if (src) {
+          col.sourceSchema = src.schema;
+          col.sourceTable = src.table;
+          col.sourceColumn = src.column;
+          col.isPk = src.pk;
+        }
+      });
+    } catch {
+      // Sin metadatos adicionales la grilla funciona igual (solo con el tipo lógico).
+    }
+    return columns;
+  }
+
   private async query<R extends pg.QueryResultRow>(
     database: string,
     text: string,
@@ -265,8 +387,16 @@ export class PostgresDriver implements DbDriver {
   }
 
   private async open(database: string): Promise<pg.Client> {
+    const client = await this.createClient(database, 'DB Explorer');
+    // Un error de socket en una conexión inactiva no debe tumbar el proceso.
+    client.on('error', () => this.clients.delete(database));
+    return client;
+  }
+
+  /** Abre una conexión física con la configuración actual (metadatos o sesión de editor). */
+  private async createClient(database: string, applicationName: string): Promise<pg.Client> {
     const cfg = this.config;
-    if (!cfg) throw new DriverError('La conexión no está abierta');
+    if (!cfg) throw new DriverError('La conexión no está abierta', 'not-connected');
     const client = new pg.Client({
       host: cfg.host,
       port: cfg.port,
@@ -275,11 +405,9 @@ export class PostgresDriver implements DbDriver {
       database,
       ssl: await sslOptions(cfg),
       connectionTimeoutMillis: cfg.connectTimeoutSec * 1000,
-      application_name: 'DB Explorer',
+      application_name: applicationName,
       types: rawTypes(),
     });
-    // Un error de socket en una conexión inactiva no debe tumbar el proceso.
-    client.on('error', () => this.clients.delete(database));
     try {
       await client.connect();
       if (cfg.readOnly) await client.query('SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY');

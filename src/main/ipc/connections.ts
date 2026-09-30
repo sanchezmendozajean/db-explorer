@@ -92,6 +92,20 @@ export function registerConnectionHandlers({ dbHost, connections, secrets, skipp
 
   handle('meta:children', ({ connectionId, ref }) => dbHost.request('meta.children', { connectionId, ref }));
 
+  handle('meta:count', async (req) => ({ count: await dbHost.request('meta.count', req, { timeoutMs: null }) }));
+
+  // Ejecución: sin límite de tiempo (el usuario la controla con Cancelar); las filas llegan por `query:event`.
+  handle('query:execute', (req) => dbHost.request('query.execute', req, { timeoutMs: null }));
+  handle('query:fetch-more', (req) => dbHost.request('query.fetchMore', req, { timeoutMs: null }));
+  handle('query:cancel', async ({ queryId }) => {
+    await dbHost.request('query.cancel', { queryId });
+    return {};
+  });
+  handle('query:close-session', async ({ sessionId }) => {
+    await dbHost.request('session.close', { sessionId });
+    return {};
+  });
+
   handle('app:open-file-dialog', async ({ title, defaultPath, allowCreate, filters }, event) => {
     const options: OpenDialogOptions = {
       title,
