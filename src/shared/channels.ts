@@ -11,6 +11,15 @@ export const IPC_INVOKE_CHANNELS = [
   'app:zoom',
   'app:edit',
   'app:clipboard-write',
+  'app:open-file-dialog',
+  'conn:list',
+  'conn:save',
+  'conn:delete',
+  'conn:set-layout',
+  'conn:test',
+  'conn:connect',
+  'conn:disconnect',
+  'meta:children',
 ] as const;
 
 export const IPC_EVENT_CHANNELS = ['app:db-host-restarted', 'app:window-state'] as const;

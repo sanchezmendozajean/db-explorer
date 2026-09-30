@@ -23,8 +23,12 @@ export class DbHostTimeoutError extends Error {
   }
 }
 
+/** Error devuelto por el db-host (p. ej. error de la base de datos), con su código si lo tiene. */
 export class DbHostRequestError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly code?: string,
+  ) {
     super(message);
     this.name = 'DbHostRequestError';
   }
@@ -116,7 +120,7 @@ export class DbHostClient {
     this.pending.delete(message.id);
     clearTimeout(entry.timer);
     if (message.ok) entry.resolve(message.result);
-    else entry.reject(new DbHostRequestError(message.error.message));
+    else entry.reject(new DbHostRequestError(message.error.message, message.error.code));
   }
 
   private handleExit(transport: DbHostTransport, code: number): void {

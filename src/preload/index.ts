@@ -27,6 +27,19 @@ const api: DbExplorerApi = {
     zoom: invoke('app:zoom'),
     edit: invoke('app:edit'),
     clipboardWrite: invoke('app:clipboard-write'),
+    openFileDialog: invoke('app:open-file-dialog'),
+  },
+  conn: {
+    list: invoke('conn:list'),
+    save: invoke('conn:save'),
+    delete: invoke('conn:delete'),
+    setLayout: invoke('conn:set-layout'),
+    test: invoke('conn:test'),
+    connect: invoke('conn:connect'),
+    disconnect: invoke('conn:disconnect'),
+  },
+  meta: {
+    children: invoke('meta:children'),
   },
   on<C extends IpcEventChannel>(channel: C, listener: (payload: IpcEventPayload<C>) => void) {
     if (!allowedEvents.includes(channel)) throw new Error(`Canal no permitido: ${String(channel)}`);

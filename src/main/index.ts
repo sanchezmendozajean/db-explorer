@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, nativeTheme } from 'electron';
+import { app, BrowserWindow, Menu, nativeTheme, safeStorage } from 'electron';
 import { join } from 'node:path';
 import type { IpcEventChannel } from '@shared/channels';
 import type { IpcEventPayload } from '@shared/ipc';
@@ -8,6 +8,9 @@ import { applyThemeSource, registerIpcHandlers } from './ipc/register';
 import { DbHostClient } from './services/db-host-client';
 import { createUtilityTransport } from './services/utility-transport';
 import { UiStateStore } from './services/ui-state-store';
+import { ConnectionStore } from './services/connection-store';
+import { SecretStore } from './services/secret-store';
+import { registerConnectionHandlers } from './ipc/connections';
 
 function broadcast<C extends IpcEventChannel>(channel: C, payload: IpcEventPayload<C>): void {
   for (const win of BrowserWindow.getAllWindows()) win.webContents.send(channel, payload);
@@ -37,12 +40,23 @@ if (!app.requestSingleInstanceLock()) {
     Menu.setApplicationMenu(null);
     applySecurityPolicies();
 
-    const uiState = new UiStateStore(join(app.getPath('userData'), 'ui-state.json'));
+    const userData = app.getPath('userData');
+    const uiState = new UiStateStore(join(userData, 'ui-state.json'));
     const state = await uiState.load();
     applyThemeSource(state.theme);
 
+    const connections = new ConnectionStore(join(userData, 'connections.json'));
+    const { skipped } = await connections.load();
+    const secrets = new SecretStore(join(userData, 'secrets.bin'), {
+      isAvailable: () => safeStorage.isEncryptionAvailable(),
+      encrypt: (plain) => safeStorage.encryptString(plain),
+      decrypt: (data) => safeStorage.decryptString(data),
+    });
+    await secrets.load();
+
     dbHost.start();
     registerIpcHandlers({ dbHost, uiState });
+    registerConnectionHandlers({ dbHost, connections, secrets, skippedOnLoad: skipped });
 
     const open = (): BrowserWindow => createMainWindow({ dark: nativeTheme.shouldUseDarkColors });
     open();

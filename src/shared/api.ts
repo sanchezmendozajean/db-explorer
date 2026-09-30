@@ -14,6 +14,19 @@ export interface DbExplorerApi {
     zoom: Invoke<'app:zoom'>;
     edit: Invoke<'app:edit'>;
     clipboardWrite: Invoke<'app:clipboard-write'>;
+    openFileDialog: Invoke<'app:open-file-dialog'>;
+  };
+  conn: {
+    list: Invoke<'conn:list'>;
+    save: Invoke<'conn:save'>;
+    delete: Invoke<'conn:delete'>;
+    setLayout: Invoke<'conn:set-layout'>;
+    test: Invoke<'conn:test'>;
+    connect: Invoke<'conn:connect'>;
+    disconnect: Invoke<'conn:disconnect'>;
+  };
+  meta: {
+    children: Invoke<'meta:children'>;
   };
   /** Suscribe a un evento de main. Devuelve la función para desuscribirse. */
   on<C extends IpcEventChannel>(channel: C, listener: (payload: IpcEventPayload<C>) => void): () => void;
