@@ -31,9 +31,10 @@ Más un **explorador de archivos** editable para organizar y abrir scripts `.sql
 - Edición de datos en grilla (según D7).
 - Abrir tabla: ver datos (con filtro WHERE y orden) y ver estructura (columnas, índices, claves, DDL).
 - Historial de consultas ejecutadas.
-- Explorador de archivos: abrir carpeta, crear/renombrar/mover/eliminar archivos y carpetas, abrir en el editor, guardar.
+- Scripts como archivos `.sql` en un **espacio de trabajo** (carpeta por defecto del usuario, configurable), con **guardado automático** opcional y restauración de pestañas al abrir (ver `11`).
+- Explorador de archivos del espacio de trabajo: crear/renombrar/mover/eliminar archivos y carpetas, abrir en el editor, guardar.
 - Temas claro/oscuro estilo VS Code.
-- Persistencia de sesión: pestañas abiertas, contenido no guardado, tamaños de paneles.
+- Persistencia: pestañas abiertas por espacio de trabajo, tamaños de paneles, tema.
 
 ## Fuera del alcance (v1)
 - Diagramas ER, diseñador visual de tablas, comparadores de esquema, generadores de datos.

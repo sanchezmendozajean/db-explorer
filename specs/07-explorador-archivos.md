@@ -2,10 +2,10 @@
 
 Segunda vista de la side bar (activity bar → `codicon-files`, Ctrl+Shift+E). Comportamiento calcado del Explorer de VS Code, reducido a lo esencial.
 
-## Carpeta de trabajo (D9)
-- "Abrir carpeta…" (menú Archivo o botón del estado vacío) → diálogo nativo. Se recuerda en `session.json` y se reabre al iniciar.
-- Lista de carpetas recientes en Archivo › Abrir reciente (máx. 10).
-- Todas las operaciones de disco se hacen en **main** (`fs:*` IPC) y quedan **restringidas a la carpeta abierta**: main valida que cada ruta resuelta (`path.resolve` + `realpath`) esté dentro de la raíz. Excepción: "Abrir archivo…" y "Guardar como…" con diálogo nativo.
+## Raíz: el espacio de trabajo (D9)
+- La vista Archivos muestra siempre el **espacio de trabajo** definido en `11` (por defecto `Documentos\DB Explorer`, configurable). No hay "Abrir carpeta" independiente.
+- Espacios usados recientemente en Archivo › Abrir espacio reciente (máx. 10).
+- Todas las operaciones de disco se hacen en **main** (`fs:*` IPC) y quedan **restringidas al espacio de trabajo**: main valida que cada ruta resuelta (`path.resolve` + `realpath`) esté dentro de la raíz. Excepción: "Abrir archivo…" y "Guardar como…" con diálogo nativo.
 
 ## Árbol
 - Carga perezosa por carpeta, orden: carpetas primero, luego archivos, alfabético sin distinguir mayúsculas.
@@ -30,11 +30,10 @@ Segunda vista de la side bar (activity bar → `codicon-files`, Ctrl+Shift+E). C
 | Buscar | Filtro por nombre al escribir con el árbol enfocado (como VS Code). Búsqueda en contenido: fuera de v1. |
 
 ## Asociación archivo ↔ conexión
-- Al abrir un `.sql` se restaura la última conexión usada con ese archivo (`fileConnections` en `session.json`, clave = ruta relativa a la carpeta).
+- Al abrir un `.sql` se restaura la última conexión usada con ese archivo (`fileConnections` en el estado del espacio, ver `11` §3; clave = ruta relativa al espacio).
 - Opcional: comentario en la primera línea `-- @connection: PayBox Prod` reconocido al abrir (útil al compartir scripts). Desactivado por defecto (`files.connectionHeader`).
 
 ## Guardado
-- Ctrl+S guarda; `●` en la pestaña y en el árbol mientras hay cambios.
+- Reglas de guardado, guardado automático y cierre: ver `11` §4.
+- Ctrl+S guarda; `●` en la pestaña y en el árbol mientras hay cambios sin escribir en disco.
 - Codificación UTF-8 por defecto; detectar BOM y conservarlo; conservar fin de línea (CRLF/LF) del archivo y mostrarlo en la status bar (clic para cambiar).
-- `files.autoSave`: `off` (defecto) | `afterDelay` | `onFocusChange`.
-- Cerrar pestaña con cambios → "¿Guardar cambios en X?" Guardar / No guardar / Cancelar.

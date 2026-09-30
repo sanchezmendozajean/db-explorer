@@ -55,7 +55,7 @@ db-explorer/
   src/
     main/            # proceso principal
       windows/
-      services/      # config, credentials, files, history
+      services/      # config, credentials, files, workspace, autosave, history
       ipc/
     db-host/         # utilityProcess
       drivers/
@@ -66,7 +66,7 @@ db-explorer/
     renderer/
       app/           # layout, title bar, activity bar, status bar
       features/
-        connections/ explorer-tree/ files/ editor/ results/ settings/ history/
+        connections/ explorer-tree/ files/ workspace/ editor/ results/ settings/ history/
       components/    # UI genérica estilo VS Code (botones, inputs, menús, diálogos)
       theme/         # tokens de color dark/light
       stores/
@@ -77,13 +77,17 @@ db-explorer/
 ```
 
 ## Persistencia (carpeta `userData`)
+
+Los scripts `.sql` **no** viven aquí: viven en el espacio de trabajo (ver `11`).
+
 | Archivo | Contenido |
 |---|---|
 | `connections.json` | Conexiones sin secretos (id, nombre, motor, host, puerto, usuario, base, carpeta, entorno, color, opciones SSL). |
 | `secrets.bin` | Contraseñas cifradas con `safeStorage`, indexadas por id de conexión. |
-| `settings.json` | Preferencias del usuario (editable en Monaco con esquema JSON y autocompletado). |
+| `settings.json` | Preferencias del usuario, incluida la ruta del espacio de trabajo (`workspace.path`) y el guardado automático (editable en Monaco con esquema JSON y autocompletado). |
 | `keybindings.json` | Atajos personalizados (opcional, formato similar a VS Code). |
-| `session.json` | Pestañas abiertas, contenido no guardado, conexión por pestaña, tamaños de paneles, carpeta de archivos. |
+| `ui-state.json` | Estado global de la UI: tamaños de paneles, vista activa de la side bar, carpetas recientes. |
+| `workspaces/<hash>.json` | Estado de cada espacio de trabajo: pestañas, orden, pestaña activa, viewState, conexión por archivo (ver `11`). |
 | `history.sqlite` | Historial de consultas (texto, conexión, fecha, duración, filas, error). |
 
 ## Rendimiento

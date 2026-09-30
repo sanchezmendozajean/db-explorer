@@ -76,7 +76,23 @@ Submenú con los mismos controles del tipo de esa columna en un popover de 280 p
 ```
 
 ## Copiar y exportar
-- Ctrl+C: TSV sin cabeceras (pega bien en Excel). Ctrl+Shift+C: con cabeceras.
+
+### Copiar la selección (Ctrl+C / Ctrl+Shift+C)
+Modos de selección en `04` §10 (celdas, filas, columnas, todo). La copia actúa **solo sobre lo seleccionado**:
+- **Ctrl+C**: TSV sin cabeceras (pega bien en Excel). **Ctrl+Shift+C**: igual, con una primera línea de cabeceras que contiene solo las columnas copiadas.
+- Filas copiadas = las que tienen al menos una celda seleccionada; columnas copiadas = las que tienen al menos una celda seleccionada. Se respeta el orden visible de la grilla (orden y filtro aplicados, columnas en su posición actual). Las columnas ocultas nunca se copian.
+- Selección no rectangular (Ctrl+clic): las celdas no seleccionadas dentro de ese contorno se copian vacías, para que al pegar en Excel cada valor quede en su columna.
+- Fila o columna seleccionada completa = todas sus celdas visibles.
+- Una sola celda: se copia solo el valor, sin tabulador ni salto de línea final; con Ctrl+Shift+C, cabecera + salto de línea + valor.
+- `NULL` se copia como cadena vacía (configurable: `results.copy.nullAs`, por defecto `""`). Valores con tabulador, salto de línea o comillas se entrecomillan según las reglas TSV/CSV de Excel.
+- Se copia el valor **crudo** (ver arriba); "copiar con formato" es una opción aparte del menú Copiar como.
+- Si la selección supera 100 000 celdas, se pide confirmación antes de copiar.
+
+### Copiar la tabla completa (menú Exportar)
+- **Copiar tabla** y **Copiar tabla (con cabeceras)**: copian al portapapeles, en TSV, **todas las filas cargadas** y todas las columnas visibles, sin importar la selección. Respetan el orden y el filtro rápido aplicados.
+- Si el resultado está truncado, se copian las filas cargadas y un aviso (toast) lo indica: "Se copiaron 500 filas cargadas (el resultado está truncado)", con la acción "Cargar todo y copiar".
+
+### Otros formatos
 - Copiar como: CSV, TSV, JSON (array de objetos), Markdown, `INSERT INTO …` (dialecto de la conexión), lista `IN (…)` de la columna seleccionada.
 - Exportar (todas las filas del resultado; si está truncado, ofrecer "re-ejecutar sin límite y exportar en streaming"): CSV (separador, comillas, encoding UTF-8 con/sin BOM), JSON, XLSX (tipos reales: números como número, fechas como fecha), SQL INSERT.
 - Exportación en streaming desde el DB Host directo a archivo para resultados grandes, con progreso en notificación y cancelación.

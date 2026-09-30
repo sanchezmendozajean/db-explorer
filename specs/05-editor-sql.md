@@ -5,7 +5,7 @@ Objetivo: que editar SQL aquí se sienta **igual que en VS Code**: mismos atajos
 ## Integración
 - Paquete `monaco-editor` empaquetado localmente con `vite-plugin-monaco-editor` (o workers configurados manualmente con `?worker`). **Nada desde CDN** (CSP estricta y uso sin internet).
 - Workers necesarios: `editor.worker` y `json.worker` (para `settings.json`, visor de JSON). SQL no necesita worker de lenguaje.
-- Una instancia de editor por grupo; un `ITextModel` por pestaña con URI propia (`inmemory://script/3`, `file:///C:/…/consulta.sql`). Guardar y restaurar `viewState` (cursor, scroll, plegados) al cambiar de pestaña.
+- Una instancia de editor por grupo; un `ITextModel` por pestaña con URI del archivo (`file:///C:/…/Script-3.sql`; todo script es un archivo, ver `11`). Guardar y restaurar `viewState` (cursor, scroll, plegados) al cambiar de pestaña.
 - Temas: definir `db-dark` y `db-light` con `monaco.editor.defineTheme` a partir de `vs-dark`/`vs` y los tokens de `04-interfaz.md`. El fondo del editor debe coincidir exactamente con `bg.editor`.
 
 ## Opciones por defecto (sobrescribibles en settings.json bajo `editor.*`)
@@ -69,8 +69,8 @@ Todas las opciones de `IEditorOptions` de Monaco se aceptan tal cual (se pasan d
 | Explicar plan | **Ctrl+Alt+E** | Ctrl+Shift+L se deja a Monaco ("seleccionar coincidencias"). |
 | Formatear SQL | **Shift+Alt+F** | `sql-formatter` con el dialecto de la conexión. Formatea selección si la hay. |
 | Commit / Rollback | Ctrl+Alt+C / Ctrl+Alt+R | Solo en modo manual. |
-| Guardar / Guardar como | Ctrl+S / Ctrl+Shift+S | Script nuevo → diálogo guardar en la carpeta abierta. |
-| Nuevo script (conexión actual) | Ctrl+N | Usa la conexión seleccionada en el árbol o la de la pestaña activa. |
+| Guardar / Guardar como | Ctrl+S / Ctrl+Shift+S | Guardar como → diálogo nativo, inicia en el espacio de trabajo. |
+| Nuevo script (conexión actual) | Ctrl+N | Crea `Script-N.sql` en el espacio de trabajo y lo asocia a la conexión seleccionada en el árbol o a la de la pestaña activa. |
 | Cerrar pestaña | Ctrl+W / Ctrl+F4 | |
 | Reabrir pestaña cerrada | Ctrl+Shift+T | |
 | Siguiente/anterior pestaña | Ctrl+Tab / Ctrl+Shift+Tab, Ctrl+PgDn / PgUp | |
@@ -127,6 +127,5 @@ Otros providers:
 - Parámetros: si la sentencia contiene `:nombre` o `?` fuera de strings/comentarios (según config), pedir valores en un diálogo pequeño antes de ejecutar (opcional v1; por defecto desactivado, `sql.parameters.enabled`).
 
 ## Guardado y sesión
-- Scripts sin guardar persisten en `session.json` (contenido incluido) y se restauran al abrir la app, como el "hot exit" de VS Code.
-- Archivos abiertos desde disco: si cambian externamente y no hay cambios locales, se recargan; si hay cambios locales, aviso con "Comparar / Mantener / Recargar".
-- Cada script recuerda su conexión y base/esquema (en `session.json` para no guardados; en un mapa `ruta → conexión` para archivos).
+Definido en `11-scripts-y-espacio-de-trabajo.md`: todo script es un archivo en el espacio de trabajo, guardado automático (5 s sin escribir, al ejecutar y al cerrar), restauración de pestañas al abrir y detección de cambios externos.
+- Antes de ejecutar, el comando de ejecución llama a `autosave.flush(tab)` y espera a que termine (o falle) cuando el guardado automático está activo.

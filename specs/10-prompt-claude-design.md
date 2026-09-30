@@ -16,7 +16,7 @@ Tamaño de lienzo: 1600 × 1000 px (ventana Windows sin marco, con title bar pro
 Pantallas a entregar (sección 17 del documento):
 1. Principal en tema oscuro: vista Conexiones con el árbol expandido (una conexión "PayBox Prod" de Producción en rojo con base "paybox", esquema "public" y tablas; una conexión "local" verde; "SGA TEST" ámbar; un archivo SQLite "requerimientos.db"). Pestañas de editor: "Script-1", "● Script-2" (activa), "CRendiciones_Conf_Generales". El editor muestra 6 consultas SQL de PostgreSQL con nombres de tabla entrecomillados, la última resaltada como sentencia activa. Resultados con ~15 filas y columnas: id (entero), Nombre (texto), FechaDeCreacion (timestamp), ImporteLimite (decimal), Activo (booleano), Observacion (con valores NULL). Status bar teñida de rojo por ser Producción.
 2. La misma pantalla en tema claro.
-3. Vista Archivos con la carpeta "scripts-paybox" abierta, subcarpetas y archivos .sql; un archivo abierto sin cambios y otro con cambios (●).
+3. Vista Archivos mostrando el espacio de trabajo "DB Explorer" con subcarpetas y archivos Script-1.sql, Script-2.sql, etc.; un script abierto sin cambios y otro con cambios (●); en la status bar, el indicador "Autoguardado" activo.
 4. Pestaña de tabla en subpestaña "Datos", con filtro WHERE, 3 celdas editadas (fondo amarillo), 1 fila nueva (verde), 1 fila marcada para eliminar (roja) y el botón primario "Guardar (5)".
 5. Diálogo "Nueva conexión" para PostgreSQL con el resultado "Conectado — PostgreSQL 16.2 (42 ms)".
 6. Paleta rápida (Ctrl+P) abierta buscando "rendic", con tablas y archivos como resultados.

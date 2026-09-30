@@ -28,7 +28,7 @@ interface ConnectionConfig {
 Validado con zod al leer `connections.json`; entradas inválidas se omiten con aviso, nunca se pierde el archivo (backup `connections.json.bak` antes de cada escritura, escritura atómica: temp + rename).
 
 ## Credenciales
-- Contraseñas cifradas con `safeStorage.encryptString` (DPAPI del usuario en Windows) y guardadas en `secrets.bin`. Nunca en `connections.json`, `session.json`, logs ni en mensajes de error.
+- Contraseñas cifradas con `safeStorage.encryptString` (DPAPI del usuario en Windows) y guardadas en `secrets.bin`. Nunca en `connections.json`, `workspaces/*.json`, `settings.json`, logs ni en mensajes de error.
 - Si `safeStorage.isEncryptionAvailable()` es falso: no guardar contraseñas (se piden al conectar) y avisarlo en el diálogo.
 - Sin "Guardar contraseña": se pide al conectar y se mantiene solo en memoria del DB Host mientras dure la sesión.
 - El renderer **nunca recibe** una contraseña guardada: main la descifra y la pasa directo al DB Host. El diálogo de edición muestra `••••••••` y solo envía la nueva si el usuario la cambia.
@@ -64,5 +64,5 @@ Validado con zod al leer `connections.json`; entradas inválidas se omiten con a
 
 ## Datos en memoria y disco
 - Resultados solo en memoria; no se cachean en disco.
-- `session.json` guarda texto de scripts no guardados (puede contener datos si el usuario los pegó): documentarlo y ofrecer `session.restoreUnsaved: false`.
+- Los scripts se guardan como archivos `.sql` en el espacio de trabajo (con guardado automático, ver `11`). Pueden contener datos pegados por el usuario: el espacio por defecto está en la carpeta del usuario de Windows, y el estado del espacio (nombres de conexión por archivo) se guarda en `userData`, no en la carpeta del espacio.
 - Botón "Limpiar historial" y "Olvidar contraseñas guardadas" en Preferencias.

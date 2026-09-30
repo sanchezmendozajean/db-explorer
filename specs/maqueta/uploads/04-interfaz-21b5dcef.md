@@ -206,25 +206,20 @@ Derecha: `codicon-chevron-up` maximizar panel, `codicon-close` ocultar.
 - `codicon-refresh` Re-ejecutar.
 - Grupo de edición (solo si hay cambios): `codicon-save` **Guardar (n)** botón primario pequeño, `codicon-discard` Descartar, `codicon-eye` Ver SQL.
 - `codicon-add` Agregar fila, `codicon-trash` Eliminar filas (si editable).
-- `codicon-export` **Exportar ▾** (CSV, JSON, XLSX, SQL INSERT, Copiar como Markdown, —, **Copiar tabla**, **Copiar tabla (con cabeceras)**). Las dos últimas copian al portapapeles la tabla completa sin importar la selección (ver `06` §Copiar y exportar).
+- `codicon-export` **Exportar ▾** (CSV, JSON, XLSX, SQL INSERT, Copiar como Markdown).
 - `codicon-list-flat` / `codicon-json` alternar **Grilla / Texto / Registro** (vista registro = una fila en formato vertical campo:valor).
 - A la derecha: "Límite" select `500 ▾` (100, 500, 1000, 5000, Todo).
 
 ### Grilla
-- Cabecera 26 px, fondo `bg.gridHeader`: icono pequeño del tipo lógico (`123` numérico, `abc` texto, `codicon-calendar` fecha, `codicon-json` json, `codicon-check` booleano, `codicon-key` si es PK) + nombre en negrita 600 + botón de orden ▲▼ a la derecha (visible al hover y siempre que la columna esté ordenada; clic alterna ascendente → descendente → sin orden). Tooltip: tipo nativo completo, tabla origen.
+- Cabecera 26 px, fondo `bg.gridHeader`: icono pequeño del tipo lógico (`123` numérico, `abc` texto, `codicon-calendar` fecha, `codicon-json` json, `codicon-check` booleano, `codicon-key` si es PK) + nombre en negrita 600 + indicador de orden ▲▼. Tooltip: tipo nativo completo, tabla origen.
 - Columna de número de fila fija a la izquierda (40 px, `fg.muted`, alineada derecha).
 - Números alineados a la derecha, texto a la izquierda, booleanos centrados como `☑/☐` o `true/false` según config.
 - `NULL` en `fg.null` itálica.
 - Texto largo truncado con `…`; JSON en una línea con resaltado mínimo.
-- Selección tipo hoja de cálculo. Celda con foco con borde 1 px `border.focus`; celdas seleccionadas con fondo `bg.selection`, y el número de fila / cabecera de columna seleccionados resaltados.
-  - **Celdas**: clic, arrastre, Shift+clic (rango), Shift+flechas, Ctrl+clic (agrega o quita celdas o rangos no contiguos).
-  - **Filas**: clic en el número de fila; arrastre o Shift+clic para un rango; Ctrl+clic para agregar filas sueltas. Teclado: Shift+Espacio selecciona la fila actual.
-  - **Columnas**: clic en la cabecera (fuera del botón de orden); arrastre o Shift+clic para un rango; Ctrl+clic para agregar columnas sueltas. Teclado: Ctrl+Espacio selecciona la columna actual.
-  - **Todo**: Ctrl+A o clic en la esquina superior izquierda (sobre los números de fila).
-  - **Copiar** (Ctrl+C) y **Copiar con cabeceras** (Ctrl+Shift+C) actúan **solo sobre lo seleccionado** (ver `06` §Copiar y exportar).
+- Selección tipo hoja de cálculo: clic, arrastre, Shift+clic, Ctrl+clic, Ctrl+A. Celda con foco con borde 1 px `border.focus`.
 - Doble clic o F2 / Enter → edición en línea (según tipo: input, checkbox, selector de fecha simple, o editor de valor para JSON/texto largo).
 - Ctrl+Shift+Enter o botón en celda → **Visor de valor** en panel lateral derecho del panel de resultados (300 px, redimensionable): muestra el valor completo en Monaco con lenguaje detectado (json, xml, texto), editable si la celda lo es.
-- Menú contextual de celda (actúa sobre la selección; si se hace clic derecho fuera de ella, primero selecciona esa celda): Copiar (Ctrl+C), Copiar con cabeceras (Ctrl+Shift+C), Copiar como ▸ (CSV, TSV, JSON, INSERT, IN (…) lista), Pegar, —, Establecer NULL, Ver valor, —, Filtrar por este valor, Excluir este valor, —, Formato de columna ▸ (ver `06`), Ocultar columna, Ajustar ancho.
+- Menú contextual de celda: Copiar (Ctrl+C), Copiar con cabeceras, Copiar como ▸ (CSV, TSV, JSON, INSERT, IN (…) lista), Pegar, —, Establecer NULL, Ver valor, —, Filtrar por este valor, Excluir este valor, —, Formato de columna ▸ (ver `06`), Ocultar columna, Ajustar ancho.
 
 ### Pie del panel (22 px, `fg.muted`, 12 px)
 `500 filas (truncado — Cargar más · Cargar todo)` · `12 ms` · `08:47:07` · a la derecha: suma/prom/min/máx de las celdas numéricas seleccionadas (como Excel), "3 cambios pendientes".

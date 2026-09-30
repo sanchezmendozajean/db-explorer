@@ -15,7 +15,7 @@ Construir por hitos. Cada hito termina con la app **arrancando y usable**, tests
 
 ## M1 — Shell visual
 - Tokens de tema oscuro/claro (`04` §2), tipografías, Codicons.
-- Title bar propia con menús y controles de ventana; activity bar; side bar; grupo de editor con pestañas; panel de resultados; status bar. Todo redimensionable y persistido en `session.json`.
+- Title bar propia con menús y controles de ventana; activity bar; side bar; grupo de editor con pestañas; panel de resultados; status bar. Todo redimensionable y persistido en `ui-state.json`.
 - Componentes base estilo VS Code: botón, input, select, checkbox, menú contextual, dropdown, modal, toast, árbol virtualizado, pestañas.
 - Paleta de comandos (Ctrl+Shift+P) con registro central de comandos `db.*` y sistema de keybindings (sin `keybindings.json` aún).
 - Estados vacíos de `04` §16.
@@ -32,15 +32,17 @@ Construir por hitos. Cada hito termina con la app **arrancando y usable**, tests
 
 ## M3 — Editor + ejecución + grilla
 - Monaco integrado según `05` (workers locales, temas, un modelo por pestaña, viewState).
+- Espacio de trabajo por defecto y scripts como archivos: Ctrl+N crea `Script-N.sql`, guardado automático (5 s, al ejecutar, al cerrar), restauración de pestañas al abrir (`11` §1, §3, §4).
 - Selectores de conexión/base/esquema en la barra del editor; sesión por pestaña.
 - Splitter para Postgres (con tests), sentencia activa decorada.
 - Ejecutar sentencia / script / selección, cancelar, múltiples result sets, pestaña Mensajes, errores posicionados en el editor.
-- Grilla Glide con streaming por lotes, límite y "cargar más", orden y filtro rápido, selección, copiar, visor de valor.
+- Grilla Glide con streaming por lotes, límite y "cargar más", orden y filtro rápido, visor de valor.
+- Selección de celdas, filas y columnas (`04` §10); Ctrl+C / Ctrl+Shift+C sobre lo seleccionado y "Copiar tabla" / "Copiar tabla (con cabeceras)" del menú Exportar (`06` §Copiar y exportar). El resto del menú Exportar llega en M7.
 - Formatos globales básicos (`06`).
 - Confirmaciones de Producción y `UPDATE/DELETE` sin `WHERE`.
 - Status bar con conexión, posición del cursor, modo de transacción.
 
-**Aceptación**: escribir y ejecutar consultas contra Postgres con todos los atajos de `05` funcionando (checklist manual incluido en `NOTAS.md`); `SELECT` de 200 000 filas no congela la UI; cancelar `SELECT pg_sleep(30)` funciona; `numeric` y `timestamp` se muestran sin pérdida ni cambio de zona.
+**Aceptación**: escribir y ejecutar consultas contra Postgres con todos los atajos de `05` funcionando (checklist manual incluido en `NOTAS.md`); `SELECT` de 200 000 filas no congela la UI; cancelar `SELECT pg_sleep(30)` funciona; `numeric` y `timestamp` se muestran sin pérdida ni cambio de zona; se cumplen los criterios de `11` §6 excepto el cambio de espacio de trabajo. Seleccionar dos columnas no contiguas con Ctrl+clic y copiar con Ctrl+Shift+C pega en Excel solo esas dos columnas con sus cabeceras; "Copiar tabla (con cabeceras)" copia todas las filas cargadas aunque haya una sola celda seleccionada (prueba e2e).
 
 ## M4 — Resto de motores
 - Drivers **MariaDB**, **SQLite** y **SQL Server** + splitters (incluyendo `DELIMITER` y `GO`).
@@ -50,9 +52,10 @@ Construir por hitos. Cada hito termina con la app **arrancando y usable**, tests
 **Aceptación**: la suite de integración pasa en los 4 motores; mismo flujo de M3 probado en cada uno.
 
 ## M5 — Explorador de archivos
-- Todo `07`: abrir carpeta, árbol con watcher, operaciones, papelera, guardar/guardar como, hot exit de scripts, asociación archivo ↔ conexión.
+- Todo `07`: árbol del espacio de trabajo con watcher, operaciones, papelera, guardar como, asociación archivo ↔ conexión.
+- Cambiar espacio de trabajo, espacios recientes, espacio no disponible al iniciar, Preferencias › Archivos (`11` §2 y §5).
 
-**Aceptación**: crear, renombrar, mover y eliminar (a la papelera) desde el árbol; cambios externos se reflejan; cerrar y abrir la app restaura pestañas, incluso scripts no guardados.
+**Aceptación**: crear, renombrar, mover y eliminar (a la papelera) desde el árbol; cambios externos se reflejan; cambiar el espacio de trabajo y reiniciar abre el nuevo espacio con sus pestañas; se cumplen todos los criterios de `11` §6.
 
 ## M6 — Productividad del editor
 - Autocompletado contextual con alias, hover, F12, snippets (`05`).

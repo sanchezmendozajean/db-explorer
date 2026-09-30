@@ -86,13 +86,12 @@ Usar exactamente estos valores (tomados de VS Code *Dark Modern* / *Light Modern
 
 ## 4. Title bar (35 px)
 - Ventana sin marco; controles de ventana propios a la derecha (estilo Windows 11: 46 px de ancho cada uno, cerrar se pone rojo `#C42B1C` al hover).
-- El título de la ventana (barra de tareas) es `<espacio de trabajo> — DB Explorer`.
 - Izquierda: icono de la app (16 px) + menú textual: **Archivo, Editar, Ver, Consulta, Ayuda**. Al hacer clic se abre un menú desplegable estilo VS Code (fondo `bg.menu`, sombra suave, atajos alineados a la derecha en `fg.muted`).
 - Centro: caja "command center" (ancho 38%, máx. 600 px, alto 24 px, fondo `bg.input`, texto `fg.muted` "Buscar objetos, archivos o comandos (Ctrl+P)"). Clic → abre la paleta rápida.
 - La zona vacía es arrastrable.
 
 ### Contenido de menús
-- **Archivo**: Nuevo script SQL (Ctrl+N), Abrir archivo… (Ctrl+O), Cambiar espacio de trabajo…, Abrir espacio reciente ▸, —, Guardar (Ctrl+S), Guardar como… (Ctrl+Shift+S), Guardar todo (Ctrl+K S), Guardado automático ✓, — , Nueva conexión…, — , Preferencias (Ctrl+,), Atajos de teclado (Ctrl+K Ctrl+S), — , Salir.
+- **Archivo**: Nuevo script SQL (Ctrl+N), Abrir archivo… (Ctrl+O), Abrir carpeta…, Guardar (Ctrl+S), Guardar como… (Ctrl+Shift+S), Guardar todo, — , Nueva conexión…, — , Preferencias (Ctrl+,), Atajos de teclado (Ctrl+K Ctrl+S), — , Salir.
 - **Editar**: Deshacer, Rehacer, —, Cortar, Copiar, Pegar, —, Buscar (Ctrl+F), Reemplazar (Ctrl+H), —, Formatear SQL (Shift+Alt+F), Alternar comentario (Ctrl+/).
 - **Ver**: Paleta de comandos (Ctrl+Shift+P), —, Conexiones (Ctrl+Shift+D), Archivos (Ctrl+Shift+E), Historial, —, Mostrar/ocultar barra lateral (Ctrl+B), Mostrar/ocultar resultados (Ctrl+J), Maximizar resultados, —, Tema ▸ (Oscuro / Claro / Sistema), Zoom +/−/restablecer.
 - **Consulta**: Ejecutar sentencia (Ctrl+Enter), Ejecutar script (Alt+X / F5), Ejecutar selección, Cancelar (Alt+Pausa / Ctrl+Shift+Q), —, Commit (Ctrl+Alt+C), Rollback (Ctrl+Alt+R), Modo auto-commit ✓, —, Explicar plan (Ctrl+Alt+E), Cambiar conexión activa… (Ctrl+9), Cambiar base/esquema… (Ctrl+0).
@@ -146,9 +145,9 @@ Menú contextual de **conexión**: Conectar / Desconectar, Nuevo script SQL (Ctr
 Menú contextual de **tabla**: Ver datos, Ver estructura, Nuevo script ▸ (SELECT, INSERT, UPDATE, DELETE, DDL), —, Copiar nombre, Copiar nombre calificado, —, Refrescar, Contar filas.
 
 ## 7. Side bar — vista Archivos (ver `07`)
-Cabecera "ARCHIVOS" + nombre del **espacio de trabajo** como sección colapsable (estilo "EXPLORER › MI-CARPETA" de VS Code); tooltip con la ruta completa. En el menú `codicon-ellipsis` de la cabecera: *Cambiar espacio de trabajo…* y *Abrir en el Explorador*. Acciones al hover de la sección: `codicon-new-file`, `codicon-new-folder`, `codicon-refresh`, `codicon-collapse-all`.
+Cabecera "ARCHIVOS" + nombre de la carpeta abierta como sección colapsable (estilo "EXPLORER › MI-CARPETA" de VS Code). Acciones al hover de la sección: `codicon-new-file`, `codicon-new-folder`, `codicon-refresh`, `codicon-collapse-all`.
 
-Siempre hay un espacio de trabajo abierto (ver `11`). Si está vacío: mensaje centrado "El espacio de trabajo está vacío" + botón primario **Nuevo script** y enlace *Cambiar espacio de trabajo…*.
+Sin carpeta abierta: mensaje centrado "No hay carpeta abierta" + botón primario **Abrir carpeta**.
 
 Árbol de archivos igual al de VS Code: iconos por tipo (`.sql` con icono de base de datos pequeño, `.json`, `.md`, `.csv`, genérico), archivo abierto en el editor resaltado, archivo con cambios sin guardar con punto a la derecha. Renombrar en línea con input en el mismo nodo.
 
@@ -159,7 +158,7 @@ Siempre hay un espacio de trabajo abierto (ver `11`). Si está vacío: mensaje c
 - Pestaña activa: fondo `bg.tabActive`, borde superior 1 px `border.focus`, texto `fg`. Inactiva: `bg.tabInactive`, texto `fg.muted`, separador derecho 1 px `border`.
 - **Borde izquierdo de 2 px** con el color de entorno de la conexión asociada.
 - Tipos de pestaña y su icono: Script SQL (`codicon-file-code`), Objeto/tabla (`codicon-table`), Archivo no SQL (`codicon-file`), Preferencias (`codicon-settings`).
-- Nombre de pestaña: script = nombre del archivo (`Script-3.sql` se muestra como "Script-3"; todo script es un archivo, ver `11`); objeto = nombre de tabla. Tooltip: ruta o `conexión › base › esquema › tabla`.
+- Nombre de pestaña: script sin guardar "Script-3"; script guardado = nombre de archivo; objeto = nombre de tabla. Tooltip: ruta o `conexión › base › esquema › tabla`.
 - Pestaña en cursiva = *preview* (se reemplaza al abrir otra desde el árbol, como VS Code); doble clic la fija.
 - Al desbordar: scroll horizontal con rueda + botón `codicon-ellipsis` "Mostrar pestañas abiertas".
 - Arrastrables para reordenar. Clic central cierra. Menú contextual: Cerrar, Cerrar otras, Cerrar a la derecha, Cerrar guardadas, Cerrar todas, Copiar ruta, Mostrar en Archivos.
@@ -206,25 +205,20 @@ Derecha: `codicon-chevron-up` maximizar panel, `codicon-close` ocultar.
 - `codicon-refresh` Re-ejecutar.
 - Grupo de edición (solo si hay cambios): `codicon-save` **Guardar (n)** botón primario pequeño, `codicon-discard` Descartar, `codicon-eye` Ver SQL.
 - `codicon-add` Agregar fila, `codicon-trash` Eliminar filas (si editable).
-- `codicon-export` **Exportar ▾** (CSV, JSON, XLSX, SQL INSERT, Copiar como Markdown, —, **Copiar tabla**, **Copiar tabla (con cabeceras)**). Las dos últimas copian al portapapeles la tabla completa sin importar la selección (ver `06` §Copiar y exportar).
+- `codicon-export` **Exportar ▾** (CSV, JSON, XLSX, SQL INSERT, Copiar como Markdown).
 - `codicon-list-flat` / `codicon-json` alternar **Grilla / Texto / Registro** (vista registro = una fila en formato vertical campo:valor).
 - A la derecha: "Límite" select `500 ▾` (100, 500, 1000, 5000, Todo).
 
 ### Grilla
-- Cabecera 26 px, fondo `bg.gridHeader`: icono pequeño del tipo lógico (`123` numérico, `abc` texto, `codicon-calendar` fecha, `codicon-json` json, `codicon-check` booleano, `codicon-key` si es PK) + nombre en negrita 600 + botón de orden ▲▼ a la derecha (visible al hover y siempre que la columna esté ordenada; clic alterna ascendente → descendente → sin orden). Tooltip: tipo nativo completo, tabla origen.
+- Cabecera 26 px, fondo `bg.gridHeader`: icono pequeño del tipo lógico (`123` numérico, `abc` texto, `codicon-calendar` fecha, `codicon-json` json, `codicon-check` booleano, `codicon-key` si es PK) + nombre en negrita 600 + indicador de orden ▲▼. Tooltip: tipo nativo completo, tabla origen.
 - Columna de número de fila fija a la izquierda (40 px, `fg.muted`, alineada derecha).
 - Números alineados a la derecha, texto a la izquierda, booleanos centrados como `☑/☐` o `true/false` según config.
 - `NULL` en `fg.null` itálica.
 - Texto largo truncado con `…`; JSON en una línea con resaltado mínimo.
-- Selección tipo hoja de cálculo. Celda con foco con borde 1 px `border.focus`; celdas seleccionadas con fondo `bg.selection`, y el número de fila / cabecera de columna seleccionados resaltados.
-  - **Celdas**: clic, arrastre, Shift+clic (rango), Shift+flechas, Ctrl+clic (agrega o quita celdas o rangos no contiguos).
-  - **Filas**: clic en el número de fila; arrastre o Shift+clic para un rango; Ctrl+clic para agregar filas sueltas. Teclado: Shift+Espacio selecciona la fila actual.
-  - **Columnas**: clic en la cabecera (fuera del botón de orden); arrastre o Shift+clic para un rango; Ctrl+clic para agregar columnas sueltas. Teclado: Ctrl+Espacio selecciona la columna actual.
-  - **Todo**: Ctrl+A o clic en la esquina superior izquierda (sobre los números de fila).
-  - **Copiar** (Ctrl+C) y **Copiar con cabeceras** (Ctrl+Shift+C) actúan **solo sobre lo seleccionado** (ver `06` §Copiar y exportar).
+- Selección tipo hoja de cálculo: clic, arrastre, Shift+clic, Ctrl+clic, Ctrl+A. Celda con foco con borde 1 px `border.focus`.
 - Doble clic o F2 / Enter → edición en línea (según tipo: input, checkbox, selector de fecha simple, o editor de valor para JSON/texto largo).
 - Ctrl+Shift+Enter o botón en celda → **Visor de valor** en panel lateral derecho del panel de resultados (300 px, redimensionable): muestra el valor completo en Monaco con lenguaje detectado (json, xml, texto), editable si la celda lo es.
-- Menú contextual de celda (actúa sobre la selección; si se hace clic derecho fuera de ella, primero selecciona esa celda): Copiar (Ctrl+C), Copiar con cabeceras (Ctrl+Shift+C), Copiar como ▸ (CSV, TSV, JSON, INSERT, IN (…) lista), Pegar, —, Establecer NULL, Ver valor, —, Filtrar por este valor, Excluir este valor, —, Formato de columna ▸ (ver `06`), Ocultar columna, Ajustar ancho.
+- Menú contextual de celda: Copiar (Ctrl+C), Copiar con cabeceras, Copiar como ▸ (CSV, TSV, JSON, INSERT, IN (…) lista), Pegar, —, Establecer NULL, Ver valor, —, Filtrar por este valor, Excluir este valor, —, Formato de columna ▸ (ver `06`), Ocultar columna, Ajustar ancho.
 
 ### Pie del panel (22 px, `fg.muted`, 12 px)
 `500 filas (truncado — Cargar más · Cargar todo)` · `12 ms` · `08:47:07` · a la derecha: suma/prom/min/máx de las celdas numéricas seleccionadas (como Excel), "3 cambios pendientes".
@@ -236,7 +230,7 @@ Izquierda:
 - Base/esquema: "paybox · public".
 - Durante ejecución: `codicon-loading` girando + "Ejecutando… 00:03".
 
-Derecha: `Ln 1, Col 38 (12 sel.)` · `codicon-save` `Autoguardado` (clic alterna; ver `11` §4) · `Espacios: 4` · `UTF-8` · `CRLF` · `SQL (PostgreSQL)` · `Auto-commit` / `Manual (3)` · `codicon-bell` notificaciones.
+Derecha: `Ln 1, Col 38 (12 sel.)` · `Espacios: 4` · `UTF-8` · `CRLF` · `SQL (PostgreSQL)` · `Auto-commit` / `Manual (3)` · `codicon-bell` notificaciones.
 
 ## 12. Diálogo de conexión
 Modal centrado 640 × 560, fondo `bg.editor`, borde `border`, radio 4 px, sombra `0 8px 24px rgba(0,0,0,.36)`.
@@ -253,7 +247,7 @@ Modal centrado 640 × 560, fondo `bg.editor`, borde `border`, radio 4 px, sombra
 
 ## 13. Paleta rápida (Ctrl+P / Ctrl+Shift+P)
 Estilo quick-open de VS Code: caja de 600 px arriba al centro, input + lista de 22 px por ítem con icono, texto con coincidencias en negrita `accent`, detalle en `fg.muted` a la derecha.
-- `Ctrl+P`: busca **objetos de BD** (tablas, vistas, funciones de las conexiones abiertas, usando la caché) y **archivos** del espacio de trabajo. Enter abre.
+- `Ctrl+P`: busca **objetos de BD** (tablas, vistas, funciones de las conexiones abiertas, usando la caché) y **archivos** de la carpeta abierta. Enter abre.
 - `Ctrl+Shift+P` / `F1`: prefijo `>`, **comandos** de la app con su atajo.
 - `Ctrl+9`: cambiar conexión de la pestaña. `Ctrl+0`: cambiar base/esquema.
 
@@ -263,20 +257,19 @@ Estilo quick-open de VS Code: caja de 600 px arriba al centro, input + lista de 
 - Notificaciones tipo toast abajo a la derecha (como VS Code): 400 px, icono de severidad, texto, acciones, se apilan y desaparecen a los 8 s salvo errores.
 
 ## 15. Preferencias
-Pestaña de editor con dos modos (como VS Code): **UI** simple con buscador y lista agrupada (Editor, Archivos, Resultados, Formatos de datos, Conexiones, Apariencia) y botón `codicon-go-to-file` "Abrir settings.json". Cada ajuste: título en negrita, descripción en `fg.muted`, control (checkbox, input, select).
+Pestaña de editor con dos modos (como VS Code): **UI** simple con buscador y lista agrupada (Editor, Resultados, Formatos de datos, Conexiones, Apariencia) y botón `codicon-go-to-file` "Abrir settings.json". Cada ajuste: título en negrita, descripción en `fg.muted`, control (checkbox, input, select).
 
-Grupo **Archivos**: espacio de trabajo y guardado automático (ver `11` §5).
 Grupo **Formatos de datos** con vista previa en vivo de cada formato (ver `06`).
 
 ## 16. Estados vacíos
 - Sin conexiones: en la side bar, ilustración mínima con `codicon-database` grande en `fg.muted` + "Aún no hay conexiones" + botón primario **Nueva conexión**.
-- Sin pestañas abiertas: fondo del editor con logo tenue y lista de atajos (como la marca de agua de VS Code): Nuevo script `Ctrl+N`, Buscar objeto `Ctrl+P`, Comandos `Ctrl+Shift+P`, Nueva conexión, Cambiar espacio de trabajo.
+- Sin pestañas abiertas: fondo del editor con logo tenue y lista de atajos (como la marca de agua de VS Code): Nuevo script `Ctrl+N`, Buscar objeto `Ctrl+P`, Comandos `Ctrl+Shift+P`, Nueva conexión, Abrir carpeta.
 - Resultados sin ejecutar: texto centrado `fg.muted` "Ejecuta una consulta con Ctrl+Enter".
 
 ## 17. Pantallas que debe incluir la maqueta
 1. Principal oscura: vista Conexiones con árbol expandido (una conexión de Producción y otra Local), script con 6 consultas, sentencia activa resaltada, resultados con grilla de ~15 filas y 6 columnas de tipos variados (id, texto, fecha, decimal, booleano, NULL), status bar teñida de Producción.
 2. Igual, en tema claro.
-3. Vista Archivos con el espacio de trabajo "DB Explorer" (subcarpetas y varios `Script-N.sql`), un script abierto sin cambios y otro con ●; status bar con el indicador "Autoguardado".
+3. Vista Archivos con carpeta abierta y un `.sql` abierto (sin cambios pendientes y otro con ●).
 4. Pestaña de objeto → Datos, con filtro WHERE y celdas editadas (amarillas), una fila nueva (verde), una eliminada (roja) y el botón "Guardar (3)".
 5. Diálogo de nueva conexión (PostgreSQL) con "Probar conexión" exitoso.
 6. Paleta rápida abierta con búsqueda de tablas.

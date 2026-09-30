@@ -18,6 +18,7 @@ Cliente de escritorio para explorar y consultar bases de datos **PostgreSQL, Mar
 | Claude Code — explorador de archivos | `07-explorador-archivos.md` |
 | Claude Code — conexiones, credenciales y seguridad | `08-conexiones-y-seguridad.md` |
 | Claude Code — orden de construcción | `09-plan-de-implementacion.md` |
+| Claude Code — scripts, espacio de trabajo y guardado automático | `11-scripts-y-espacio-de-trabajo.md` |
 
 ## Flujo sugerido
 

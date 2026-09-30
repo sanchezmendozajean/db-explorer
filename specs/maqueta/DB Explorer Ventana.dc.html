@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@vscode/codicons@0.0.36/dist/codicon.css">
+<style>body{margin:0}</style>
+</helmet>
+<div style="{{ vars }}">
+<div data-screen-label="{{ screenLabel }}" style="width:1600px; height:1000px; position:relative; overflow:hidden; display:flex; flex-direction:column; background:var(--ed); color:var(--fg); font-family:'Segoe UI', system-ui, -apple-system, sans-serif; font-size:13px; line-height:22px; box-sizing:border-box;">
+
+  <!-- Title bar -->
+  <div style="height:35px; flex:none; display:flex; align-items:center; background:var(--tb); border-bottom:1px solid var(--bd); position:relative; box-sizing:border-box;">
+    <div style="width:44px; display:flex; justify-content:center; align-items:center;"><i class="codicon codicon-database" style="color:var(--acc); font-size:16px;"></i></div>
+    <div style="display:flex; align-items:center; gap:2px;">
+      <div style="padding:0 7px; height:22px; border-radius:4px;">Archivo</div>
+      <div style="padding:0 7px; height:22px; border-radius:4px;">Editar</div>
+      <div style="padding:0 7px; height:22px; border-radius:4px;">Ver</div>
+      <div style="padding:0 7px; height:22px; border-radius:4px;">Consulta</div>
+      <div style="padding:0 7px; height:22px; border-radius:4px;">Ayuda</div>
+    </div>
+    <div style="position:absolute; left:500px; top:5px; width:600px; height:24px; box-sizing:border-box; background:var(--inp); border:1px solid var(--inpbd); border-radius:6px; display:flex; align-items:center; justify-content:center; gap:6px; color:var(--mut); font-size:12px;">
+      <i class="codicon codicon-search" style="font-size:14px;"></i><span>Buscar objetos, archivos o comandos (Ctrl+P)</span>
+    </div>
+    <div style="margin-left:auto; display:flex; height:35px;">
+      <div style="width:46px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-chrome-minimize"></i></div>
+      <div style="width:46px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-chrome-maximize"></i></div>
+      <div style="width:46px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-chrome-close"></i></div>
+    </div>
+  </div>
+
+  <div style="flex:1; display:flex; min-height:0;">
+    <!-- Activity bar -->
+    <div style="width:48px; flex:none; background:var(--tb); border-right:1px solid var(--bd); display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
+      <div style="display:flex; flex-direction:column;">
+        <div style="height:48px; position:relative; display:flex; align-items:center; justify-content:center;">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:2px; background:{{ actConnBar }};"></div>
+          <i class="codicon codicon-database" style="font-size:24px; color:{{ actConnFg }};"></i>
+        </div>
+        <div style="height:48px; position:relative; display:flex; align-items:center; justify-content:center;">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:2px; background:{{ actFilesBar }};"></div>
+          <i class="codicon codicon-files" style="font-size:24px; color:{{ actFilesFg }};"></i>
+        </div>
+        <div style="height:48px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-history" style="font-size:24px; color:var(--mut);"></i></div>
+      </div>
+      <div style="height:48px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-settings-gear" style="font-size:24px; color:var(--mut);"></i></div>
+    </div>
+
+    <!-- Side bar -->
+    <div style="width:280px; flex:none; background:var(--tb); border-right:1px solid var(--bd); display:flex; flex-direction:column; box-sizing:border-box; overflow:hidden;">
+      <sc-if value="{{ isConn }}" hint-placeholder-val="{{ true }}">
+        <div style="height:35px; flex:none; display:flex; align-items:center; padding:0 8px 0 20px;">
+          <span style="font-size:11px; font-weight:600; letter-spacing:0.5px; color:var(--mut);">CONEXIONES</span>
+          <div style="margin-left:auto; display:flex; gap:2px;">
+            <div style="width:22px; height:22px; border-radius:4px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-add"></i></div>
+            <div style="width:22px; height:22px; border-radius:4px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-new-folder"></i></div>
+            <div style="width:22px; height:22px; border-radius:4px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-refresh"></i></div>
+            <div style="width:22px; height:22px; border-radius:4px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-collapse-all"></i></div>
+            <div style="width:22px; height:22px; border-radius:4px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-ellipsis"></i></div>
+          </div>
+        </div>
+        <div style="height:32px; flex:none; padding:0 8px 8px; box-sizing:border-box;">
+          <div style="height:24px; box-sizing:border-box; background:var(--inp); border:1px solid var(--inpbd); border-radius:2px; display:flex; align-items:center; gap:6px; padding:0 6px; color:var(--mut); font-size:12px;">
+            <i class="codicon codicon-filter" style="font-size:14px;"></i><span>Filtrar (tablas, vistas…)</span>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isFiles }}" hint-placeholder-val="{{ false }}">
+        <div style="height:35px; flex:none; display:flex; align-items:center; padding:0 8px 0 20px;">
+          <span style="font-size:11px; font-weight:600; letter-spacing:0.5px; color:var(--mut);">ARCHIVOS</span>
+          <div style="margin-left:auto; width:22px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-ellipsis"></i></div>
+        </div>
+        <div style="height:22px; flex:none; display:flex; align-items:center; gap:2px; padding:0 8px 0 2px; border-top:1px solid var(--bd); box-sizing:content-box;">
+          <i class="codicon codicon-chevron-down"></i>
+          <span style="font-size:11px; font-weight:700; letter-spacing:0.3px;">DB EXPLORER</span>
+          <div style="margin-left:auto; display:flex; gap:2px;">
+            <div style="width:22px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-new-file"></i></div>
+            <div style="width:22px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-new-folder"></i></div>
+            <div style="width:22px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-refresh"></i></div>
+            <div style="width:22px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-collapse-all"></i></div>
+          </div>
+        </div>
+      </sc-if>
+      <div style="flex:1; min-height:0; overflow:hidden;">
+        <sc-for list="{{ tree }}" as="n" hint-placeholder-count="14">
+          <div style="height:22px; display:flex; align-items:center; gap:5px; padding-left:{{ n.pad }}px; padding-right:8px; background:{{ n.bg }}; outline:{{ n.out }}; outline-offset:-1px; white-space:nowrap; overflow:hidden; opacity:{{ n.op }};">
+            <i class="codicon codicon-{{ n.chev }}" style="width:16px; flex:none; margin-right:-2px;"></i>
+            <sc-if value="{{ n.dot }}" hint-placeholder-val="{{ false }}"><span style="width:8px; height:8px; border-radius:50%; background:{{ n.dotColor }}; flex:none;"></span></sc-if>
+            <sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><span style="width:16px; height:14px; box-sizing:border-box; border:1px solid var(--mut); border-radius:3px; font-family:'Cascadia Code', Consolas, monospace; font-size:8px; line-height:12px; text-align:center; font-weight:700; color:var(--fg); flex:none;">{{ n.badge }}</span></sc-if>
+            <sc-if value="{{ n.icon }}" hint-placeholder-val="{{ false }}"><i class="codicon codicon-{{ n.icon }}" style="color:{{ n.iconColor }}; flex:none;"></i></sc-if>
+            <span style="flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; color:{{ n.fg }};">{{ n.label }}</span>
+            <span style="color:var(--mut); font-style:italic; font-size:12px; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0;">{{ n.sec }}</span>
+            <sc-if value="{{ n.mod }}" hint-placeholder-val="{{ false }}"><i class="codicon codicon-circle-filled" style="font-size:9px; flex:none; color:var(--fg);"></i></sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- Editor group -->
+    <div style="flex:1; min-width:0; display:flex; flex-direction:column; background:var(--ed);">
+      <div style="height:35px; flex:none; display:flex; background:var(--tb);">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+          <div style="height:35px; box-sizing:border-box; display:flex; align-items:center; gap:6px; padding:0 6px 0 10px; background:{{ t.bg }}; border-left:2px solid {{ t.env }}; border-right:1px solid var(--bd); border-top:1px solid {{ t.top }}; border-bottom:1px solid {{ t.bottom }}; color:{{ t.fg }}; font-style:{{ t.fs }}; white-space:nowrap; flex:none;">
+            <i class="codicon codicon-{{ t.icon }}" style="color:{{ t.iconColor }};"></i>
+            <span>{{ t.label }}</span>
+            <span style="width:20px; height:20px; display:flex; align-items:center; justify-content:center; border-radius:4px;"><i class="codicon codicon-{{ t.end }}" style="font-size:{{ t.endSize }}px; color:var(--fg);"></i></span>
+          </div>
+        </sc-for>
+        <div style="flex:1; border-bottom:1px solid var(--bd); display:flex; align-items:center; justify-content:flex-end; gap:2px; padding-right:8px; box-sizing:border-box;">
+          <div style="width:22px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-split-horizontal"></i></div>
+          <div style="width:22px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-ellipsis"></i></div>
+        </div>
+      </div>
+
+      <sc-if value="{{ isScript }}" hint-placeholder-val="{{ true }}">
+        <div style="height:30px; flex:none; box-sizing:border-box; display:flex; align-items:center; gap:4px; padding:0 8px; border-bottom:1px solid var(--bd);">
+          <div style="width:24px; height:22px; display:flex; align-items:center; justify-content:center; border-radius:4px;"><i class="codicon codicon-play" style="color:var(--ok);"></i></div>
+          <div style="width:24px; height:22px; display:flex; align-items:center; justify-content:center; border-radius:4px;"><i class="codicon codicon-run-all"></i></div>
+          <div style="width:24px; height:22px; display:flex; align-items:center; justify-content:center; border-radius:4px;"><i class="codicon codicon-debug-stop" style="color:var(--dis);"></i></div>
+          <div style="width:24px; height:22px; display:flex; align-items:center; justify-content:center; border-radius:4px;"><i class="codicon codicon-lightbulb"></i></div>
+          <div style="width:1px; height:16px; background:var(--bd); margin:0 6px;"></div>
+          <div style="height:22px; box-sizing:border-box; display:flex; align-items:center; gap:6px; padding:0 4px 0 8px; border:1px solid var(--inpbd); background:var(--inp); border-radius:2px;">
+            <span style="width:8px; height:8px; border-radius:50%; background:#F85149;"></span><span>PayBox Prod</span><i class="codicon codicon-chevron-down" style="font-size:14px; color:var(--mut);"></i>
+          </div>
+          <div style="height:22px; box-sizing:border-box; display:flex; align-items:center; gap:6px; padding:0 4px 0 8px; border:1px solid var(--inpbd); background:var(--inp); border-radius:2px;">
+            <i class="codicon codicon-database" style="font-size:14px; color:var(--mut);"></i><span>paybox</span><i class="codicon codicon-chevron-down" style="font-size:14px; color:var(--mut);"></i>
+          </div>
+          <div style="height:22px; box-sizing:border-box; display:flex; align-items:center; gap:6px; padding:0 4px 0 8px; border:1px solid var(--inpbd); background:var(--inp); border-radius:2px;">
+            <i class="codicon codicon-symbol-namespace" style="font-size:14px; color:var(--mut);"></i><span>public</span><i class="codicon codicon-chevron-down" style="font-size:14px; color:var(--mut);"></i>
+          </div>
+          <div style="width:1px; height:16px; background:var(--bd); margin:0 6px;"></div>
+          <div style="height:22px; box-sizing:border-box; display:flex; align-items:center; gap:6px; padding:0 4px 0 8px; border:1px solid var(--inpbd); background:var(--inp); border-radius:2px;">
+            <span style="color:var(--mut);">Transacción:</span><span>Auto</span><i class="codicon codicon-chevron-down" style="font-size:14px; color:var(--mut);"></i>
+          </div>
+          <div style="margin-left:auto; display:flex; gap:2px;">
+            <div style="width:24px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-symbol-keyword"></i></div>
+            <div style="width:24px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-layout-panel"></i></div>
+          </div>
+        </div>
+        <div style="flex:1; min-height:0; overflow:hidden; padding-top:4px; font-family:'Cascadia Code', Consolas, 'Courier New', monospace; font-size:13px; line-height:19px;">
+          <sc-for list="{{ lines }}" as="l" hint-placeholder-count="11">
+            <div style="height:19px; display:flex; background:{{ l.bg }}; outline:{{ l.out }}; outline-offset:-2px;">
+              <div style="width:20px; flex:none; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-{{ l.gut }}" style="font-size:13px; color:{{ l.gutColor }};"></i></div>
+              <div style="width:34px; flex:none; text-align:right; color:{{ l.lnColor }};">{{ l.n }}</div>
+              <div style="width:2px; flex:none; margin-left:14px; background:{{ l.bar }};"></div>
+              <div style="padding-left:10px; white-space:pre;"><sc-for list="{{ l.toks }}" as="k" hint-placeholder-count="4"><span style="color:{{ k.c }}; font-style:{{ k.fs }};">{{ k.t }}</span></sc-for><sc-if value="{{ l.caret }}" hint-placeholder-val="{{ false }}"><span style="display:inline-block; width:2px; height:17px; background:var(--caret); vertical-align:-3px;"></span></sc-if></div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isTable }}" hint-placeholder-val="{{ false }}">
+        <div style="height:30px; flex:none; box-sizing:border-box; display:flex; align-items:center; gap:4px; padding:0 12px; border-bottom:1px solid var(--bd); color:var(--mut);">
+          <span style="width:8px; height:8px; border-radius:50%; background:#F85149; margin-right:2px;"></span>
+          <span>PayBox Prod</span><i class="codicon codicon-chevron-right" style="font-size:14px;"></i>
+          <i class="codicon codicon-database" style="font-size:14px;"></i><span>paybox</span><i class="codicon codicon-chevron-right" style="font-size:14px;"></i>
+          <i class="codicon codicon-symbol-namespace" style="font-size:14px;"></i><span>public</span><i class="codicon codicon-chevron-right" style="font-size:14px;"></i>
+          <i class="codicon codicon-table" style="font-size:14px; color:var(--tbl);"></i><span style="color:var(--fg);">CRendiciones_Conf_Generales</span>
+          <div style="margin-left:auto; display:flex; gap:4px;">
+            <div style="height:20px; padding:0 10px; border-radius:10px; background:var(--acc); color:#FFFFFF; font-size:12px; line-height:20px;">Datos</div>
+            <div style="height:20px; padding:0 10px; border-radius:10px; color:var(--fg); font-size:12px; line-height:20px; border:1px solid var(--inpbd); box-sizing:border-box; line-height:18px;">Estructura</div>
+            <div style="height:20px; padding:0 10px; border-radius:10px; color:var(--fg); font-size:12px; line-height:20px; border:1px solid var(--inpbd); box-sizing:border-box; line-height:18px;">DDL</div>
+          </div>
+        </div>
+        <div style="height:36px; flex:none; box-sizing:border-box; display:flex; align-items:center; gap:8px; padding:0 12px; border-bottom:1px solid var(--bd); background:var(--tb);">
+          <div style="flex:1; height:24px; box-sizing:border-box; display:flex; align-items:center; border:1px solid var(--foc); background:var(--ed); border-radius:2px; overflow:hidden;">
+            <div style="height:22px; padding:0 8px; display:flex; align-items:center; background:var(--gh); border-right:1px solid var(--bd); font-size:11px; font-weight:600; letter-spacing:0.5px; color:var(--mut);">WHERE</div>
+            <div style="padding-left:8px; font-family:'Cascadia Code', Consolas, monospace; font-size:12px; white-space:pre;"><sc-for list="{{ whereToks }}" as="k" hint-placeholder-count="4"><span style="color:{{ k.c }};">{{ k.t }}</span></sc-for><span style="display:inline-block; width:2px; height:15px; background:var(--caret); vertical-align:-3px;"></span></div>
+          </div>
+          <div style="width:280px; height:24px; box-sizing:border-box; display:flex; align-items:center; border:1px solid var(--inpbd); background:var(--ed); border-radius:2px; overflow:hidden;">
+            <div style="height:22px; padding:0 8px; display:flex; align-items:center; background:var(--gh); border-right:1px solid var(--bd); font-size:11px; font-weight:600; letter-spacing:0.5px; color:var(--mut);">ORDER BY</div>
+            <div style="padding-left:8px; font-family:'Cascadia Code', Consolas, monospace; font-size:12px; white-space:pre;"><sc-for list="{{ orderToks }}" as="k" hint-placeholder-count="2"><span style="color:{{ k.c }};">{{ k.t }}</span></sc-for></div>
+          </div>
+          <div style="width:24px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-play" style="color:var(--ok);"></i></div>
+        </div>
+      </sc-if>
+
+      <!-- Results -->
+      <div style="height:{{ resultsH }}; flex:{{ resultsFlex }}; min-height:0; box-sizing:border-box; display:flex; flex-direction:column; border-top:1px solid var(--bd);">
+        <sc-if value="{{ isScript }}" hint-placeholder-val="{{ true }}">
+          <div style="height:30px; flex:none; box-sizing:border-box; display:flex; align-items:stretch; gap:16px; padding:0 8px 0 12px; background:var(--tb);">
+            <div style="display:flex; align-items:center; gap:6px; border-bottom:1px solid var(--foc); color:var(--fg);">
+              <i class="codicon codicon-table" style="font-size:14px; color:var(--tbl);"></i><span>CRendiciones_Conf_Generales</span><i class="codicon codicon-pin" style="font-size:14px; color:var(--mut);"></i>
+            </div>
+            <div style="display:flex; align-items:center; color:var(--mut);">Mensajes</div>
+            <div style="display:flex; align-items:center; color:var(--mut);">Historial</div>
+            <div style="margin-left:auto; display:flex; align-items:center; gap:2px;">
+              <div style="width:22px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-chevron-up"></i></div>
+              <div style="width:22px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-close"></i></div>
+            </div>
+          </div>
+        </sc-if>
+        <div style="height:30px; flex:none; box-sizing:border-box; display:flex; align-items:center; gap:4px; padding:0 8px; background:var(--tb); border-bottom:1px solid var(--bd);">
+          <div style="width:240px; height:22px; box-sizing:border-box; display:flex; align-items:center; gap:6px; padding:0 6px; background:var(--inp); border:1px solid var(--inpbd); border-radius:2px; color:var(--mut); font-size:12px;">
+            <i class="codicon codicon-filter" style="font-size:14px;"></i><span>Filtrar resultados…</span>
+          </div>
+          <div style="width:24px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-refresh"></i></div>
+          <sc-if value="{{ isTable }}" hint-placeholder-val="{{ false }}">
+            <div style="width:1px; height:16px; background:var(--bd); margin:0 4px;"></div>
+            <div style="height:22px; display:flex; align-items:center; gap:6px; padding:0 10px; background:var(--acc); color:#FFFFFF; border-radius:2px;"><i class="codicon codicon-save" style="font-size:14px;"></i><span>Guardar (5)</span></div>
+            <div style="height:22px; display:flex; align-items:center; gap:4px; padding:0 6px;"><i class="codicon codicon-discard"></i><span>Descartar</span></div>
+            <div style="height:22px; display:flex; align-items:center; gap:4px; padding:0 6px;"><i class="codicon codicon-eye"></i><span>Ver SQL</span></div>
+          </sc-if>
+          <div style="width:1px; height:16px; background:var(--bd); margin:0 4px;"></div>
+          <div style="width:24px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-add"></i></div>
+          <div style="width:24px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-trash"></i></div>
+          <div style="height:22px; display:flex; align-items:center; gap:4px; padding:0 6px;"><i class="codicon codicon-export"></i><span>Exportar</span><i class="codicon codicon-chevron-down" style="font-size:14px; color:var(--mut);"></i></div>
+          <div style="width:1px; height:16px; background:var(--bd); margin:0 4px;"></div>
+          <div style="height:22px; display:flex; border:1px solid var(--inpbd); border-radius:2px; overflow:hidden; box-sizing:border-box; font-size:12px;">
+            <div style="padding:0 8px; display:flex; align-items:center; gap:4px; background:var(--seli);"><i class="codicon codicon-list-flat" style="font-size:14px;"></i>Grilla</div>
+            <div style="padding:0 8px; display:flex; align-items:center; gap:4px; color:var(--mut); border-left:1px solid var(--inpbd);"><i class="codicon codicon-json" style="font-size:14px;"></i>Texto</div>
+            <div style="padding:0 8px; display:flex; align-items:center; gap:4px; color:var(--mut); border-left:1px solid var(--inpbd);"><i class="codicon codicon-list-unordered" style="font-size:14px;"></i>Registro</div>
+          </div>
+          <div style="margin-left:auto; display:flex; align-items:center; gap:6px;">
+            <span style="color:var(--mut);">Límite</span>
+            <div style="height:22px; box-sizing:border-box; display:flex; align-items:center; gap:8px; padding:0 4px 0 8px; border:1px solid var(--inpbd); background:var(--inp); border-radius:2px;"><span>500</span><i class="codicon codicon-chevron-down" style="font-size:14px; color:var(--mut);"></i></div>
+          </div>
+        </div>
+        <div style="flex:1; min-height:0; overflow:hidden; background:var(--ed);">
+          <div style="display:flex; height:26px; background:var(--gh); border-bottom:1px solid var(--bd); box-sizing:border-box;">
+            <div style="width:40px; flex:none; border-right:1px solid var(--bd);"></div>
+            <sc-for list="{{ cols }}" as="h" hint-placeholder-count="6">
+              <div style="width:{{ h.w }}px; flex:none; box-sizing:border-box; display:flex; align-items:center; gap:6px; padding:0 8px; border-right:1px solid var(--bd); font-size:12px; font-weight:600; white-space:nowrap;">
+                <sc-if value="{{ h.icon }}" hint-placeholder-val="{{ false }}"><i class="codicon codicon-{{ h.icon }}" style="font-size:13px; color:{{ h.iconColor }};"></i></sc-if>
+                <sc-if value="{{ h.iconText }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Cascadia Code', Consolas, monospace; font-size:9px; font-weight:400; color:var(--mut);">{{ h.iconText }}</span></sc-if>
+                <span>{{ h.name }}</span>
+                <sc-if value="{{ h.sort }}" hint-placeholder-val="{{ false }}"><i class="codicon codicon-{{ h.sort }}" style="font-size:12px; color:var(--acc);"></i></sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="15">
+            <div style="display:flex; height:24px; background:{{ r.bg }}; text-decoration:{{ r.deco }}; font-family:'Cascadia Code', Consolas, 'Courier New', monospace; font-size:12px;">
+              <div style="width:40px; flex:none; box-sizing:border-box; padding-right:8px; text-align:right; line-height:24px; color:{{ r.numFg }}; background:{{ r.numBg }}; border-right:1px solid var(--bd);">{{ r.num }}</div>
+              <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="6">
+                <div style="width:{{ c.w }}px; flex:none; box-sizing:border-box; padding:0 8px; line-height:24px; border-right:1px solid var(--bd); text-align:{{ c.align }}; background:{{ c.bg }}; color:{{ c.color }}; font-style:{{ c.fs }}; outline:{{ c.out }}; outline-offset:-1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                  <sc-if value="{{ c.isBool }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex; width:14px; height:14px; box-sizing:border-box; border:1px solid {{ c.chkBd }}; border-radius:3px; background:{{ c.chkBg }}; align-items:center; justify-content:center; vertical-align:-2px;"><i class="codicon codicon-{{ c.chk }}" style="font-size:12px; color:#FFFFFF;"></i></span></sc-if>
+                  <sc-if value="{{ c.isText }}" hint-placeholder-val="{{ true }}">{{ c.v }}</sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div style="height:22px; flex:none; box-sizing:border-box; display:flex; align-items:center; gap:14px; padding:0 12px; background:var(--tb); border-top:1px solid var(--bd); color:var(--mut); font-size:12px;">
+          <span>{{ footRows }}</span><span>{{ footMs }}</span><span>{{ footTime }}</span>
+          <span style="margin-left:auto; color:{{ footRightColor }};">{{ footRight }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div style="height:22px; flex:none; display:flex; align-items:center; background:var(--stbg); color:var(--stfg); font-size:12px; border-top:1px solid var(--bd); box-sizing:border-box;">
+    <div style="height:22px; display:flex; align-items:center; gap:6px; padding:0 10px; background:#F85149; color:#FFFFFF; font-weight:600;"><i class="codicon codicon-database" style="font-size:14px;"></i><span>PayBox Prod</span></div>
+    <div style="padding:0 10px;">PostgreSQL 16.2</div>
+    <div style="padding:0 10px;">paybox · public</div>
+    <div style="margin-left:auto; display:flex; align-items:center;">
+      <div style="padding:0 10px;">{{ statusPos }}</div>
+      <div style="padding:0 10px; display:flex; align-items:center; gap:4px;"><i class="codicon codicon-save" style="font-size:14px;"></i><span>Autoguardado</span></div>
+      <div style="padding:0 10px;">Espacios: 4</div>
+      <div style="padding:0 10px;">UTF-8</div>
+      <div style="padding:0 10px;">CRLF</div>
+      <div style="padding:0 10px;">SQL (PostgreSQL)</div>
+      <div style="padding:0 10px;">Auto-commit</div>
+      <div style="padding:0 10px; display:flex; align-items:center;"><i class="codicon codicon-bell" style="font-size:14px;"></i></div>
+    </div>
+  </div>
+
+  <!-- Overlay: Nueva conexión -->
+  <sc-if value="{{ ovConn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; inset:0; background:var(--backdrop);"></div>
+    <div style="position:absolute; left:480px; top:220px; width:640px; height:560px; box-sizing:border-box; background:var(--ed); border:1px solid var(--menubd); border-radius:4px; box-shadow:0 8px 24px rgba(0,0,0,.36); display:flex; flex-direction:column; overflow:hidden;">
+      <div style="height:36px; flex:none; display:flex; align-items:center; padding:0 8px 0 16px; border-bottom:1px solid var(--bd);">
+        <span style="font-weight:600;">Nueva conexión</span>
+        <div style="margin-left:auto; width:22px; height:22px; display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-close"></i></div>
+      </div>
+      <div style="flex:1; padding:12px 16px; display:flex; flex-direction:column; gap:10px; overflow:hidden;">
+        <div style="display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px;">
+          <div style="height:46px; box-sizing:border-box; border:1px solid var(--foc); background:var(--sel); border-radius:4px; display:flex; align-items:center; gap:8px; padding:0 10px;">
+            <span style="width:24px; height:20px; box-sizing:border-box; border:1px solid var(--fg); border-radius:3px; font-family:'Cascadia Code', Consolas, monospace; font-size:10px; line-height:18px; text-align:center; font-weight:700;">PG</span><span>PostgreSQL</span>
+          </div>
+          <div style="height:46px; box-sizing:border-box; border:1px solid var(--inpbd); border-radius:4px; display:flex; align-items:center; gap:8px; padding:0 10px;">
+            <span style="width:24px; height:20px; box-sizing:border-box; border:1px solid var(--mut); border-radius:3px; font-family:'Cascadia Code', Consolas, monospace; font-size:10px; line-height:18px; text-align:center; font-weight:700; color:var(--mut);">MY</span><span>MariaDB / MySQL</span>
+          </div>
+          <div style="height:46px; box-sizing:border-box; border:1px solid var(--inpbd); border-radius:4px; display:flex; align-items:center; gap:8px; padding:0 10px;">
+            <span style="width:24px; height:20px; box-sizing:border-box; border:1px solid var(--mut); border-radius:3px; font-family:'Cascadia Code', Consolas, monospace; font-size:10px; line-height:18px; text-align:center; font-weight:700; color:var(--mut);">LT</span><span>SQLite</span>
+          </div>
+          <div style="height:46px; box-sizing:border-box; border:1px solid var(--inpbd); border-radius:4px; display:flex; align-items:center; gap:8px; padding:0 10px;">
+            <span style="width:24px; height:20px; box-sizing:border-box; border:1px solid var(--mut); border-radius:3px; font-family:'Cascadia Code', Consolas, monospace; font-size:10px; line-height:18px; text-align:center; font-weight:700; color:var(--mut);">MS</span><span>SQL Server</span>
+          </div>
+        </div>
+        <div style="font-size:11px; font-weight:600; letter-spacing:0.5px; color:var(--mut); margin-top:2px;">GENERAL</div>
+        <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px 16px;">
+          <div><div style="font-weight:600; line-height:20px;">Nombre</div><div style="height:26px; box-sizing:border-box; border:1px solid var(--inpbd); background:var(--inp); border-radius:2px; padding:0 8px; line-height:24px;">PayBox Prod</div></div>
+          <div><div style="font-weight:600; line-height:20px;">Carpeta</div><div style="height:26px; box-sizing:border-box; border:1px solid var(--inpbd); background:var(--inp); border-radius:2px; padding:0 4px 0 8px; display:flex; align-items:center;"><span style="color:var(--mut);">(sin carpeta)</span><i class="codicon codicon-chevron-down" style="margin-left:auto; color:var(--mut);"></i></div></div>
+          <div><div style="font-weight:600; line-height:20px;">Entorno</div><div style="height:26px; box-sizing:border-box; border:1px solid var(--inpbd); background:var(--inp); border-radius:2px; padding:0 4px 0 8px; display:flex; align-items:center; gap:8px;"><span style="width:8px; height:8px; border-radius:50%; background:#F85149;"></span><span>Producción</span><i class="codicon codicon-chevron-down" style="margin-left:auto; color:var(--mut);"></i></div></div>
+          <div><div style="font-weight:600; line-height:20px;">Color personalizado <span style="font-weight:400; color:var(--mut);">(opcional)</span></div><div style="height:26px; box-sizing:border-box; border:1px solid var(--inpbd); background:var(--inp); border-radius:2px; padding:0 8px; display:flex; align-items:center; gap:8px; color:var(--mut);"><span style="width:14px; height:14px; border-radius:2px; border:1px dashed var(--mut); box-sizing:border-box;"></span><span>Usar color del entorno</span></div></div>
+        </div>
+        <div style="font-size:11px; font-weight:600; letter-spacing:0.5px; color:var(--mut); margin-top:2px;">SERVIDOR</div>
+        <div style="display:grid; grid-template-columns:minmax(0,3fr) minmax(0,1fr) minmax(0,2fr); gap:8px 16px;">
+          <div><div style="font-weight:600; line-height:20px;">Host</div><div style="height:26px; box-sizing:border-box; border:1px solid var(--foc); background:var(--inp); border-radius:2px; padding:0 8px; line-height:24px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">extendspro.ctqoiasdeqhp.us-east-1.rds.amazonaws.com</div></div>
+          <div><div style="font-weight:600; line-height:20px;">Puerto</div><div style="height:26px; box-sizing:border-box; border:1px solid var(--inpbd); background:var(--inp); border-radius:2px; padding:0 8px; line-height:24px;">5432</div></div>
+          <div><div style="font-weight:600; line-height:20px;">Base de datos <span style="font-weight:400; color:var(--mut);">(opcional)</span></div><div style="height:26px; box-sizing:border-box; border:1px solid var(--inpbd); background:var(--inp); border-radius:2px; padding:0 8px; line-height:24px;">paybox</div></div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px 16px;">
+          <div><div style="font-weight:600; line-height:20px;">Usuario</div><div style="height:26px; box-sizing:border-box; border:1px solid var(--inpbd); background:var(--inp); border-radius:2px; padding:0 8px; line-height:24px;">app_paybox</div></div>
+          <div><div style="font-weight:600; line-height:20px;">Contraseña</div><div style="height:26px; box-sizing:border-box; border:1px solid var(--inpbd); background:var(--inp); border-radius:2px; padding:0 4px 0 8px; display:flex; align-items:center; letter-spacing:2px;">••••••••••••<i class="codicon codicon-eye" style="margin-left:auto; color:var(--mut); letter-spacing:0;"></i></div></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="width:16px; height:16px; box-sizing:border-box; border-radius:3px; background:var(--acc); display:flex; align-items:center; justify-content:center;"><i class="codicon codicon-check" style="font-size:13px; color:#FFFFFF;"></i></span><span>Guardar contraseña</span>
+        </div>
+        <div style="display:flex; flex-direction:column; border-top:1px solid var(--bd);">
+          <div style="height:26px; display:flex; align-items:center; gap:4px; border-bottom:1px solid var(--bd);"><i class="codicon codicon-chevron-right"></i><span style="font-size:11px; font-weight:600; letter-spacing:0.5px; color:var(--mut);">SSL / TLS</span><span style="margin-left:8px; color:var(--mut); font-size:12px;">Requerido</span></div>
+          <div style="height:26px; display:flex; align-items:center; gap:4px; border-bottom:1px solid var(--bd);"><i class="codicon codicon-chevron-right"></i><span style="font-size:11px; font-weight:600; letter-spacing:0.5px; color:var(--mut);">AVANZADO</span><span style="margin-left:8px; color:var(--mut); font-size:12px;">Confirmar sentencias de escritura (auto en Producción)</span></div>
+        </div>
+      </div>
+      <div style="height:52px; flex:none; box-sizing:border-box; display:flex; align-items:center; gap:10px; padding:0 16px; border-top:1px solid var(--bd);">
+        <div style="height:26px; display:flex; align-items:center; padding:0 12px; background:var(--btn2); border:1px solid var(--inpbd); box-sizing:border-box; border-radius:2px;">Probar conexión</div>
+        <i class="codicon codicon-pass" style="color:var(--ok);"></i><span style="color:var(--ok);">Conectado — PostgreSQL 16.2 (42 ms)</span>
+        <div style="margin-left:auto; height:26px; display:flex; align-items:center; padding:0 14px; background:var(--btn2); border:1px solid var(--inpbd); box-sizing:border-box; border-radius:2px;">Cancelar</div>
+        <div style="height:26px; display:flex; align-items:center; padding:0 18px; background:var(--acc); color:#FFFFFF; border-radius:2px;">Guardar</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- Overlay: Paleta rápida -->
+  <sc-if value="{{ ovPalette }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; left:500px; top:40px; width:600px; box-sizing:border-box; background:var(--menu); border:1px solid var(--menubd); border-radius:4px; box-shadow:0 8px 24px rgba(0,0,0,.36); padding:6px 0 6px;">
+      <div style="margin:0 6px 6px; height:26px; box-sizing:border-box; border:1px solid var(--foc); background:var(--inp); border-radius:2px; padding:0 8px; display:flex; align-items:center;">
+        <span>rendic</span><span style="display:inline-block; width:1px; height:16px; background:var(--caret); margin-left:1px;"></span>
+      </div>
+      <sc-for list="{{ palette }}" as="p" hint-placeholder-count="9">
+        <div style="border-top:1px solid {{ p.sepColor }}; margin-top:{{ p.gap }}px;">
+          <div style="height:22px; display:flex; align-items:center; gap:6px; margin:0 6px; padding:0 8px; border-radius:3px; background:{{ p.bg }}; outline:{{ p.out }}; outline-offset:-1px; white-space:nowrap;">
+            <i class="codicon codicon-{{ p.icon }}" style="color:{{ p.iconColor }};"></i>
+            <span>{{ p.pre }}<span style="color:var(--acc2); font-weight:700;">{{ p.mt }}</span>{{ p.post }}</span>
+            <span style="color:var(--mut); font-size:12px;">{{ p.det }}</span>
+            <span style="margin-left:auto; color:var(--mut); font-size:12px;">{{ p.section }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- Overlay: menús contextuales -->
+  <sc-if value="{{ ovMenus }}" hint-placeholder-val="{{ false }}">
+    <sc-for list="{{ menus }}" as="m" hint-placeholder-count="3">
+      <div style="position:absolute; left:{{ m.x }}px; top:{{ m.y }}px; width:{{ m.w }}px; box-sizing:border-box; background:var(--menu); border:1px solid var(--menubd); border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,.36); padding:4px 0;">
+        <sc-for list="{{ m.items }}" as="it" hint-placeholder-count="8">
+          <sc-if value="{{ it.sep }}" hint-placeholder-val="{{ false }}"><div style="height:1px; background:var(--menubd); margin:4px 0;"></div></sc-if>
+          <sc-if value="{{ it.item }}" hint-placeholder-val="{{ true }}">
+            <div style="height:24px; display:flex; align-items:center; margin:0 4px; padding:0 8px 0 24px; border-radius:3px; background:{{ it.bg }}; color:{{ it.fg }}; white-space:nowrap;">
+              <span>{{ it.label }}</span>
+              <span style="margin-left:auto; padding-left:24px; color:{{ it.keyFg }}; font-size:12px;">{{ it.key }}</span>
+              <sc-if value="{{ it.sub }}" hint-placeholder-val="{{ false }}"><i class="codicon codicon-chevron-right" style="margin-left:auto; font-size:14px;"></i></sc-if>
+            </div>
+          </sc-if>
+        </sc-for>
+      </div>
+    </sc-for>
+  </sc-if>
+
+  <!-- Overlay: confirmación Producción -->
+  <sc-if value="{{ ovConfirm }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; inset:0; background:var(--backdrop);"></div>
+    <div style="position:absolute; left:540px; top:290px; width:520px; box-sizing:border-box; background:var(--ed); border:1px solid var(--menubd); border-top:3px solid #F85149; border-radius:4px; box-shadow:0 8px 24px rgba(0,0,0,.36); padding:16px 20px; display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; align-items:center; gap:8px;"><i class="codicon codicon-warning" style="color:var(--err); font-size:18px;"></i><span style="font-weight:600; font-size:14px;">Confirmar escritura en Producción</span></div>
+      <div style="text-wrap:pretty;">Vas a ejecutar 1 sentencia que modifica datos en <strong>PayBox Prod</strong> (Producción).</div>
+      <div style="border:1px solid var(--bd); background:var(--tb); border-radius:2px; padding:6px 0; font-family:'Cascadia Code', Consolas, monospace; font-size:12px; line-height:18px;">
+        <sc-for list="{{ confirmLines }}" as="l" hint-placeholder-count="4">
+          <div style="display:flex;"><div style="width:28px; text-align:right; color:var(--ln); flex:none;">{{ l.n }}</div><div style="padding-left:12px; white-space:pre;"><sc-for list="{{ l.toks }}" as="k" hint-placeholder-count="4"><span style="color:{{ k.c }};">{{ k.t }}</span></sc-for></div></div>
+        </sc-for>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="width:16px; height:16px; box-sizing:border-box; border:1px solid var(--inpbd); background:var(--inp); border-radius:3px;"></span><span>No volver a preguntar en esta pestaña</span>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">
+        <div style="height:26px; display:flex; align-items:center; padding:0 14px; background:var(--btn2); border:1px solid var(--inpbd); box-sizing:border-box; border-radius:2px; outline:1px solid var(--foc); outline-offset:2px;">Cancelar</div>
+        <div style="height:26px; display:flex; align-items:center; gap:6px; padding:0 14px; background:#C42B1C; color:#FFFFFF; border-radius:2px;"><i class="codicon codicon-play" style="font-size:14px;"></i>Ejecutar</div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1600,&quot;height&quot;:1000},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;'dark'|'light'&quot;},&quot;view&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;conexiones&quot;,&quot;archivos&quot;],&quot;default&quot;:&quot;conexiones&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;script&quot;,&quot;tabla&quot;],&quot;default&quot;:&quot;script&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;overlay&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;ninguno&quot;,&quot;conexion&quot;,&quot;paleta&quot;,&quot;menus&quot;,&quot;confirmacion&quot;],&quot;default&quot;:&quot;ninguno&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme ?? 'dark';
+    const view = this.props.view ?? 'conexiones';
+    const mode = this.props.mode ?? 'script';
+    const ov = this.props.overlay ?? 'ninguno';
+    const D = theme === 'dark';
+    const t = D ? {
+      tb:'#181818',ed:'#1F1F1F',inp:'#313131',inpbd:'#3C3C3C',hov:'#2A2D2E',sel:'#04395E',seli:'#37373D',menu:'#1F1F1F',menubd:'#454545',gh:'#252526',alt:'#232323',ced:'#3A3D1F',rdel:'#4B1818',rins:'#1E3A1E',bd:'#2B2B2B',foc:'#0078D4',fg:'#CCCCCC',mut:'#9D9D9D',dis:'#6E6E6E',nul:'#6E6E6E',acc:'#0078D4',acc2:'#3794FF',err:'#F85149',warn:'#CCA700',ok:'#2EA043',stbg:'#5A1D1D',stfg:'#CCCCCC',kw:'#569CD6',str:'#CE9178',num:'#B5CEA8',qid:'#9CDCFE',com:'#6A9955',ln:'#6E7681',lna:'#CCCCCC',curl:'#282828',caret:'#AEAFAD',tbl:'#75BEFF',sqlc:'#519ABA',btn2:'#313131',backdrop:'rgba(0,0,0,0.35)'
+    } : {
+      tb:'#F8F8F8',ed:'#FFFFFF',inp:'#FFFFFF',inpbd:'#CECECE',hov:'#F2F2F2',sel:'#E4F0FB',seli:'#E4E6F1',menu:'#FFFFFF',menubd:'#CECECE',gh:'#F3F3F3',alt:'#FAFAFA',ced:'#FFF8C5',rdel:'#FDE7E9',rins:'#E6F4EA',bd:'#E5E5E5',foc:'#005FB8',fg:'#3B3B3B',mut:'#6E6E6E',dis:'#A0A0A0',nul:'#A0A0A0',acc:'#005FB8',acc2:'#005FB8',err:'#E51400',warn:'#BF8803',ok:'#388A34',stbg:'#FDE7E9',stfg:'#3B3B3B',kw:'#0000FF',str:'#A31515',num:'#098658',qid:'#001080',com:'#008000',ln:'#6E7681',lna:'#171184',curl:'#EEEEEE',caret:'#000000',tbl:'#007ACC',sqlc:'#498BA7',btn2:'#E5E5E5',backdrop:'rgba(0,0,0,0.2)'
+    };
+    const vars = {};
+    Object.keys(t).forEach(k => vars['--' + k] = t[k]);
+    const PROD = '#F85149', LOC = '#2EA043', QA = '#CCA700';
+
+    const KW = new Set('select from where order by desc asc limit and or as join on update set insert into values delete interval current_date is null not in true false'.split(' '));
+    const tok = (line) => {
+      const out = []; let m;
+      const re = /(--.*$)|('(?:[^']|'')*')|("[^"]*")|(\b\d+(?:\.\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*)|(\s+)|(.)/g;
+      while ((m = re.exec(line))) {
+        let c = 'var(--fg)', fs = 'normal';
+        if (m[1]) { c = 'var(--com)'; fs = 'italic'; }
+        else if (m[2]) c = 'var(--str)';
+        else if (m[3]) c = 'var(--qid)';
+        else if (m[4]) c = 'var(--num)';
+        else if (m[5] && KW.has(m[5].toLowerCase())) c = 'var(--kw)';
+        out.push({ t: m[0], c, fs });
+      }
+      return out;
+    };
+
+    const isFiles = view === 'archivos';
+    const isTable = mode === 'tabla';
+
+    // --- Tree
+    let tree;
+    if (!isFiles) {
+      tree = [
+        { l:0, chev:'chevron-right', dot:LOC, badge:'PG', label:'local', sec:'localhost:5432' },
+        { l:0, chev:'chevron-down', dot:PROD, badge:'PG', label:'PayBox Prod', sec:'extendspro.ctqoiasdeqhp.us-east-1.rds.amazonaws.com:5432' },
+        { l:1, chev:'chevron-down', icon:'database', label:'paybox', sec:'2,4 GB' },
+        { l:2, chev:'chevron-down', icon:'symbol-namespace', label:'public' },
+        { l:3, chev:'chevron-down', icon:'folder', label:'Tablas', sec:'(48)' },
+        { l:4, icon:'table', label:'CRendiciones_Conf_Generales', sec:'15' },
+        { l:4, icon:'table', label:'ControlesDeRendiciones_Cabeceras', sec:'8,2 k' },
+        { l:4, icon:'table', label:'ControlesDeRendiciones_Rendiciones', sec:'41 k' },
+        { l:4, icon:'table', label:'ModelosDeAprobacion_Aprobadores', sec:'312' },
+        { l:4, icon:'table', label:'ModelosDeAprobacion_Modelos', sec:'24' },
+        { l:4, icon:'table', label:'Provisiones_Cabeceras', sec:'39 k' },
+        { l:4, icon:'table', label:'Provisiones_Detalles', sec:'127 k' },
+        { l:4, icon:'table', label:'Usuarios', sec:'1,1 k' },
+        { l:3, chev:'chevron-right', icon:'folder', label:'Vistas', sec:'(6)' },
+        { l:3, chev:'chevron-right', icon:'folder', label:'Funciones', sec:'(12)' },
+        { l:3, chev:'chevron-right', icon:'folder', label:'Secuencias', sec:'(31)' },
+        { l:0, chev:'chevron-right', dot:QA, badge:'PG', label:'SGA TEST', sec:'tawa-app-db-des-001.ctqoiasdeqhp.us-east-1.rds.amazonaws.com:5432' },
+        { l:0, chev:'chevron-right', dot:LOC, badge:'LT', label:'requerimientos.db', sec:'D:\\datos\\requerimientos.db' }
+      ];
+      const selIdx = ov === 'menus' ? 6 : 5;
+      tree[selIdx].state = ov === 'menus' ? 'focus' : 'inactive';
+    } else {
+      const sql = 'database';
+      tree = [
+        { l:0, chev:'chevron-down', label:'paybox' },
+        { l:1, icon:sql, ic:'var(--sqlc)', label:'Script-1.sql' },
+        { l:1, icon:sql, ic:'var(--sqlc)', label:'Script-2.sql' },
+        { l:1, icon:sql, ic:'var(--sqlc)', label:'Script-3.sql', state:'inactive' },
+        { l:1, icon:sql, ic:'var(--sqlc)', label:'Script-5.sql', mod:true },
+        { l:1, icon:sql, ic:'var(--sqlc)', label:'rendiciones_pendientes.sql' },
+        { l:0, chev:'chevron-down', label:'sga' },
+        { l:1, icon:sql, ic:'var(--sqlc)', label:'Script-4.sql' },
+        { l:1, icon:sql, ic:'var(--sqlc)', label:'Script-6.sql' },
+        { l:0, chev:'chevron-right', label:'exportaciones' },
+        { l:0, chev:'chevron-right', label:'plantillas' },
+        { l:0, icon:'json', ic:'#CBCB41', label:'conexiones.json' },
+        { l:0, icon:'file', ic:'#89E051', label:'datos_prueba.csv' },
+        { l:0, icon:'markdown', ic:'var(--sqlc)', label:'README.md' }
+      ];
+    }
+    tree = tree.map(n => ({
+      pad: (isFiles ? 12 : 6) + n.l * (isFiles ? 12 : 10),
+      chev: n.chev || 'blank',
+      dot: !!n.dot, dotColor: n.dot || 'transparent',
+      badge: n.badge || '',
+      icon: n.icon || '',
+      iconColor: n.ic || (n.icon === 'table' ? 'var(--tbl)' : 'var(--fg)'),
+      label: n.label, sec: n.sec || '', mod: !!n.mod,
+      fg: 'var(--fg)', op: 1,
+      bg: n.state === 'focus' ? 'var(--sel)' : n.state === 'inactive' ? 'var(--seli)' : 'transparent',
+      out: n.state === 'focus' ? '1px solid var(--foc)' : 'none'
+    }));
+
+    // --- Tabs
+    const mk = (icon, label, env, o = {}) => ({ icon, label, env, ...o });
+    let tabs;
+    if (isFiles) tabs = [mk('file-code', 'Script-3', PROD, { active:true }), mk('file-code', 'Script-5', PROD, { mod:true }), mk('file-code', 'Script-1', LOC)];
+    else if (isTable) tabs = [mk('file-code', 'Script-1', LOC), mk('file-code', 'Script-2', PROD, { mod:true }), mk('table', 'CRendiciones_Conf_Generales', PROD, { active:true })];
+    else tabs = [mk('file-code', 'Script-1', LOC), mk('file-code', 'Script-2', PROD, { mod:true, active:true }), mk('table', 'CRendiciones_Conf_Generales', PROD, { preview:true })];
+    tabs = tabs.map(x => ({
+      icon: x.icon, label: x.label, env: x.env,
+      iconColor: x.icon === 'table' ? 'var(--tbl)' : x.icon === 'database' ? 'var(--sqlc)' : 'var(--mut)',
+      bg: x.active ? 'var(--ed)' : 'var(--tb)',
+      top: x.active ? 'var(--foc)' : 'transparent',
+      bottom: x.active ? 'var(--ed)' : 'var(--bd)',
+      fg: x.active ? 'var(--fg)' : 'var(--mut)',
+      fs: x.preview ? 'italic' : 'normal',
+      end: x.mod ? 'circle-filled' : x.active ? 'close' : 'blank',
+      endSize: x.mod ? 10 : 16
+    }));
+
+    // --- Code
+    let src, activeRange, caretLine, gutPass;
+    if (isFiles) {
+      src = ['-- Configuración general de rendiciones', '-- Revisar límites antes del cierre mensual', 'select id,', '       "Nombre",', '       "FechaDeCreacion",', '       "ImporteLimite",', '       "Activo",', '       "Observacion"', 'from "CRendiciones_Conf_Generales"', 'order by id;'];
+      activeRange = [3, 10]; caretLine = 10; gutPass = [3];
+    } else {
+      src = [
+        'select * from "ControlesDeRendiciones_Rendiciones" where id = 15975;', '',
+        'select * from "ControlesDeRendiciones_Rendiciones" order by id desc limit 100;', '',
+        'select * from "ControlesDeRendiciones_Cabeceras" where "Tipo" = \'ER\' order by id desc limit 100;', '',
+        'select * from "ModelosDeAprobacion_Aprobadores";', '',
+        'select "FechaDeEstorno", * from "Provisiones_Cabeceras" where id = 39572;', '',
+        'select * from "CRendiciones_Conf_Generales";'
+      ];
+      activeRange = [11, 11]; caretLine = 11; gutPass = [11];
+      if (ov === 'confirmacion') {
+        src = src.concat(['', 'update "CRendiciones_Conf_Generales"', 'set "ImporteLimite" = 60.00,', '    "Observacion" = \'Ajuste aprobado por finanzas\'', 'where id = 1;']);
+        activeRange = [13, 16]; caretLine = 16; gutPass = [11];
+      }
+    }
+    const lines = src.map((s, i) => {
+      const n = i + 1, act = n >= activeRange[0] && n <= activeRange[1];
+      return {
+        n, toks: tok(s), caret: n === caretLine,
+        bg: act ? 'rgba(0,120,212,0.06)' : 'transparent',
+        bar: act ? 'var(--acc)' : 'transparent',
+        out: n === caretLine ? '2px solid var(--curl)' : 'none',
+        lnColor: n === caretLine ? 'var(--lna)' : 'var(--ln)',
+        gut: gutPass.includes(n) ? 'pass' : 'blank', gutColor: 'var(--ok)'
+      };
+    });
+    const confirmSrc = ['update "CRendiciones_Conf_Generales"', 'set "ImporteLimite" = 60.00,', '    "Observacion" = \'Ajuste aprobado por finanzas\'', 'where id = 1;'];
+    const confirmLines = confirmSrc.map((s, i) => ({ n: i + 1, toks: tok(s) }));
+
+    // --- Grid
+    const base = [
+      [1,'Límite diario de rendición','2026-09-30 08:42:52.658','45.20',true,null],
+      [2,'Importe máximo por documento','2026-01-12 10:15:03.221','999999999.00',true,'Sin tope operativo'],
+      [3,'Días para rendir anticipo','2026-01-12 10:15:03.221','15.00',true,null],
+      [4,'Tolerancia de redondeo','2026-02-03 16:40:11.004','0.05',true,'Aplica solo en PEN'],
+      [5,'Monto mínimo de caja chica','2026-02-03 16:41:27.930','200.00',true,null],
+      [6,'Límite de movilidad local','2026-03-18 09:02:45.117','120.00',false,'Reemplazado por regla v2'],
+      [7,'Límite de alimentación por día','2026-03-18 09:05:12.480','80.00',true,null],
+      [8,'Límite de hospedaje nacional','2026-04-07 11:30:00.000','350.00',true,null],
+      [9,'Límite de hospedaje extranjero','2026-04-07 11:31:48.662','1200.00',true,'Monto en USD'],
+      [10,'Aprobación automática hasta','2026-05-21 14:12:09.305','500.00',false,null],
+      [11,'Retención de comprobantes (días)','2026-06-02 08:00:00.000','30.00',true,null],
+      [12,'Máximo de rendiciones abiertas','2026-06-15 17:45:33.890','3.00',true,'Por colaborador'],
+      [13,'Tope de reembolso por kilómetro','2026-07-01 10:20:14.552','1.35',true,null],
+      [14,'Límite de gastos de representación','2026-08-11 12:05:47.019','750.00',true,null],
+      [15,'Plazo de observación del aprobador','2026-09-02 09:14:26.773','5.00',false,null]
+    ];
+    const colDefs = [
+      { name:'id', w:80, align:'right', icon:'key', iconColor:'var(--warn)' },
+      { name:'Nombre', w:300, align:'left', iconText:'abc' },
+      { name:'FechaDeCreacion', w:210, align:'left', icon:'calendar', iconColor:'var(--mut)' },
+      { name:'ImporteLimite', w:150, align:'right', iconText:'123' },
+      { name:'Activo', w:80, align:'center', icon:'check', iconColor:'var(--mut)' },
+      { name:'Observacion', w:300, align:'left', iconText:'abc' }
+    ];
+    const cols = colDefs.map((c, i) => ({ name:c.name, w:c.w, icon:c.icon || '', iconColor:c.iconColor || 'var(--mut)', iconText:c.iconText || '', sort: isTable && i === 0 ? 'arrow-up' : '' }));
+    let data = base.map(r => ({ v: r.slice(), state: '' }));
+    const edits = {};
+    if (isTable) {
+      data[1].v[3] = '1500000.00'; edits['1-3'] = 1;
+      data[6].v[5] = 'Revisar con RR.HH.'; edits['6-5'] = 1;
+      data[9].v[4] = true; edits['9-4'] = 1;
+      data[5].state = 'del';
+      data.push({ v: ['16', 'Límite de taxi nocturno', '2026-09-30 09:12:05.000', '60.00', true, null], state: 'ins' });
+    }
+    const focus = ov === 'menus' ? [2, 1] : isTable ? [-1, -1] : [0, 3];
+    const rows = data.map((r, ri) => {
+      const isF = focus[0] === ri;
+      return {
+        num: r.state === 'ins' ? '+' : String(ri + 1),
+        numFg: r.state === 'ins' ? 'var(--ok)' : isF ? 'var(--fg)' : 'var(--mut)',
+        numBg: isF ? 'var(--seli)' : 'transparent',
+        bg: r.state === 'del' ? 'var(--rdel)' : r.state === 'ins' ? 'var(--rins)' : (ri % 2 ? 'var(--alt)' : 'transparent'),
+        deco: r.state === 'del' ? 'line-through' : 'none',
+        cells: colDefs.map((c, ci) => {
+          const v = r.v[ci];
+          const isNull = v === null, isBool = typeof v === 'boolean';
+          const sel = isF && focus[1] === ci;
+          const edited = edits[ri + '-' + ci];
+          return {
+            w: c.w, align: c.align,
+            v: isNull ? 'NULL' : String(v),
+            isBool, isText: !isBool,
+            chk: v === true ? 'check' : 'blank',
+            chkBg: v === true ? 'var(--acc)' : 'var(--inp)',
+            chkBd: v === true ? 'var(--acc)' : 'var(--inpbd)',
+            color: isNull ? 'var(--nul)' : 'var(--fg)',
+            fs: isNull ? 'italic' : 'normal',
+            bg: edited ? 'var(--ced)' : sel ? 'var(--sel)' : 'transparent',
+            out: sel ? '1px solid var(--foc)' : 'none'
+          };
+        })
+      };
+    });
+
+    // --- Palette
+    const q = 'rendic';
+    const pal = [
+      { icon:'table', label:'CRendiciones_Conf_Generales', det:'PayBox Prod › paybox › public', section:'objetos de base de datos' },
+      { icon:'table', label:'ControlesDeRendiciones_Rendiciones', det:'PayBox Prod › paybox › public' },
+      { icon:'table', label:'ControlesDeRendiciones_Cabeceras', det:'PayBox Prod › paybox › public' },
+      { icon:'eye', label:'vw_rendiciones_pendientes', det:'PayBox Prod › paybox › public' },
+      { icon:'symbol-method', label:'fn_cerrar_rendicion(p_id integer)', det:'PayBox Prod › paybox › public' },
+      { icon:'table', label:'Rendiciones_Historial', det:'SGA TEST › sga › public' },
+      { icon:'database', label:'rendiciones_pendientes.sql', det:'DB Explorer\\paybox', section:'archivos', file:true },
+      { icon:'database', label:'rendiciones_por_usuario.sql', det:'DB Explorer\\sga', file:true },
+      { icon:'database', label:'backup_rendiciones_2025.sql', det:'DB Explorer\\exportaciones', file:true }
+    ];
+    const palette = pal.map((p, i) => {
+      const ix = p.label.toLowerCase().indexOf(q);
+      const newSec = p.section && i > 0;
+      return {
+        icon: p.icon, iconColor: p.file ? 'var(--sqlc)' : p.icon === 'table' ? 'var(--tbl)' : p.icon === 'symbol-method' ? '#B180D7' : 'var(--fg)',
+        pre: p.label.slice(0, ix), mt: p.label.slice(ix, ix + q.length), post: p.label.slice(ix + q.length),
+        det: p.det, section: p.section || '',
+        sepColor: newSec ? 'var(--menubd)' : 'transparent', gap: newSec ? 4 : 0,
+        bg: i === 0 ? 'var(--sel)' : 'transparent', out: i === 0 ? '1px solid var(--foc)' : 'none'
+      };
+    });
+
+    // --- Menus
+    const mItems = (arr) => arr.map(a => a === '-' ? { sep:true, item:false } : {
+      sep:false, item:true, label:a.l, key:a.k || '', sub:!!a.s,
+      bg: a.h ? 'var(--acc)' : 'transparent', fg: a.h ? '#FFFFFF' : 'var(--fg)', keyFg: a.h ? '#FFFFFF' : 'var(--mut)'
+    });
+    const menus = [
+      { x:236, y:246, w:240, items: mItems([{ l:'Ver datos', h:true }, { l:'Ver estructura' }, { l:'Nuevo script', s:true }, '-', { l:'Copiar nombre' }, { l:'Copiar nombre calificado' }, '-', { l:'Refrescar', k:'F5' }, { l:'Contar filas' }]) },
+      { x:620, y:654, w:250, items: mItems([{ l:'Copiar', k:'Ctrl+C' }, { l:'Copiar con cabeceras', k:'Ctrl+Shift+C' }, { l:'Copiar como', s:true, h:true }, { l:'Pegar', k:'Ctrl+V' }, '-', { l:'Establecer NULL' }, { l:'Ver valor', k:'Ctrl+Shift+Enter' }, '-', { l:'Filtrar por este valor' }, { l:'Excluir este valor' }, '-', { l:'Formato de columna', s:true }, { l:'Ocultar columna' }, { l:'Ajustar ancho' }]) },
+      { x:866, y:702, w:170, items: mItems([{ l:'CSV' }, { l:'TSV' }, { l:'JSON', h:false }, { l:'INSERT' }, { l:'IN (…) lista' }]) }
+    ];
+
+    const connActive = !isFiles;
+    return {
+      vars,
+      screenLabel: [theme, view, mode, ov].join(' · '),
+      isConn: !isFiles, isFiles, isScript: !isTable, isTable,
+      actConnBar: connActive ? 'var(--foc)' : 'transparent', actConnFg: connActive ? 'var(--fg)' : 'var(--mut)',
+      actFilesBar: !connActive ? 'var(--foc)' : 'transparent', actFilesFg: !connActive ? 'var(--fg)' : 'var(--mut)',
+      tree, tabs, lines, cols, rows, palette, menus, confirmLines,
+      whereToks: tok('"FechaDeCreacion" >= \'2026-01-01\''),
+      orderToks: tok('id asc'),
+      resultsH: isTable ? 'auto' : '470px', resultsFlex: isTable ? '1' : 'none',
+      footRows: isTable ? '16 filas (1 nueva)' : '15 filas',
+      footMs: isTable ? '9 ms' : '12 ms',
+      footTime: isTable ? '09:12:05' : '08:47:07',
+      footRight: isTable ? '5 cambios pendientes' : ov === 'menus' ? '' : 'Suma: 45.20 · Prom.: 45.20 · Mín.: 45.20 · Máx.: 45.20',
+      footRightColor: isTable ? 'var(--warn)' : 'var(--mut)',
+      statusPos: isTable ? 'Fila 2, Col 4' : isFiles ? 'Ln 10, Col 13' : ov === 'confirmacion' ? 'Ln 16, Col 14' : 'Ln 11, Col 45',
+      ovConn: ov === 'conexion', ovPalette: ov === 'paleta', ovMenus: ov === 'menus', ovConfirm: ov === 'confirmacion'
+    };
+  }
+}
+</script>
+</body>
+</html>

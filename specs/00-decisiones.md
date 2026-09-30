@@ -42,8 +42,7 @@ Formato: marca con `[x]` la opción elegida.
 - [ ] Sí en v1 (librería `ssh2`).
 
 ### D9. Explorador de archivos: raíz
-- [ ] ✅ **Una carpeta de trabajo** elegida por el usuario (como "Abrir carpeta" en VS Code), recordada entre sesiones.
-- [ ] Varias carpetas simultáneas (multi-root).
+- [x] **Un único "espacio de trabajo"**: la carpeta donde se crean los scripts es la misma que muestra la vista Archivos. Por defecto una carpeta del usuario; se puede cambiar y se recuerda (definido por el usuario, ver `11`).
 
 ### D10. Protección de conexiones de producción
 - [ ] ✅ **Etiqueta de entorno por conexión** (Local / Desarrollo / QA / Producción) con color. En Producción: confirmación antes de ejecutar sentencias que modifican datos o estructura, y opción "solo lectura".
@@ -66,3 +65,16 @@ Formato: marca con `[x]` la opción elegida.
 ### D14. Driver de SQLite
 - [ ] ✅ **`better-sqlite3`** (el más rápido y estable; nativo, se recompila para Electron con `electron-rebuild`). Corre en el proceso de BD, no en el principal.
 - [ ] `node:sqlite` nativo de Node (sin compilación, API aún experimental según versión de Electron).
+
+### D15. Guardado automático por defecto
+- [ ] ✅ **Activado** (se puede desactivar en Preferencias). Guarda 5 s después de dejar de escribir, al ejecutar y al cerrar el programa.
+- [ ] Desactivado por defecto.
+
+### D16. Dónde se crean los nuevos scripts dentro del espacio de trabajo
+- [ ] ✅ **En la raíz del espacio de trabajo** (`<espacio>\Script-1.sql`).
+- [ ] En una subcarpeta `Scripts\` (como DBeaver), dejando la raíz para otros archivos.
+- [ ] En subcarpetas por conexión (`<espacio>\PayBox Prod\Script-1.sql`).
+
+### D17. Espacio de trabajo por defecto
+- [ ] ✅ **`Documentos\DB Explorer`** (visible y fácil de respaldar).
+- [ ] Dentro de los datos de la aplicación (`%APPDATA%\DB Explorer\workspace`), como DBeaver (oculto al usuario).
