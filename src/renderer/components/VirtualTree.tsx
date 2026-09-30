@@ -23,7 +23,7 @@ export interface VirtualTreeProps<T extends TreeRow> {
   renderRow: (row: T) => ReactNode;
   ariaLabel: string;
   rowHeight?: number;
-  /** Sangría por nivel, en px. */
+  /** Sangría por nivel, en px. Por defecto 18 (chevron 16 + margen 2): el chevron de un hijo queda bajo el ícono del padre. */
   indent?: number;
   /** Relleno izquierdo del nivel 0, en px. */
   basePadding?: number;
@@ -58,7 +58,7 @@ export function VirtualTree<T extends TreeRow>({
   renderRow,
   ariaLabel,
   rowHeight = 22,
-  indent = 8,
+  indent = 18,
   basePadding = 8,
   focusContext = 'treeFocus',
   toggleOnClick = true,

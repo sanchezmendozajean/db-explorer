@@ -571,7 +571,6 @@ export function ConnectionsView(): React.JSX.Element {
                 if (row) void toggleNode(row.node, open);
               }}
               toggleOnClick={false}
-              indent={10}
               basePadding={6}
               onOpen={(row) => {
                 if (row.expandable) void toggleNode(row.node, !row.expanded);

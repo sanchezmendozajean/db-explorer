@@ -128,7 +128,6 @@ export function FilesView(): React.JSX.Element {
             selectedId={selected}
             onSelect={setSelected}
             onToggle={toggle}
-            indent={12}
             basePadding={12}
             renderRow={(row) => {
               const n: SampleTreeNode = row.node;
