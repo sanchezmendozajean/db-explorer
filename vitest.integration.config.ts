@@ -3,7 +3,8 @@ import { defineConfig } from 'vitest/config';
 
 /**
  * Pruebas de integración contra los motores levantados con
- * `docker compose -f test/integration/docker-compose.yml up -d`.
+ * `docker compose -f test/integration/docker-compose
+ * o, si no hay Docker, contra un clúster temporal creado con los binarios locales de PostgreSQL.yml up -d`.
  */
 export default defineConfig({
   resolve: { alias: { '@shared': resolve('src/shared') } },
@@ -11,6 +12,8 @@ export default defineConfig({
     include: ['test/integration/**/*.test.ts'],
     environment: 'node',
     testTimeout: 60_000,
-    passWithNoTests: true,
+    hookTimeout: 120_000,
+    globalSetup: ['test/integration/global-setup.ts'],
+    fileParallelism: false,
   },
 });
