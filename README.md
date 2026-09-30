@@ -7,7 +7,7 @@ Las especificaciones están en [`specs/`](specs/README.md) y el registro de deci
 ## Requisitos
 
 - Node.js 22.12 o superior.
-- Docker (solo para las pruebas de integración).
+- Para las pruebas de integración y e2e: PostgreSQL instalado localmente (se crea un clúster temporal) o Docker.
 
 ## Scripts
 
@@ -23,7 +23,11 @@ Las especificaciones están en [`specs/`](specs/README.md) y el registro de deci
 | `npm run format`           | Formatea con Prettier.                                                        |
 | `npm run package`          | Genera el instalador de Windows (NSIS + portable) en `dist/`.                 |
 
-### Pruebas de integración
+### Pruebas de integración y e2e
+
+Necesitan un PostgreSQL de pruebas. Si hay uno escuchando con los datos de `test/integration/.env` (o `.env.example`), se usa; si no, se crea un clúster temporal con los binarios de PostgreSQL instalados (`C:\Program Files\PostgreSQL\<versión>\bin`, o la variable `PG_BIN`) y se borra al terminar.
+
+Con Docker:
 
 ```sh
 cp test/integration/.env.example test/integration/.env

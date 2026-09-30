@@ -93,3 +93,44 @@ Definiciones que faltaban (se eligió lo más simple, compatible con Excel y DBe
 - **Copiar tabla**: todas las filas *cargadas* y las columnas visibles, respetando orden y filtro rápido; si el resultado está truncado se avisa con la opción "Cargar todo y copiar".
 - `NULL` se copia como cadena vacía (`results.copy.nullAs`); una sola celda se copia sin salto de línea final; confirmación si la selección supera 100 000 celdas.
 - En M3 el menú Exportar tendrá habilitadas solo las dos opciones de copiar tabla; CSV/JSON/XLSX/INSERT/Markdown siguen en M7.
+
+---
+
+## M2 — Conexiones + PostgreSQL + árbol (2026-09-30)
+
+### Estado
+Completado. Criterios de aceptación verificados:
+
+| Criterio | Resultado |
+|---|---|
+| Crear, editar, duplicar y borrar conexiones | ✅ e2e `connections.spec.ts` |
+| Conectar a PostgreSQL | ✅ contra PostgreSQL 18.6 real (ver "Servidor de pruebas") |
+| Navegar bases → esquemas → tablas → columnas | ✅ e2e e integración (también índices, vistas, funciones, secuencias) |
+| La contraseña no aparece en texto plano en `userData` | ✅ e2e: recorre todos los archivos de `userData` buscando la contraseña en UTF-8 y UTF-16 |
+| Pruebas | ✅ 58 unitarias, 12 de integración, 24 e2e; lint y tipos limpios |
+
+### Qué se construyó
+- **Modelo de conexión** de `08` con zod (`shared/connection.ts`) y tipos de metadatos de `03` (`shared/metadata.ts`).
+- **`connections.json`**: validado por entrada (las inválidas o duplicadas se omiten con aviso al iniciar), copia `.bak` antes de cada escritura, escritura atómica. Un archivo ilegible se aparta como `connections.json.invalido-<fecha>` en lugar de sobrescribirse.
+- **`secrets.bin`**: contraseñas cifradas con `safeStorage` (DPAPI). El renderer solo recibe la lista de ids con contraseña guardada; main descifra y envía la contraseña directo al db-host. Sin "Guardar contraseña", se pide al conectar y solo vive en la memoria del db-host. Si el cifrado no está disponible, el diálogo lo avisa y no guarda contraseñas.
+- **Driver PostgreSQL** (`pg`) con metadatos desde `pg_catalog`, una conexión de metadatos por base (Postgres no permite `USE`), `numeric`/`int8`/fechas como texto crudo, SSL (`require`, `verify-ca`, `verify-full` con CA) y `SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY` en conexiones de solo lectura.
+- **Árbol genérico por `capabilities`** (`db-host/tree.ts`): conexión → bases → esquemas (los de sistema agrupados en "Esquemas del sistema") → carpetas con conteo (Tablas, Vistas, Vistas materializadas, Funciones, Procedimientos, Secuencias) → objetos → columnas (tipo, `NOT NULL`, llave en PK) e Índices. Carga perezosa con spinner; errores de carga en el nodo con tooltip.
+- **Diálogo de conexión** (`04` §12): tarjetas de motor, General (nombre, carpeta, entorno con punto de color, color personalizado), Servidor o Archivo (SQLite, con "Examinar…"), SSL/TLS y Avanzado (solo lectura, confirmar escrituras —activado automáticamente en Producción—, timeouts, parámetros extra, objetos del sistema). "Probar conexión" con resultado en línea. Al editar, la contraseña guardada se muestra como `••••••••` y solo se envía si se cambia.
+- **Carpetas de conexiones**, menús contextuales de carpeta, conexión y tabla, teclado (Enter/doble clic conecta y expande, F2 renombra, Supr elimina con confirmación, F4 edita, F5 refresca), filtro sobre los nodos cargados, filtro por entorno y **arrastrar para reordenar** (conexión sobre carpeta = entra; sobre otra conexión = se ubica antes; carpeta sobre carpeta = reordena).
+- **Copiar nombre calificado** con entrecomillado por dialecto (`shared/sql-quote.ts`, reutilizable en M6).
+
+### Decisiones
+- **Servidor de pruebas sin Docker**: `test/integration/pg-server.ts` usa el PostgreSQL de `.env` si responde (p. ej. docker-compose) y, si no, crea un **clúster temporal** con los binarios locales (`C:\Program Files\PostgreSQL\<versión>\bin` o `PG_BIN`) en el puerto 55432 con las credenciales de `.env.example`; lo detiene y borra al terminar. No toca el servicio PostgreSQL instalado. Lo usan tanto Vitest (integración) como Playwright (e2e).
+- **Interfaz `DbDriver` parcial**: en M2 solo conexión y metadatos (más `countObjects` para los conteos de carpetas). Ejecución, sesiones y transacciones se agregan en M3.
+- **Solo PostgreSQL conecta**: las conexiones de MariaDB, SQLite y SQL Server se pueden crear y guardar, pero al conectar o probar muestran "El motor … todavía no está disponible" hasta M4.
+- **Contraseña requerida**: si no hay contraseña guardada (o "Guardar contraseña" está desactivado), main responde `password-required` y el renderer abre el diálogo de contraseña, que ofrece guardarla. Tras conectar, el nodo se expande.
+- **Renombrar** conexiones y carpetas con un diálogo pequeño en lugar de un input dentro del nodo (más simple; el renombrado en línea queda para el árbol de archivos de M5).
+- **"Mostrar objetos del sistema"** es por conexión (en Avanzado, como en `08`); del menú "…" de la cabecera se quitó para no duplicarlo. Ahí queda "Filtrar por entorno".
+- **Editar una conexión la desconecta**, para que el siguiente uso tome la nueva configuración.
+- **Clic simple en el árbol de conexiones solo selecciona**; se expande con el chevron, las flechas, Enter o doble clic, para que conectar sea siempre explícito.
+- Acciones que dependen de hitos posteriores aparecen deshabilitadas en los menús: Nuevo script (M3), Ver datos / Ver estructura (M7), Contar filas (M3).
+- `pg_ctl` en Windows: `pg_ctl start` deja al servidor heredando los pipes; se lanza con `stdio: 'ignore'` para no bloquear.
+
+### Pendientes / avisos
+- La barra de estado, las pestañas y el editor siguen con datos de ejemplo (conexión "PayBox Prod" falsa) hasta M3, cuando las pestañas se asocien a conexiones reales.
+- Ctrl+P sigue buscando en objetos de ejemplo; la búsqueda real en la caché de metadatos llega en M6.
