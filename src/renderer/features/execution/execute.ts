@@ -161,6 +161,14 @@ export function effectiveLimit(tabId: string): number | null {
   return limit === 'all' ? null : limit;
 }
 
+/** "Re-ejecutar": vuelve a enviar las sentencias de la última ejecución de la pestaña. */
+export async function rerun(tabId: string): Promise<void> {
+  const tab = useWorkbenchStore.getState().tabs.find((t) => t.id === tabId);
+  const last = tabResults(tabId).lastRun;
+  if (!tab || last.length === 0 || isRunning(tabId) || !connectionById(tab.connectionId)) return;
+  await runStatements(tab, last, {});
+}
+
 export async function cancelExecution(tabId: string | undefined = activeTab()?.id): Promise<void> {
   if (!tabId) return;
   const running = tabResults(tabId).running;

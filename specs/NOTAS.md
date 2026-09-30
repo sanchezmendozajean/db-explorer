@@ -132,9 +132,91 @@ Completado. Criterios de aceptación verificados:
 - `pg_ctl` en Windows: `pg_ctl start` deja al servidor heredando los pipes; se lanza con `stdio: 'ignore'` para no bloquear.
 
 ### Pendientes / avisos
-- La barra de estado, las pestañas y el editor siguen con datos de ejemplo (conexión "PayBox Prod" falsa) hasta M3, cuando las pestañas se asocien a conexiones reales.
+- ~~La barra de estado, las pestañas y el editor siguen con datos de ejemplo hasta M3.~~ Resuelto en M3.
 - Ctrl+P sigue buscando en objetos de ejemplo; la búsqueda real en la caché de metadatos llega en M6.
 
 ## Ajuste visual (2026-09-30): color de entorno en la pestaña
 
 - A pedido del usuario, la línea de color de entorno de la pestaña del editor pasa del borde izquierdo al **borde superior** (2 px). En la pestaña activa con conexión reemplaza al borde de foco de 1 px; sin conexión se mantiene el borde de foco. Actualizado en `specs/04` (§ colores de entorno y § 8).
+
+---
+
+## M3 — Editor + ejecución + grilla (2026-09-30)
+
+### Estado
+Completado. Criterios de aceptación verificados:
+
+| Criterio | Resultado |
+|---|---|
+| Escribir y ejecutar consultas contra Postgres con los atajos de `05` | ✅ e2e `editor.spec.ts` + checklist de atajos (abajo) |
+| `SELECT` de 200 000 filas no congela la UI | ✅ e2e (sin límite; la UI sigue pintando cuadros mientras llegan los lotes) e integración (lotes de ≤ 500 filas) |
+| Cancelar `SELECT pg_sleep(30)` | ✅ e2e (Ctrl+Shift+Q, menos de 10 s) e integración (la sesión sigue usable) |
+| `numeric` y `timestamp` sin pérdida ni cambio de zona | ✅ integración (valores crudos) y e2e (copia al portapapeles exacta) |
+| `11` §6 salvo el cambio de espacio de trabajo | ✅ e2e: Ctrl+N crea `Script-N.sql` y aparece en Archivos; guardado a los 5 s y al ejecutar; cerrar la ventana antes de 5 s guarda; al reabrir se restauran pestaña, cursor y conexión; un cambio externo no se pisa; cerrar un script vacío lo elimina |
+| Dos columnas no contiguas + Ctrl+Shift+C → solo esas columnas con cabeceras | ✅ e2e |
+| "Copiar tabla (con cabeceras)" copia todas las filas con una sola celda seleccionada | ✅ e2e |
+| Confirmaciones de Producción y `UPDATE/DELETE` sin `WHERE` | ✅ e2e |
+| Pruebas | ✅ 104 unitarias, 26 de integración, 40 e2e; lint, tipos y Prettier limpios |
+
+### Qué se construyó
+- **Separador de sentencias** (`src/shared/splitter`): PostgreSQL completo (cadenas, `E'…'`, identificadores, comentarios anidados, *dollar quoting*, `BEGIN ATOMIC … END`), comillas de los demás dialectos, sentencia bajo el cursor y clasificación de escrituras / `UPDATE`-`DELETE` sin `WHERE`.
+- **Ejecución en el db-host**: una sesión (conexión física) por pestaña, `pg-cursor` con lotes de 500 filas, límite, "Cargar más" / "Cargar todo", `NOTICE`, errores con posición, detalle y sugerencia, cancelación con `pg_cancel_backend`, `statement_timeout` según el timeout de consulta y esquema por `search_path`.
+- **Espacio de trabajo y `settings.json`** en main: `Documentos\DB Explorer` por defecto, `Script-N.sql`, guardado atómico con BOM y fin de línea, detección de cambios externos por `mtime`, estado de pestañas en `userData/workspaces/<sha1>.json` y cierre coordinado con el renderer.
+- **Monaco** local (textos en español, worker empaquetado, temas `db-dark` / `db-light` con el fondo de `bg.editor`), un modelo por pestaña con viewState, sentencia activa decorada, marcas ✓/✗ en el gutter y error subrayado en la posición que informa el motor.
+- **Grilla Glide** con selección de celdas, filas y columnas (Ctrl/Shift+clic, Shift+Espacio, Ctrl+Espacio, Ctrl+A), copia TSV compatible con Excel, "Copiar tabla", orden en cliente (botón ▲▼ de la cabecera), filtro rápido, ocultar columnas, visor de valor (Ctrl+Shift+Enter), suma/promedio/mín./máx. de la selección y formatos globales básicos de `06`.
+- **Barra del editor** con conexión, base y esquema (listas filtrables, Ctrl+9 / Ctrl+0), cronómetro y barra de progreso; **status bar** real (conexión, versión, base · esquema, ejecución, Ln/Col, Autoguardado conmutable, fin de línea, lenguaje).
+- Pestaña **Mensajes** (hora, filas, duración, NOTICE, errores con "Ir a la línea"), **Re-ejecutar**, fijar resultados y "Ejecutar en nueva pestaña de resultado".
+- Árbol: Nuevo script (menú y Ctrl+]), Nuevo script ▸ SELECT/INSERT/UPDATE/DELETE, clic central o Ctrl+Enter en una tabla, Contar filas y arrastrar tablas o columnas al editor.
+- Vista **Archivos** y **Ctrl+P** con los archivos reales del espacio de trabajo (solo listar y abrir).
+
+### Decisiones
+- **Glide Data Grid `6.0.4-alpha24`** (versión fija): la estable 6.0.3 declara compatibilidad solo hasta React 18; la beta declara React 19.
+- **`dompurify` forzado a ≥ 3.4.16** con `overrides`: Monaco 0.57 trae una versión con un aviso de seguridad.
+- **Una sola fuente de íconos**: Monaco declara su propia fuente `codicon`; un alias de Vite reemplaza su `codicon.css` por uno vacío y Monaco usa la de `@vscode/codicons`.
+- **Monaco se carga de forma diferida** (chunk aparte) con solo los lenguajes `sql`, `pgsql` y `mysql`.
+- **Valores crudos**: en las sesiones de editor todo llega como texto del servidor salvo booleanos y enteros de 32 bits (`03` decía JSON como objeto; como texto no se pierde nada y el visor lo muestra con sangría). Actualizado en `03`.
+- **Fin de la ejecución por evento**: la respuesta de `query:execute` y los eventos `query:event` viajan por canales IPC distintos y la respuesta puede llegar antes que los últimos lotes; el db-host emite `execution-done` / `fetch-done` y el renderer termina con ese evento.
+- **Cursor abierto solo para el último resultado** de una ejecución: para ejecutar la sentencia siguiente hay que cerrar el cursor anterior, así que un resultado truncado en medio de un script no tiene "Cargar más" (se re-ejecuta).
+- **"Cargar todo"** trae hasta 100 000 filas y, si el resultado sigue, pregunta antes de traer el resto (actualizado en `06`).
+- **El splitter vive en `src/shared/splitter`** (`05` es más específico que la estructura de `02`, que se actualizó).
+- **Canales del espacio de trabajo con prefijo `fs:`** (`fs:open-workspace`, `fs:new-script`…), porque `02` fija los dominios `conn/meta/query/fs/settings/app`.
+- **`settings.json`** se lee al iniciar y se modifica conservando comentarios (`jsonc-parser`); en M3 solo lo cambia la app (conmutar Autoguardado). La UI de Preferencias es de M8 y la edición con esquema, de M6.
+- **Espacio configurado inexistente**: se usa el predeterminado sin preguntar; el modal "No se encuentra el espacio de trabajo" es de M5.
+- **Scripts nuevos con CRLF** (Windows primero, D12); los existentes conservan su fin de línea y BOM.
+- **Confirmación de Producción**: usa `confirmWrites` de la conexión (activado por defecto en Producción); "No volver a preguntar en esta pestaña" dura hasta cerrar la pestaña. En conexiones de solo lectura las escrituras se bloquean en el cliente con un aviso.
+- **El aviso de cambio externo no se oculta solo** (pide una decisión); un Ctrl+S explícito lo vuelve a mostrar si se cerró.
+- **El foco no se roba**: al cambiar de pestaña el editor toma el foco solo si estaba en el grupo de editor; Ctrl+N y abrir desde Archivos lo enfocan explícitamente. Ocultar o maximizar los resultados no vuelve a crear el editor.
+- **Acordes dentro de Monaco**: con el foco en el editor, Monaco resuelve los acordes (los suyos, como Ctrl+K Ctrl+0, y los de la app, que también se registran en Monaco). Ctrl+K Ctrl+U / Ctrl+K Ctrl+L = mayúsculas / minúsculas (`05`).
+- **Alt+F4** lo resuelve Windows enviando `close` a la ventana; la prueba e2e simula ese evento.
+- En Chromium reciente `scrollIntoView` devuelve una promesa: los efectos de React que lo llaman usan llaves (un efecto solo puede devolver su función de limpieza).
+
+### Pendientes / avisos
+- **Explicar plan** (Ctrl+Alt+E) está en `05`, pero no en ningún hito de `09`: el botón muestra "todavía no disponible". Falta decidir en qué hito se agrega.
+- Vistas **Texto** y **Registro** de la barra de resultados (`04` §10): tampoco tienen hito asignado; se muestran como "todavía no disponible".
+- **Comparar** (diff) en el aviso de cambio externo y **renombrar con F2** la pestaña: M5, junto con el watcher y las operaciones de archivos (por ahora Sobrescribir / Recargar).
+- Formateo SQL (Shift+Alt+F), autocompletado, hover y F12: M6. Modo de transacción manual, Copiar como, Exportar a archivo, formato por columna y filtrar por valor: M7.
+- La pestaña de objeto sigue con datos de ejemplo (M7); por eso se conserva la grilla de maqueta `ResultsGrid.tsx`.
+- El chunk de Monaco pesa ~7,8 MB sin minificar; se revisará al medir el arranque (M8).
+
+### Checklist manual de atajos (`05`)
+Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarlos a mano con `npm run dev`.
+
+| Atajo | Acción | Estado |
+|---|---|---|
+| Ctrl+Enter | Ejecutar la sentencia bajo el cursor o la selección | ✅ e2e |
+| Alt+X, F5 | Ejecutar el script (o la selección como script) | ✅ e2e (Alt+X) · F5 a mano |
+| Ctrl+Alt+Shift+Enter | Ejecutar en nueva pestaña de resultado | a mano |
+| Ctrl+Shift+Q, Alt+Pausa | Cancelar | ✅ e2e (Ctrl+Shift+Q) · Alt+Pausa a mano |
+| Ctrl+Alt+Enter | Insertar línea debajo | ✅ e2e |
+| Ctrl+K Ctrl+U / Ctrl+K Ctrl+L | Mayúsculas / minúsculas | ✅ e2e |
+| Ctrl+/ | Alternar comentario | ✅ e2e |
+| Ctrl+D, Ctrl+Shift+L, Alt+↑/↓, Shift+Alt+↑/↓, Ctrl+Shift+K, Ctrl+F/H, Ctrl+G, Ctrl+Espacio, Ctrl+K Ctrl+0 / Ctrl+K Ctrl+J | Propios de Monaco | a mano |
+| Ctrl+S / Ctrl+K S | Guardar / Guardar todo | a mano |
+| Ctrl+N | Nuevo script (conexión del árbol o de la pestaña) | ✅ e2e |
+| Ctrl+W, Ctrl+Shift+T | Cerrar / reabrir pestaña | ✅ e2e |
+| Ctrl+Tab, Ctrl+PgDn/PgUp, Alt+1…9 | Cambiar de pestaña | ✅ e2e (Alt+1) · resto a mano |
+| Ctrl+9 / Ctrl+0 | Cambiar conexión / base-esquema | ✅ e2e |
+| Ctrl+Shift+P, F1, Ctrl+P | Paletas (incluye acciones de Monaco) | ✅ e2e (Ctrl+Shift+P, Ctrl+P) · F1 a mano |
+| Ctrl+C / Ctrl+Shift+C en la grilla | Copiar selección / con cabeceras | ✅ e2e |
+| Ctrl+Shift+Enter en la grilla | Visor de valor | a mano |
+| Ctrl+B, Ctrl+J, Ctrl+Shift+J, Ctrl+1, Ctrl+2 | Distribución y foco | ✅ e2e (Ctrl+B, Ctrl+J) · resto a mano |

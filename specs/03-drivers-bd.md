@@ -73,7 +73,7 @@ interface ResultSink {
 - Cancelación: `pg_cancel_backend(pid)` desde la conexión de metadatos.
 - Filas grandes: usar `pg-cursor` o `pg-query-stream` para leer en lotes y respetar el límite.
 - `NOTICE` → `sink.message`.
-- Tipos: `numeric` como string (no perder precisión), `int8` como string o BigInt, `json/jsonb` como objeto, `timestamp` sin conversión de zona (configurar `types.setTypeParser` para devolver texto crudo y formatear en UI).
+- Tipos: en las sesiones de editor todo valor llega como **texto crudo del servidor** (`numeric`, `int8`, `float`, fechas, `json/jsonb`, `bytea`, arreglos…), salvo `boolean` y enteros de 32 bits; el formateo es solo de presentación en la UI (ver `NOTAS.md`, M3).
 - SSL: `require`, `verify-ca`, `verify-full` con CA opcional (RDS).
 
 ### MariaDB / MySQL — `mysql2`

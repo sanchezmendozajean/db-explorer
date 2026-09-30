@@ -20,7 +20,7 @@ interface ResultSetState {
 
 ### Carga
 - Límite por defecto `results.maxRows = 500`. "Cargar más" pide el siguiente lote a la misma sesión (cursor abierto si el driver lo permite; si no, re-ejecuta con OFFSET en pestaña de objeto).
-- "Cargar todo" pide confirmación si se superan 100 000 filas.
+- "Cargar todo" carga hasta 100 000 filas y, si el resultado sigue, pide confirmación antes de traer el resto.
 
 ## Formatos de datos (el punto débil de DBeaver)
 

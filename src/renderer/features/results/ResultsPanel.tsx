@@ -15,7 +15,7 @@ import { showToast } from '../../stores/toast-store';
 import { useUiStore } from '../../stores/ui-store';
 import type { EditorTab } from '../../stores/workbench-store';
 import { askChoice } from '../dialogs/ask';
-import { loadMore, revealPosition } from '../execution/execute';
+import { loadMore, rerun, revealPosition } from '../execution/execute';
 import type { CopySelection, CopySource } from './copy';
 import { selectedCellCount, selectionToTsv, tableToTsv } from './copy';
 import { separators } from './format';
@@ -233,6 +233,8 @@ function ResultsToolbar({
         onChange={(e) => setFilter(e.target.value)}
         onKeyDown={(e) => e.key === 'Escape' && setFilter('')}
       />
+      <IconButton icon="refresh" label={r.rerun} onClick={() => void rerun(tab.id)} />
+      <span className="toolbar-separator" />
       <Dropdown
         className="toolbar-btn"
         testId="export-menu"
@@ -251,6 +253,28 @@ function ResultsToolbar({
         <Codicon name="export" size={14} />
         <span>{r.export}</span>
       </Dropdown>
+      {/* Vistas Texto y Registro: pendientes (specs/04 §10). */}
+      <div className="segmented" role="radiogroup">
+        {(
+          [
+            ['grid', 'list-flat', r.viewGrid],
+            ['text', 'json', r.viewText],
+            ['record', 'list-unordered', r.viewRecord],
+          ] as const
+        ).map(([id, icon, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={id === 'grid'}
+            className={id === 'grid' ? 'is-active' : ''}
+            onClick={() => id !== 'grid' && notAvailable(label)}
+          >
+            <Codicon name={icon} size={14} />
+            {label}
+          </button>
+        ))}
+      </div>
       <div className="toolbar-spacer" />
       <label className="results-limit">
         <span>{r.limit}</span>

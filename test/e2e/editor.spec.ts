@@ -258,3 +258,45 @@ test('en Producción confirma antes de ejecutar escrituras y tiñe la status bar
   await expect(page.getByTestId('messages')).toContainText('CREATE');
   await shot('m3-produccion');
 });
+
+/** Texto visible del editor (Monaco usa espacios duros). */
+async function editorText(): Promise<string> {
+  const text = await editor().locator('.view-lines').innerText();
+  return text.replace(/\u00a0/g, ' ');
+}
+
+test('atajos del editor: acordes de Monaco, comentar, insertar línea y selectores', async () => {
+  await typeInEditor('select a');
+  await page.keyboard.press('Control+A');
+  await page.keyboard.press('Control+K');
+  await page.keyboard.press('Control+U');
+  await expect.poll(editorText).toBe('SELECT A');
+  await page.keyboard.press('Control+K');
+  await page.keyboard.press('Control+L');
+  await expect.poll(editorText).toBe('select a');
+  await page.keyboard.press('Control+/');
+  await expect.poll(editorText).toBe('-- select a');
+  // Ctrl+Enter ejecuta; "insertar línea debajo" queda en Ctrl+Alt+Enter.
+  await page.keyboard.press('Control+Alt+Enter');
+  await expect(editor().locator('.view-line')).toHaveCount(2);
+
+  await page.keyboard.press('Control+9');
+  await expect(page.getByTestId('quick-input')).toHaveAttribute(
+    'placeholder',
+    'Elige la conexión de la pestaña',
+  );
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Control+0');
+  await expect(page.getByTestId('quick-input')).toHaveAttribute(
+    'placeholder',
+    'Elige el esquema o la base de datos',
+  );
+  await expect(page.locator('.quick-input-item').first()).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  // Las acciones de Monaco aparecen en la paleta con su id reasignable.
+  await page.keyboard.press('Control+Shift+P');
+  await page.getByTestId('quick-input').fill('>editor: mayúsculas');
+  await expect(page.locator('.quick-input-item').first()).toBeVisible();
+  await page.keyboard.press('Escape');
+});

@@ -61,7 +61,6 @@ db-explorer/
       drivers/
         postgres/ mariadb/ sqlite/ sqlserver/
       pool.ts
-      splitter/      # separador de sentencias por dialecto
     preload/
     renderer/
       app/           # layout, title bar, activity bar, status bar
@@ -70,7 +69,7 @@ db-explorer/
       components/    # UI genérica estilo VS Code (botones, inputs, menús, diálogos)
       theme/         # tokens de color dark/light
       stores/
-    shared/          # tipos, contrato IPC, esquemas zod
+    shared/          # tipos, contrato IPC, esquemas zod, splitter/ (separador de sentencias, ver 05)
   test/
     integration/     # docker-compose.yml con postgres, mariadb, mssql
     e2e/

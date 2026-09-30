@@ -71,6 +71,8 @@ export interface TabResults {
   limit: number | 'all' | null;
   /** Estado de cada sentencia de la última ejecución, para el gutter del editor. */
   outcomes: { line: number; ok: boolean }[];
+  /** Sentencias de la última ejecución ("Re-ejecutar"). */
+  lastRun: StatementMeta[];
 }
 
 interface ResultsStore {
@@ -89,6 +91,7 @@ export const EMPTY_TAB_RESULTS: TabResults = {
   activeView: 'messages',
   limit: null,
   outcomes: [],
+  lastRun: [],
 };
 
 export const useResultsStore = create<ResultsStore>((set) => ({
@@ -164,6 +167,7 @@ export function beginExecution(
     results: options.keepPrevious ? current.results : current.results.filter((r) => r.pinned),
     messages: options.keepPrevious ? current.messages : [],
     outcomes: [],
+    lastRun: statements,
   });
 }
 
