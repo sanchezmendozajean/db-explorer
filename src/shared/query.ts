@@ -94,7 +94,15 @@ export type QueryEvent =
       cancelled: boolean;
       durationMs: number;
     }
-  | { type: 'message'; queryId: string; index: number; severity: MessageSeverity; text: string };
+  | { type: 'message'; queryId: string; index: number; severity: MessageSeverity; text: string }
+  /**
+   * Último evento de una ejecución. El renderer termina la ejecución con este
+   * evento y no con la respuesta de `query:execute`, que viaja por otro canal
+   * IPC y puede llegar antes que los últimos lotes de filas.
+   */
+  | { type: 'execution-done'; queryId: string; summary: ExecuteSummary }
+  /** Último evento de un "Cargar más" (mismo motivo). */
+  | { type: 'fetch-done'; queryId: string; index: number; result: FetchMoreResult | null; error?: string };
 
 export interface ExecuteSummary {
   queryId: string;

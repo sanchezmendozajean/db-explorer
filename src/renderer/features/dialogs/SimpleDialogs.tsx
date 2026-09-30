@@ -122,9 +122,12 @@ export function PromptDialog({
 /** Pide la contraseña al conectar (conexiones sin contraseña guardada). */
 export function PasswordDialog({
   connectionId,
+  onResult,
   onClose,
 }: {
   connectionId: string;
+  /** Se llama al terminar: true si quedó conectada. */
+  onResult?: (connected: boolean) => void;
   onClose: () => void;
 }): React.JSX.Element | null {
   const encryptionAvailable = useConnectionsStore((s) => s.encryptionAvailable);
@@ -137,22 +140,28 @@ export function PasswordDialog({
 
   const submit = async (): Promise<void> => {
     onClose();
+    let connected = false;
     if (save && encryptionAvailable) {
       const r = await useConnectionsStore.getState().save({ ...conn, savePassword: true }, { password });
-      if (r.ok) await connect(conn.id);
+      if (r.ok) connected = await connect(conn.id);
     } else {
-      await connect(conn.id, password);
+      connected = await connect(conn.id, password);
     }
+    onResult?.(connected);
+  };
+  const cancel = (): void => {
+    onClose();
+    onResult?.(false);
   };
 
   return (
     <Modal
       title={es.connections.passwordTitle(conn.name)}
-      onClose={onClose}
+      onClose={cancel}
       width={420}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={cancel}>
             {es.dialogs.cancel}
           </Button>
           <Button onClick={() => void submit()}>{es.connections.connect}</Button>

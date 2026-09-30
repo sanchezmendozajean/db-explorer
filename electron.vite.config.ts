@@ -73,7 +73,15 @@ export default defineConfig({
   renderer: {
     root: resolve('src/renderer'),
     resolve: {
-      alias: { ...sharedAlias, '@renderer': resolve('src/renderer') },
+      alias: [
+        { find: '@shared', replacement: resolve('src/shared') },
+        { find: '@renderer', replacement: resolve('src/renderer') },
+        // Monaco declara su propia fuente "codicon"; se usa la de la app para no tener dos versiones.
+        {
+          find: /^.*\/codicons\/codicon\/codicon\.css$/,
+          replacement: resolve('src/renderer/features/editor/monaco/empty.css'),
+        },
+      ],
     },
     plugins: [react(), cspPlugin()],
     define: { __APP_VERSION__: JSON.stringify(appVersion) },

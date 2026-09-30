@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, stat, unlink, writeFile } from 'node:fs/promises';
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import type { ScriptFile, WorkspaceInfo, WorkspaceState } from '@shared/workspace';
+import type { FileNode, ScriptFile, WorkspaceInfo, WorkspaceState } from '@shared/workspace';
 import { parseWorkspaceState } from '@shared/workspace';
 import { writeFileAtomic } from './fs-atomic';
 
@@ -56,7 +56,17 @@ export class WorkspaceService {
     if (configured && (await isDirectory(configured))) root = resolve(configured);
     else await mkdir(root, { recursive: true });
     this.rootPath = root;
-    return { path: root, name: basename(root), state: await this.loadState() };
+    const state = await this.loadState();
+    const missing: string[] = [];
+    if (state) {
+      const exists = await Promise.all(state.tabs.map((t) => isFile(this.resolve(t.file))));
+      state.tabs = state.tabs.filter((t, i) => {
+        if (!exists[i]) missing.push(t.file);
+        return exists[i];
+      });
+      state.activeTab = Math.min(state.activeTab, state.tabs.length - 1);
+    }
+    return { path: root, name: basename(root), state, missing };
   }
 
   private stateFile(): string {
@@ -97,6 +107,33 @@ export class WorkspaceService {
     return resolve(path);
   }
 
+  /**
+   * Árbol de archivos del espacio para la vista Archivos (carpetas primero).
+   * Se omiten entradas ocultas (`.git`…) y se limita el total para no frenar
+   * con carpetas enormes. Operaciones y watcher llegan en M5.
+   */
+  async listFiles(maxEntries = 5000, maxDepth = 8): Promise<FileNode[]> {
+    let count = 0;
+    const collator = new Intl.Collator('es', { numeric: true, sensitivity: 'base' });
+    const walk = async (dir: string, depth: number): Promise<FileNode[]> => {
+      const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+      const nodes: FileNode[] = [];
+      for (const e of entries) {
+        if (e.name.startsWith('.') || count >= maxEntries) continue;
+        if (!e.isDirectory() && !e.isFile()) continue;
+        count++;
+        const path = join(dir, e.name);
+        nodes.push({ name: e.name, path, dir: e.isDirectory() });
+      }
+      nodes.sort((a, b) => (a.dir === b.dir ? collator.compare(a.name, b.name) : a.dir ? -1 : 1));
+      for (const node of nodes) {
+        if (node.dir) node.children = depth < maxDepth ? await walk(node.path, depth + 1) : [];
+      }
+      return nodes;
+    };
+    return walk(this.rootPath, 0);
+  }
+
   /** Crea `Script-N.sql` con el menor N ≥ 1 libre en la raíz (D16). */
   async newScript(): Promise<string> {
     for (let n = 1; n < 100_000; n++) {
@@ -131,7 +168,8 @@ export class WorkspaceService {
     const target = this.check(path);
     if (!options.force && options.expectedMtimeMs !== undefined) {
       const current = await stat(target).catch(() => null);
-      if (current && Math.abs(current.mtimeMs - options.expectedMtimeMs) > 1) throw new FileConflictError(target);
+      if (current && Math.abs(current.mtimeMs - options.expectedMtimeMs) > 1)
+        throw new FileConflictError(target);
     }
     const body = Buffer.from(content, 'utf8');
     await writeFileAtomic(target, options.bom ? Buffer.concat([BOM, body]) : body);
@@ -145,6 +183,14 @@ export class WorkspaceService {
     if (data === null || data.replace(/^\uFEFF/, '').trim() !== '') return false;
     await unlink(target);
     return true;
+  }
+}
+
+async function isFile(path: string): Promise<boolean> {
+  try {
+    return (await stat(path)).isFile();
+  } catch {
+    return false;
   }
 }
 

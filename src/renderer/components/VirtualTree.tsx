@@ -40,6 +40,10 @@ export interface VirtualTreeProps<T extends TreeRow> {
   dragData?: (row: T) => string | null;
   canDrop?: (data: string, target: T) => boolean;
   onDrop?: (data: string, target: T) => void;
+  /** Texto que se arrastra fuera del árbol (p. ej. nombre calificado hacia el editor). */
+  dragText?: (row: T) => string | null;
+  /** Clic central sobre una fila. */
+  onMiddleClick?: (row: T) => void;
 }
 
 const DRAG_TYPE = 'application/x-dbx-tree';
@@ -66,6 +70,8 @@ export function VirtualTree<T extends TreeRow>({
   dragData,
   canDrop,
   onDrop,
+  dragText,
+  onMiddleClick,
 }: VirtualTreeProps<T>): React.JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null);
   const baseId = useId();
@@ -172,13 +178,20 @@ export function VirtualTree<T extends TreeRow>({
                 selected ? 'is-selected' : '',
                 dropTarget === row.id ? 'is-drop-target' : '',
               ].join(' ')}
-              draggable={dragData ? dragData(row) !== null : undefined}
+              draggable={
+                dragData || dragText ? dragData?.(row) != null || dragText?.(row) != null : undefined
+              }
               onDragStart={(e) => {
                 const data = dragData?.(row);
+                const text = dragText?.(row);
+                if (text) {
+                  e.dataTransfer.setData('text/plain', text);
+                  e.dataTransfer.effectAllowed = data ? 'copyMove' : 'copy';
+                }
                 if (!data) return;
                 dragging.current = data;
                 e.dataTransfer.setData(DRAG_TYPE, data);
-                e.dataTransfer.effectAllowed = 'move';
+                if (!text) e.dataTransfer.effectAllowed = 'move';
               }}
               onDragEnd={() => {
                 dragging.current = null;
@@ -214,6 +227,12 @@ export function VirtualTree<T extends TreeRow>({
                   onToggle(row.id, !row.expanded);
               }}
               onDoubleClick={() => onOpen?.(row)}
+              onAuxClick={(e) => {
+                if (e.button === 1 && onMiddleClick) {
+                  e.preventDefault();
+                  onMiddleClick(row);
+                }
+              }}
               onContextMenu={(e) => onContextMenu?.(row, e)}
             >
               {Array.from({ length: row.depth }, (_, d) => (

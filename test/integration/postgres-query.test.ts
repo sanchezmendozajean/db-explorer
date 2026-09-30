@@ -33,8 +33,13 @@ function request(statements: string[], extra: Partial<ExecuteRequest> = {}): Exe
   };
 }
 
-function eventsOf<T extends QueryEvent['type']>(queryId: string, type: T): Extract<QueryEvent, { type: T }>[] {
-  return events.filter((e): e is Extract<QueryEvent, { type: T }> => e.type === type && e.queryId === queryId);
+function eventsOf<T extends QueryEvent['type']>(
+  queryId: string,
+  type: T,
+): Extract<QueryEvent, { type: T }>[] {
+  return events.filter(
+    (e): e is Extract<QueryEvent, { type: T }> => e.type === type && e.queryId === queryId,
+  );
 }
 
 function rowsOf(queryId: string, index = 0): unknown[][] {
@@ -87,7 +92,11 @@ describe('Ejecución en PostgreSQL', () => {
       sourceSchema: 'dbx',
       isPk: true,
     });
-    expect(cols?.columns[1]).toMatchObject({ nativeType: 'character varying(120)', logicalType: 'text', isPk: false });
+    expect(cols?.columns[1]).toMatchObject({
+      nativeType: 'character varying(120)',
+      logicalType: 'text',
+      isPk: false,
+    });
     expect(eventsOf(req.queryId, 'statement-done')[0]).toMatchObject({ command: 'SELECT', truncated: false });
   });
 
@@ -164,7 +173,11 @@ describe('Ejecución en PostgreSQL', () => {
     const req = request(['SELECT g FROM generate_series(1, 1234) g'], { maxRows: 500 });
     await manager.execute(req);
     expect(rowsOf(req.queryId)).toHaveLength(500);
-    expect(eventsOf(req.queryId, 'statement-done')[0]).toMatchObject({ truncated: true, hasMore: true, rowCount: 500 });
+    expect(eventsOf(req.queryId, 'statement-done')[0]).toMatchObject({
+      truncated: true,
+      hasMore: true,
+      rowCount: 500,
+    });
 
     const more = await manager.fetchMore({ queryId: req.queryId, statementIndex: 0, count: 500 });
     expect(more).toEqual({ loaded: 500, hasMore: true });
@@ -230,7 +243,9 @@ describe('Ejecución en PostgreSQL', () => {
   });
 
   it('cuenta filas de una tabla', async () => {
-    expect(await manager.countRows(config.id, { database: server.database, schema: 'dbx', name: 'tipos' })).toBe(2);
+    expect(
+      await manager.countRows(config.id, { database: server.database, schema: 'dbx', name: 'tipos' }),
+    ).toBe(2);
   });
 
   it('cerrar la sesión descarta su estado', async () => {

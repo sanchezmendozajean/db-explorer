@@ -321,7 +321,9 @@ export class PostgresDriver implements DbDriver {
       logicalType: LOGICAL_BY_OID[f.dataTypeID] ?? 'other',
     }));
     try {
-      const missing = fields.filter((f) => !this.typeNames.has(`${database}:${f.dataTypeID}:${f.dataTypeModifier}`));
+      const missing = fields.filter(
+        (f) => !this.typeNames.has(`${database}:${f.dataTypeID}:${f.dataTypeModifier}`),
+      );
       if (missing.length > 0) {
         const { rows } = await this.query<{ oid: number; mod: number; name: string }>(
           database,
@@ -334,7 +336,13 @@ export class PostgresDriver implements DbDriver {
       const sourced = fields.map((f, i) => ({ f, i })).filter(({ f }) => f.tableID > 0 && f.columnID > 0);
       const sources = new Map<number, { schema: string; table: string; column: string; pk: boolean }>();
       if (sourced.length > 0) {
-        const { rows } = await this.query<{ i: number; schema: string; table: string; column: string; pk: boolean }>(
+        const { rows } = await this.query<{
+          i: number;
+          schema: string;
+          table: string;
+          column: string;
+          pk: boolean;
+        }>(
           database,
           `SELECT u.i::int AS i, n.nspname AS schema, c.relname AS table, a.attname AS column,
                   EXISTS (SELECT 1 FROM pg_index x

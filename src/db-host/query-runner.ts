@@ -98,13 +98,15 @@ export class QueryRunner {
       entry.running = null;
       if (entry.openCursor?.queryId !== req.queryId) this.queries.delete(req.queryId);
     }
-    return {
+    const summary: ExecuteSummary = {
       queryId: req.queryId,
       executed,
       failed,
       cancelled: run.cancelled,
       durationMs: Math.round(this.now() - started),
     };
+    this.emit({ type: 'execution-done', queryId: req.queryId, summary });
+    return summary;
   }
 
   async fetchMore(req: FetchMoreRequest): Promise<FetchMoreResult> {
@@ -112,19 +114,26 @@ export class QueryRunner {
     const entry = sessionId ? this.sessions.get(sessionId) : undefined;
     const cursor = entry?.openCursor;
     if (!entry || !cursor || cursor.queryId !== req.queryId || cursor.statementIndex !== req.statementIndex) {
-      throw new DriverError('El resultado ya no tiene filas pendientes (vuelve a ejecutar la consulta)', 'no-cursor');
+      throw new DriverError(
+        'El resultado ya no tiene filas pendientes (vuelve a ejecutar la consulta)',
+        'no-cursor',
+      );
     }
     if (entry.running) throw new DriverError('La pestaña ya está ejecutando una consulta', 'busy');
     const run = { queryId: req.queryId, cancelled: false };
     entry.running = run;
+    const done = (result: FetchMoreResult | null, error?: string): void =>
+      this.emit({ type: 'fetch-done', queryId: req.queryId, index: req.statementIndex, result, error });
     try {
       const result = await entry.session.fetchMore(req.count, this.sink(req.queryId, req.statementIndex));
       if (!result.hasMore) this.forgetCursor(entry);
+      done(result);
       return result;
     } catch (err) {
       this.forgetCursor(entry);
-      if (run.cancelled) throw new DriverError('Carga cancelada', 'cancelled');
-      throw err;
+      const error = run.cancelled ? new DriverError('Carga cancelada', 'cancelled') : err;
+      done(null, error instanceof Error ? error.message : String(error));
+      throw error;
     } finally {
       entry.running = null;
     }

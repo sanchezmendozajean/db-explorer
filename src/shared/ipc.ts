@@ -7,7 +7,7 @@ import type { TreeNodeData } from './metadata';
 import { TreeNodeRefSchema } from './metadata';
 import type { ExecuteSummary, FetchMoreResult, QueryEvent } from './query';
 import type { Settings } from './settings';
-import type { ScriptFile, WorkspaceInfo } from './workspace';
+import type { FileNode, ScriptFile, WorkspaceInfo } from './workspace';
 import { WorkspaceStateSchema } from './workspace';
 
 /**
@@ -160,12 +160,16 @@ export const ipcInvokeContract = {
   },
   'settings:get': { request: Empty, response: z.custom<Settings>() },
   'settings:update': { request: SettingsUpdateSchema, response: z.custom<Settings>() },
-  'workspace:open': { request: Empty, response: z.custom<WorkspaceInfo>() },
-  'workspace:save-state': { request: WorkspaceStateSchema, response: Empty },
-  'workspace:new-script': { request: Empty, response: z.object({ path: z.string() }) },
+  'fs:open-workspace': { request: Empty, response: z.custom<WorkspaceInfo>() },
+  'fs:save-workspace-state': { request: WorkspaceStateSchema, response: Empty },
+  'fs:new-script': { request: Empty, response: z.object({ path: z.string() }) },
+  'fs:list-files': { request: Empty, response: z.custom<FileNode[]>() },
   'fs:read-script': { request: z.object({ path: FilePath }), response: z.custom<ScriptFile>() },
   'fs:write-script': { request: WriteScriptSchema, response: z.object({ mtimeMs: z.number() }) },
-  'fs:delete-empty-script': { request: z.object({ path: FilePath }), response: z.object({ deleted: z.boolean() }) },
+  'fs:delete-empty-script': {
+    request: z.object({ path: FilePath }),
+    response: z.object({ deleted: z.boolean() }),
+  },
   'conn:list': { request: Empty, response: ConnectionListSchema },
   'conn:save': { request: SaveConnectionSchema, response: z.object({ config: ConnectionConfigSchema }) },
   'conn:delete': { request: z.object({ id: Id }), response: Empty },

@@ -43,7 +43,8 @@ export function parseWorkspaceState(raw: unknown): WorkspaceState | null {
         return parsed.success ? [parsed.data] : [];
       })
     : [];
-  const activeTab = typeof r['activeTab'] === 'number' && Number.isInteger(r['activeTab']) ? r['activeTab'] : 0;
+  const activeTab =
+    typeof r['activeTab'] === 'number' && Number.isInteger(r['activeTab']) ? r['activeTab'] : 0;
   const fileConnections = WorkspaceStateSchema.shape.fileConnections.safeParse(r['fileConnections']);
   return {
     path: typeof r['path'] === 'string' ? r['path'] : '',
@@ -59,6 +60,8 @@ export interface WorkspaceInfo {
   /** Nombre visible (última parte de la ruta). */
   name: string;
   state: WorkspaceState | null;
+  /** Archivos del estado que ya no existen (se omiten de las pestañas). */
+  missing: string[];
 }
 
 export interface ScriptFile {
@@ -67,4 +70,13 @@ export interface ScriptFile {
   /** El archivo empezaba con BOM UTF-8 (se conserva al guardar). */
   bom: boolean;
   eol: 'LF' | 'CRLF';
+}
+
+/** Entrada del árbol de la vista Archivos. */
+export interface FileNode {
+  name: string;
+  /** Ruta absoluta. */
+  path: string;
+  dir: boolean;
+  children?: FileNode[];
 }

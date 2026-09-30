@@ -11,6 +11,9 @@ test.describe.configure({ mode: 'serial' });
 test.beforeAll(async () => {
   app = await launchApp(userData);
   page = await app.firstWindow();
+  page.on('pageerror', (e) => console.log('Error en el renderer:', e.message));
+  page.on('crash', () => console.log('RENDERER CRASH'));
+  app.on('close', () => console.log('APP CLOSED'));
   await page.getByTestId('statusbar').waitFor();
 });
 
@@ -18,13 +21,16 @@ test.afterAll(async () => {
   await app?.close();
 });
 
-test('muestra title bar, activity bar, barra lateral, pestañas y status bar de Producción', async () => {
+test('muestra title bar, activity bar, barra lateral, marca de agua y status bar', async () => {
   await expect(page.getByRole('menuitem', { name: 'Archivo' })).toBeVisible();
   await expect(page.getByTestId('side-bar')).toBeVisible();
-  await expect(page.getByRole('tab', { name: /Script-2/ })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByTestId('statusbar')).toHaveClass(/is-prod/);
-  await expect(page.getByTestId('statusbar')).toContainText('PayBox Prod');
+  // Sin pestañas: marca de agua con atajos (specs/04 §16).
+  await expect(page.locator('.editor-content')).toContainText('Nuevo script');
+  await expect(page.getByTestId('statusbar')).not.toHaveClass(/is-prod/);
   expect(await page.title()).toBe('DB Explorer — DB Explorer');
+  // Ctrl+N crea un script (sin conexión) y abre el panel de resultados.
+  await page.keyboard.press('Control+N');
+  await expect(page.getByRole('tab', { name: /Script-1/ })).toHaveAttribute('aria-selected', 'true');
 });
 
 test('Ctrl+B oculta y muestra la barra lateral', async () => {
@@ -58,27 +64,26 @@ test('la paleta de comandos cambia el tema', async () => {
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 
-test('Ctrl+P busca objetos y archivos', async () => {
+test('Ctrl+P busca archivos del espacio de trabajo', async () => {
   await page.keyboard.press('Control+P');
-  await page.getByTestId('quick-input').fill('rendic');
-  const options = page.locator('.quick-input-item');
-  await expect(options.filter({ hasText: 'CRendiciones_Conf_Generales' })).toHaveCount(1);
-  await expect(page.getByRole('option', { name: /rendiciones_pendientes\.sql/ })).toBeVisible();
+  await page.getByTestId('quick-input').fill('scr1');
+  await expect(page.getByRole('option', { name: /Script-1.sql/ })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('quick-input')).toHaveCount(0);
 });
 
 test('cerrar todas las pestañas muestra la marca de agua y Ctrl+Shift+T reabre', async () => {
-  for (let i = 0; i < 3; i++) await page.keyboard.press('Control+W');
+  // Con contenido, el script no se elimina al cerrar su pestaña.
+  await page.getByTestId('sql-editor').locator('.view-lines').click();
+  await page.keyboard.type('select 1;');
+  await page.keyboard.press('Control+W');
   await expect(page.getByTestId('watermark')).toBeVisible();
   await expect(page.getByTestId('watermark')).toContainText('Ctrl+Shift+P');
   await page.keyboard.press('Control+Shift+T');
-  await expect(page.getByTestId('watermark')).toHaveCount(0);
-  await page.keyboard.press('Control+Shift+T');
-  await page.keyboard.press('Control+Shift+T');
   await expect(page.getByRole('tab', { name: /Script-1/ })).toBeVisible();
   await page.keyboard.press('Alt+1');
-  await expect(page.getByRole('tab', { name: /Script-/ }).first()).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: /Script-1/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByTestId('sql-editor')).toContainText('select 1;');
 });
 
 test('los tamaños de paneles y el tema se recuerdan al reiniciar', async () => {

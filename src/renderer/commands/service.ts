@@ -27,12 +27,22 @@ export function keybindingLabel(command: string): string | undefined {
   return sequence ? formatSequence(sequence) : undefined;
 }
 
+type ContextProvider = () => readonly string[];
+const contextProviders = new Set<ContextProvider>();
+
+/** Agrega contextos calculados (p. ej. `editorTextFocus` según Monaco). */
+export function registerContextProvider(provider: ContextProvider): () => void {
+  contextProviders.add(provider);
+  return () => contextProviders.delete(provider);
+}
+
 /**
  * Contextos de foco para las cláusulas `when`. Cada zona de la UI declara
  * `data-focus-context="treeFocus"` (u otro) y se toman todos los ancestros.
  */
 export function currentContext(): Set<string> {
   const context = new Set<string>();
+  for (const provider of contextProviders) provider().forEach((c) => context.add(c));
   let el: Element | null = document.activeElement;
   if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) context.add('inputFocus');
   while (el) {
@@ -67,6 +77,12 @@ export function installKeybindingHandler(target: Window = window): () => void {
         void commands.execute(result.command);
         break;
       case 'chord-pending':
+        // Dentro de Monaco los acordes los resuelve el editor (tiene los suyos, como Ctrl+K Ctrl+0, y
+        // también los de la app, registrados en setup.ts): no se interceptan aquí.
+        if (event.target instanceof Element && event.target.closest('.monaco-editor')) {
+          keybindings.reset();
+          break;
+        }
         event.preventDefault();
         event.stopPropagation();
         showKeyMessage(es.statusBar.chordPending(formatChord(result.first)));

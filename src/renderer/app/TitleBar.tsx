@@ -4,7 +4,7 @@ import { Menu } from '../components/Menu';
 import type { MenuCloseReason } from '../components/Menu';
 import { commands } from '../commands/service';
 import { es } from '../i18n/es';
-import { SAMPLE_WORKSPACE } from '../sample/sample-data';
+import { useWorkspaceStore } from '../stores/workspace-store';
 import { TITLE_BAR_MENUS } from './menus';
 
 function MenuBar(): React.JSX.Element {
@@ -137,6 +137,7 @@ function WindowControls(): React.JSX.Element {
 }
 
 export function TitleBar(): React.JSX.Element {
+  const workspaceName = useWorkspaceStore((s) => s.name);
   return (
     <header className="titlebar">
       <div className="titlebar-icon">
@@ -150,7 +151,7 @@ export function TitleBar(): React.JSX.Element {
         onClick={() => void commands.execute('db.quickOpen')}
       >
         <Codicon name="search" size={14} />
-        <span>{es.titleBar.commandCenter(SAMPLE_WORKSPACE.name)}</span>
+        <span>{es.titleBar.commandCenter(workspaceName)}</span>
       </button>
       <WindowControls />
     </header>

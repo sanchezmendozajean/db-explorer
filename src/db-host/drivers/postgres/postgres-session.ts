@@ -66,7 +66,8 @@ export class PostgresSession implements DbSession {
   async setSchema(schema: string | undefined): Promise<void> {
     if (schema === this.schema) return;
     // Esquema elegido primero y `public` como respaldo (funciones y extensiones comunes).
-    const path = !schema || schema === 'public' ? '"$user", public' : `${quoteIdent('postgres', schema)}, public`;
+    const path =
+      !schema || schema === 'public' ? '"$user", public' : `${quoteIdent('postgres', schema)}, public`;
     await this.client.query("SELECT set_config('search_path', $1, false)", [path]).catch((err: unknown) => {
       throw toDriverError(err);
     });
@@ -76,7 +77,9 @@ export class PostgresSession implements DbSession {
   async execute(sql: string, maxRows: number | null, sink: StatementSink): Promise<StatementOutcome> {
     await this.closeCursor();
     this.currentSink = sink;
-    const cursor = this.client.query(new Cursor<CellValue[]>(sql, undefined, { rowMode: 'array', types: sessionTypes }));
+    const cursor = this.client.query(
+      new Cursor<CellValue[]>(sql, undefined, { rowMode: 'array', types: sessionTypes }),
+    );
     const open: OpenCursor = { cursor, lookahead: null };
     try {
       let loaded = 0;

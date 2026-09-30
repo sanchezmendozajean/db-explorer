@@ -92,7 +92,9 @@ export function registerConnectionHandlers({ dbHost, connections, secrets, skipp
 
   handle('meta:children', ({ connectionId, ref }) => dbHost.request('meta.children', { connectionId, ref }));
 
-  handle('meta:count', async (req) => ({ count: await dbHost.request('meta.count', req, { timeoutMs: null }) }));
+  handle('meta:count', async (req) => ({
+    count: await dbHost.request('meta.count', req, { timeoutMs: null }),
+  }));
 
   // Ejecución: sin límite de tiempo (el usuario la controla con Cancelar); las filas llegan por `query:event`.
   handle('query:execute', (req) => dbHost.request('query.execute', req, { timeoutMs: null }));

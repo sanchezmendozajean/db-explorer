@@ -547,94 +547,83 @@
   flex: 1;
 }
 
-/* Vista estática del código (hasta M3) */
-.code-preview {
-  flex: 1;
-  overflow: auto;
-  padding-top: 4px;
+/* Editor Monaco (specs/05) */
+.editor-pane[hidden] {
+  display: none;
+}
+
+.editor-toolbar-wrap {
+  position: relative;
+  flex: none;
+}
+
+.toolbar-timer {
   font-family: var(--font-code);
-  font-size: 13px;
-  line-height: 19px;
+  font-size: 12px;
+  color: var(--fg-muted);
+  min-width: 52px;
+}
+
+/* Barra de progreso indeterminada de 2 px bajo la barra del editor (specs/04 §8). */
+.progress-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -30%;
+  width: 30%;
+  height: 100%;
+  background: var(--accent);
+  animation: progress-slide 1.2s ease-in-out infinite;
+}
+
+@keyframes progress-slide {
+  from {
+    left: -30%;
+  }
+  to {
+    left: 100%;
+  }
+}
+
+.sql-editor {
+  flex: 1;
+  min-height: 0;
   background: var(--bg-editor);
-  user-select: text;
-  cursor: text;
 }
 
-.code-line {
-  display: flex;
-  height: 19px;
-  white-space: pre;
-}
-
-.code-line.is-cursor-line .code-text {
-  background: var(--editor-current-line);
-}
-
-.code-line.is-active-stmt .code-text {
+/* Sentencia activa: fondo sutil y barra de 2 px en el margen (specs/04 §8). */
+.monaco-editor .active-statement {
   background: rgba(0, 120, 212, 0.06);
 }
 
-.code-glyph {
-  width: 20px;
+.monaco-editor .active-statement-gutter {
+  border-left: 2px solid var(--accent);
+  margin-left: 3px;
+}
+
+.monaco-editor .statement-ok {
+  color: var(--success);
+}
+
+.monaco-editor .statement-error {
+  color: var(--error);
+}
+
+.monaco-editor .glyph-margin-widgets .codicon {
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: none;
-}
-
-.code-number {
-  width: 36px;
-  text-align: right;
-  color: var(--editor-line-number);
-  flex: none;
-}
-
-.code-number.is-current {
-  color: var(--editor-line-number-active);
-}
-
-.code-bar {
-  width: 2px;
-  margin: 0 12px 0 16px;
-  flex: none;
-}
-
-.code-line.is-active-stmt .code-bar {
-  background: var(--accent);
-}
-
-.code-text {
-  flex: 1;
-  padding-left: 2px;
-}
-
-.code-cursor {
-  display: inline-block;
-  width: 2px;
-  height: 17px;
-  vertical-align: text-bottom;
-  background: var(--editor-cursor);
-}
-
-.tok-keyword {
-  color: var(--syntax-keyword);
-}
-
-.tok-string {
-  color: var(--syntax-string);
-}
-
-.tok-number {
-  color: var(--syntax-number);
-}
-
-.tok-identifier {
-  color: var(--syntax-identifier);
-}
-
-.tok-comment {
-  color: var(--syntax-comment);
-  font-style: italic;
 }
 
 /* Marca de agua sin pestañas */
@@ -855,7 +844,7 @@ kbd {
   color: var(--fg-muted);
 }
 
-/* Grilla de maqueta (se reemplaza por Glide Data Grid en M3) */
+/* Grilla de maqueta: solo la usa la pestaña de objeto de ejemplo hasta M7 */
 .grid {
   min-width: max-content;
   font-family: var(--font-code);
@@ -1014,4 +1003,168 @@ kbd {
   color: #ffffff;
   font-size: 12px;
   cursor: pointer;
+}
+
+/* ---------- Resultados (M3) ---------- */
+.results-body {
+  display: flex;
+  overflow: hidden;
+}
+
+.results-body > .split {
+  flex: 1;
+}
+
+.result-grid {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.tab-pin {
+  display: inline-flex;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tab:hover .tab-pin,
+.tab.is-active .tab-pin,
+.tab-pin.is-pinned {
+  opacity: 1;
+}
+
+.tab-pin.is-pinned {
+  color: var(--fg);
+}
+
+.results-footer .link {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--link);
+  cursor: pointer;
+}
+
+.results-footer .link:hover,
+.messages .link:hover {
+  text-decoration: underline;
+}
+
+.messages {
+  padding: 4px 0;
+  font-family: var(--font-code);
+  font-size: 12px;
+  user-select: text;
+  outline: none;
+}
+
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 2px 12px;
+  line-height: 18px;
+}
+
+.message .codicon {
+  margin-top: 2px;
+  flex: none;
+}
+
+.message-time {
+  color: var(--fg-muted);
+  flex: none;
+}
+
+.message-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message.is-error .message-text {
+  color: var(--error);
+}
+
+.messages .link {
+  flex: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--link);
+  cursor: pointer;
+}
+
+.value-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-editor);
+  border-left: 1px solid var(--border);
+}
+
+.value-viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 26px;
+  padding: 0 4px 0 10px;
+  background: var(--bg-grid-header);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.value-viewer-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.value-viewer-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Status bar: segmentos que son botones */
+button.statusbar-item {
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.statusbar-item:hover {
+  background: var(--bg-hover);
+}
+
+.statusbar-item.is-muted {
+  color: var(--fg-muted);
+}
+
+/* Vista Archivos: archivo abierto en el editor */
+.tree-label.is-open {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.glide-portal {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 9999;
+}
+
+/* Resultados maximizados: el editor se oculta sin desmontarse (conserva la instancia de Monaco). */
+.split.is-results-maximized > [data-testid='editor'],
+.split.is-results-maximized > .sash {
+  display: none;
+}
+
+.split.is-results-maximized > [data-testid='results'] {
+  flex: 1 1 100% !important;
 }

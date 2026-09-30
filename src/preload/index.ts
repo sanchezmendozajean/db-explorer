@@ -35,9 +35,10 @@ const api: DbExplorerApi = {
     update: invoke('settings:update'),
   },
   workspace: {
-    open: invoke('workspace:open'),
-    saveState: invoke('workspace:save-state'),
-    newScript: invoke('workspace:new-script'),
+    open: invoke('fs:open-workspace'),
+    saveState: invoke('fs:save-workspace-state'),
+    newScript: invoke('fs:new-script'),
+    listFiles: invoke('fs:list-files'),
   },
   fs: {
     readScript: invoke('fs:read-script'),

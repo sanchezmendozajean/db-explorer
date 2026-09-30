@@ -10,7 +10,7 @@ interface Deps {
   workspace: WorkspaceService;
 }
 
-/** Canales `settings:*`, `workspace:*` y `fs:*` de los scripts (specs/11). */
+/** Canales `settings:*` y `fs:*` del espacio de trabajo y los scripts (specs/11). */
 export function registerWorkspaceHandlers({ settings, workspace }: Deps): void {
   handle('settings:get', () => settings.settings);
 
@@ -23,7 +23,7 @@ export function registerWorkspaceHandlers({ settings, workspace }: Deps): void {
     return updated;
   });
 
-  handle('workspace:open', async () => {
+  handle('fs:open-workspace', async () => {
     const info = await workspace.open(settings.settings['workspace.path']);
     // El renderer trabaja con rutas absolutas; en disco se guardan relativas al espacio.
     if (info.state) {
@@ -35,7 +35,7 @@ export function registerWorkspaceHandlers({ settings, workspace }: Deps): void {
     return info;
   });
 
-  handle('workspace:save-state', async (state: WorkspaceState) => {
+  handle('fs:save-workspace-state', async (state: WorkspaceState) => {
     await workspace.saveState({
       ...state,
       tabs: state.tabs.map((t) => ({ ...t, file: workspace.toStatePath(t.file) })),
@@ -43,7 +43,9 @@ export function registerWorkspaceHandlers({ settings, workspace }: Deps): void {
     return {};
   });
 
-  handle('workspace:new-script', async () => ({ path: await workspace.newScript() }));
+  handle('fs:new-script', async () => ({ path: await workspace.newScript() }));
+
+  handle('fs:list-files', () => workspace.listFiles());
 
   handle('fs:read-script', ({ path }) => workspace.readScript(path));
 

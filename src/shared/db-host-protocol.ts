@@ -1,12 +1,6 @@
 import type { ConnectionConfig, ServerInfo } from './connection';
 import type { TreeNodeData, TreeNodeRef } from './metadata';
-import type {
-  ExecuteRequest,
-  ExecuteSummary,
-  FetchMoreRequest,
-  FetchMoreResult,
-  QueryEvent,
-} from './query';
+import type { ExecuteRequest, ExecuteSummary, FetchMoreRequest, FetchMoreResult, QueryEvent } from './query';
 
 /**
  * Protocolo de mensajes entre main y el proceso db-host (utilityProcess).

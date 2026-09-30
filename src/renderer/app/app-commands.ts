@@ -6,6 +6,12 @@ import { useOverlayStore } from '../stores/overlay-store';
 import { useWorkbenchStore } from '../stores/workbench-store';
 import { showToast } from '../stores/toast-store';
 import { newConnection } from '../features/connections/actions';
+import { useSettingsStore } from '../stores/settings-store';
+import { activeEditor } from '../features/editor/editor-instance';
+import { autoSaveChanged, saveAll, saveDocument } from '../features/editor/documents';
+import { closeActiveTab, newScript } from '../features/editor/scripts';
+import { pickConnection, pickDatabaseOrSchema } from '../features/editor/target-pickers';
+import { cancelExecution, executeFromEditor, isRunning } from '../features/execution/execute';
 
 const cat = es.commandCategories;
 
@@ -20,6 +26,16 @@ export function registerAppCommands(): () => void {
   const overlay = useOverlayStore.getState;
   const wb = useWorkbenchStore.getState;
   const hasTabs = (): boolean => wb().tabs.length > 0;
+  const activeScript = (): string | undefined => {
+    const tab = wb().tabs.find((t) => t.id === wb().activeId);
+    return tab?.kind === 'script' ? tab.id : undefined;
+  };
+  const hasScript = (): boolean => activeScript() !== undefined;
+  const hasSelection = (): boolean => {
+    const selection = activeEditor()?.getSelection();
+    return hasScript() && !!selection && !selection.isEmpty();
+  };
+  const settings = useSettingsStore.getState;
 
   const list: Command[] = [
     { id: 'db.showCommands', category: cat.view, run: () => overlay().openPalette('commands') },
@@ -50,7 +66,15 @@ export function registerAppCommands(): () => void {
       },
     },
     { id: 'db.view.history', category: cat.view, run: () => ui().showView('history') },
-    { id: 'db.focusEditor', category: cat.view, run: () => focusArea('[data-focus-context~="editorFocus"]') },
+    {
+      id: 'db.focusEditor',
+      category: cat.view,
+      run: () => {
+        const editor = activeEditor();
+        if (editor) editor.focus();
+        else focusArea('[data-focus-context~="editorFocus"]');
+      },
+    },
     {
       id: 'db.focusPanel',
       category: cat.view,
@@ -77,13 +101,77 @@ export function registerAppCommands(): () => void {
       run: () => void window.api.app.edit({ action }),
     })),
 
+    { id: 'db.closeTab', category: cat.tabs, enabled: hasTabs, run: () => void closeActiveTab() },
+
+    // Archivos (specs/11)
+    { id: 'db.newScript', category: cat.file, run: () => newScript() },
     {
-      id: 'db.closeTab',
-      category: cat.tabs,
-      enabled: hasTabs,
+      id: 'db.save',
+      category: cat.file,
+      enabled: hasScript,
+      run: async () => {
+        const id = activeScript();
+        if (id) await saveDocument(id);
+      },
+    },
+    { id: 'db.saveAll', category: cat.file, run: async () => void (await saveAll()) },
+    {
+      id: 'db.toggleAutoSave',
+      category: cat.file,
+      checked: () => settings().settings['files.autoSave'],
+      run: async () => {
+        const next = !settings().settings['files.autoSave'];
+        if (await settings().update('files.autoSave', next)) autoSaveChanged(next);
+      },
+    },
+
+    // Ejecución (specs/05)
+    {
+      id: 'db.executeStatement',
+      category: cat.query,
+      enabled: hasScript,
+      run: () => executeFromEditor('statement'),
+    },
+    {
+      id: 'db.executeScript',
+      category: cat.query,
+      enabled: hasScript,
+      run: () => executeFromEditor('script'),
+    },
+    {
+      id: 'db.executeSelection',
+      category: cat.query,
+      enabled: hasSelection,
+      run: () => executeFromEditor('script'),
+    },
+    {
+      id: 'db.executeInNewTab',
+      category: cat.query,
+      enabled: hasScript,
+      run: () => executeFromEditor('statement', { newResultTab: true }),
+    },
+    {
+      id: 'db.cancel',
+      category: cat.query,
+      enabled: () => isRunning(activeScript()),
+      run: () => cancelExecution(),
+    },
+    {
+      id: 'db.changeConnection',
+      category: cat.query,
+      enabled: hasScript,
       run: () => {
-        const id = wb().activeId;
-        if (id) wb().close(id);
+        const id = activeScript();
+        if (id) pickConnection(id);
+      },
+    },
+    {
+      id: 'db.changeSchema',
+      category: cat.query,
+      enabled: () => hasScript() && !!wb().tabs.find((t) => t.id === activeScript())?.connectionId,
+      run: async () => {
+        const id = activeScript();
+        if (id) await pickDatabaseOrSchema(id);
       },
     },
     {

@@ -12,12 +12,19 @@ import { App } from './app/App';
 import { registerAppCommands } from './app/app-commands';
 import { installKeybindingHandler, commands } from './commands/service';
 import { es } from './i18n/es';
-import { SAMPLE_WORKSPACE } from './sample/sample-data';
 import { startUiStatePersistence, useUiStore } from './stores/ui-store';
 import { showToast } from './stores/toast-store';
-import { useWorkbenchStore } from './stores/workbench-store';
 import { useSampleStore } from './stores/sample-store';
 import { useConnectionsStore } from './stores/connections-store';
+import { useSettingsStore } from './stores/settings-store';
+import { handleBeforeClose, restoreWorkspace, startWorkspacePersistence } from './features/editor/scripts';
+import {
+  applyQueryEvent,
+  positionInStatement,
+  resetAllRunning,
+  setExecutionCallbacks,
+} from './features/results/results-store';
+import { markError } from './features/execution/execute';
 
 async function bootstrap(): Promise<void> {
   // El estado de UI se carga antes del primer render para no parpadear tamaños ni tema.
@@ -29,6 +36,10 @@ async function bootstrap(): Promise<void> {
   if (response.ok) useUiStore.getState().hydrate(response.data);
   document.documentElement.dataset['theme'] = useUiStore.getState().effectiveTheme;
   startUiStatePersistence();
+
+  const settings = await window.api.settings.get({});
+  if (settings.ok) useSettingsStore.getState().hydrate(settings.data);
+  window.api.on('settings:changed', (next) => useSettingsStore.getState().hydrate(next));
 
   registerAppCommands();
   installKeybindingHandler();
@@ -43,46 +54,35 @@ async function bootstrap(): Promise<void> {
     });
   }
 
-  // Pestañas de ejemplo (pantalla 1 de la maqueta). En M3 se restauran las del espacio de trabajo.
-  const wb = useWorkbenchStore.getState();
-  wb.open({
-    id: 'script:Script-1',
-    kind: 'script',
-    title: 'Script-1',
-    tooltip: `${SAMPLE_WORKSPACE.path}\\Script-1.sql`,
-    connectionId: 'local',
-    dirty: false,
-    preview: false,
-  });
-  wb.open({
-    id: 'script:Script-2',
-    kind: 'script',
-    title: 'Script-2',
-    tooltip: `${SAMPLE_WORKSPACE.path}\\Script-2.sql`,
-    connectionId: 'paybox-prod',
-    dirty: true,
-    preview: false,
-  });
-  wb.open({
-    id: 'object:pb/paybox/public/tables/CRendiciones_Conf_Generales',
-    kind: 'object',
-    title: 'CRendiciones_Conf_Generales',
-    tooltip: 'PayBox Prod › paybox › public › CRendiciones_Conf_Generales',
-    connectionId: 'paybox-prod',
-    dirty: false,
-    preview: true,
-  });
-  wb.activate('script:Script-2');
-
-  document.title = es.app.windowTitle(SAMPLE_WORKSPACE.name);
-
   window.api.on('app:db-host-restarted', () => {
     useConnectionsStore.getState().resetSessions();
+    resetAllRunning();
     showToast('warning', es.toasts.dbHostRestarted);
   });
 
+  // Filas, mensajes y errores de las consultas en curso (llegan en lotes desde el db-host).
+  window.api.on('query:event', applyQueryEvent);
+  setExecutionCallbacks({
+    onStatementError: (tabId, meta, event) => {
+      if (!meta || event.cancelled) return;
+      const pos =
+        event.position !== undefined
+          ? positionInStatement(meta, event.position)
+          : { line: meta.startLine, column: meta.startColumn };
+      markError(tabId, pos.line, pos.column, event.message);
+    },
+  });
+
+  // Conexiones antes que el espacio de trabajo: las pestañas restauradas muestran su conexión.
   const skipped = await useConnectionsStore.getState().load();
   if (skipped > 0) showToast('warning', es.connections.skippedEntries(skipped));
+
+  await restoreWorkspace();
+  startWorkspacePersistence();
+
+  // Al cerrar la ventana se guardan los scripts y el estado del espacio (specs/11 §4).
+  window.api.on('app:before-close', () => void handleBeforeClose());
+  void window.api.app.closeReady({ phase: 'listening' });
 
   const container = document.getElementById('root');
   if (!container) throw new Error('No se encontró el elemento raíz');

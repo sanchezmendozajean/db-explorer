@@ -22,9 +22,10 @@ export interface DbExplorerApi {
     update: Invoke<'settings:update'>;
   };
   workspace: {
-    open: Invoke<'workspace:open'>;
-    saveState: Invoke<'workspace:save-state'>;
-    newScript: Invoke<'workspace:new-script'>;
+    open: Invoke<'fs:open-workspace'>;
+    saveState: Invoke<'fs:save-workspace-state'>;
+    newScript: Invoke<'fs:new-script'>;
+    listFiles: Invoke<'fs:list-files'>;
   };
   fs: {
     readScript: Invoke<'fs:read-script'>;

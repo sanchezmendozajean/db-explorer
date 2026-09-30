@@ -12,6 +12,7 @@ export interface DropdownProps {
   /** Muestra el chevron ▾ al final. */
   chevron?: boolean;
   disabled?: boolean;
+  testId?: string;
 }
 
 /** Botón que abre un menú desplegable debajo de sí. */
@@ -22,6 +23,7 @@ export function Dropdown({
   title,
   chevron = true,
   disabled,
+  testId,
 }: DropdownProps): React.JSX.Element {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState<DOMRect | null>(null);
@@ -38,6 +40,7 @@ export function Dropdown({
       <button
         ref={buttonRef}
         type="button"
+        data-testid={testId}
         className={['dropdown', open ? 'is-open' : '', className ?? ''].join(' ')}
         title={title}
         aria-haspopup="menu"

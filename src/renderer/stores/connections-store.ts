@@ -4,6 +4,12 @@ import type { IpcError, IpcResult } from '@shared/ipc';
 import type { TreeNodeData, TreeNodeRef } from '@shared/metadata';
 import { nodeKey } from '@shared/metadata';
 
+export interface TreeTarget {
+  connectionId: string;
+  database?: string;
+  schema?: string;
+}
+
 export type ConnectResult = { ok: true } | { ok: false; passwordRequired: boolean; error: IpcError };
 
 interface ConnectionsStore {
@@ -19,6 +25,8 @@ interface ConnectionsStore {
   nodeErrors: Record<string, string>;
   /** Conexión que el árbol debe expandir cuando termine de conectar (tras pedir la contraseña). */
   expandOnConnect: string | null;
+  /** Conexión, base y esquema del nodo seleccionado en el árbol (destino de "Nuevo script"). */
+  treeSelection: TreeTarget | null;
 
   /** Devuelve la cantidad de entradas inválidas omitidas al leer el archivo. */
   load: () => Promise<number>;
@@ -62,6 +70,7 @@ export const useConnectionsStore = create<ConnectionsStore>((set, get) => ({
   loading: {},
   nodeErrors: {},
   expandOnConnect: null,
+  treeSelection: null,
 
   load: async () => {
     const r = await window.api.conn.list({});

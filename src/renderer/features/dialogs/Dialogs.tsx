@@ -10,6 +10,7 @@ import { commandTitle, es } from '../../i18n/es';
 import { useOverlayStore } from '../../stores/overlay-store';
 import { ConnectionDialog } from '../connections/ConnectionDialog';
 import { ConfirmDialog, PasswordDialog, PromptDialog } from './SimpleDialogs';
+import { ChoiceDialog, WriteConfirmDialog } from './ChoiceDialogs';
 
 type PingState =
   { status: 'pending' } | { status: 'ok'; result: PingResult } | { status: 'error'; error: IpcError };
@@ -139,10 +140,14 @@ export function Dialogs(): React.JSX.Element | null {
         />
       );
     case 'password':
-      return <PasswordDialog connectionId={dialog.connectionId} onClose={close} />;
+      return <PasswordDialog connectionId={dialog.connectionId} onResult={dialog.onResult} onClose={close} />;
     case 'confirm':
       return <ConfirmDialog {...dialog} onClose={close} />;
     case 'prompt':
       return <PromptDialog {...dialog} onClose={close} />;
+    case 'choice':
+      return <ChoiceDialog {...dialog} onClose={close} />;
+    case 'writeConfirm':
+      return <WriteConfirmDialog {...dialog} onClose={close} />;
   }
 }

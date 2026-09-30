@@ -5,7 +5,11 @@ import { join } from 'node:path';
 import { DEFAULT_SETTINGS, parseSettings, validateSetting } from '@shared/settings';
 import { parseWorkspaceState } from '@shared/workspace';
 import { SettingsStore } from '../../src/main/services/settings-store';
-import { FileAccessError, FileConflictError, WorkspaceService } from '../../src/main/services/workspace-service';
+import {
+  FileAccessError,
+  FileConflictError,
+  WorkspaceService,
+} from '../../src/main/services/workspace-service';
 
 const dirs: string[] = [];
 function tempDir(): string {
@@ -62,7 +66,7 @@ describe('WorkspaceService', () => {
   it('crea el espacio predeterminado y lo usa si el configurado no existe', async () => {
     const { root, info, ws } = await setup();
     expect(existsSync(root)).toBe(true);
-    expect(info).toMatchObject({ path: root, name: 'DB Explorer', state: null });
+    expect(info).toMatchObject({ path: root, name: 'DB Explorer', state: null, missing: [] });
     const other = await ws.open(join(root, 'no-existe'));
     expect(other.path).toBe(root);
   });
@@ -78,7 +82,10 @@ describe('WorkspaceService', () => {
   it('lee y guarda conservando BOM y fin de línea', async () => {
     const { ws, root } = await setup();
     const path = join(root, 'con-bom.sql');
-    writeFileSync(path, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from('select 1;\r\nselect 2;')]));
+    writeFileSync(
+      path,
+      Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from('select 1;\r\nselect 2;')]),
+    );
     const file = await ws.readScript(path);
     expect(file).toMatchObject({ content: 'select 1;\r\nselect 2;', bom: true, eol: 'CRLF' });
     await ws.writeScript(path, 'select ñ;\r\n', { bom: true, expectedMtimeMs: file.mtimeMs });
@@ -94,9 +101,9 @@ describe('WorkspaceService', () => {
     const { mtimeMs } = await ws.readScript(path);
     writeFileSync(path, 'cambio externo');
     utimesSync(path, new Date(), new Date(Date.now() + 5000));
-    await expect(ws.writeScript(path, 'mío', { bom: false, expectedMtimeMs: mtimeMs })).rejects.toBeInstanceOf(
-      FileConflictError,
-    );
+    await expect(
+      ws.writeScript(path, 'mío', { bom: false, expectedMtimeMs: mtimeMs }),
+    ).rejects.toBeInstanceOf(FileConflictError);
     expect(readFileSync(path, 'utf8')).toBe('cambio externo');
     await ws.writeScript(path, 'mío', { bom: false, expectedMtimeMs: mtimeMs, force: true });
     expect(readFileSync(path, 'utf8')).toBe('mío');
@@ -128,13 +135,20 @@ describe('WorkspaceService', () => {
     const { ws, root, userData } = await setup();
     const file = join(root, 'sub', 'Script-1.sql');
     mkdirSync(join(root, 'sub'));
+    writeFileSync(file, '');
     await ws.saveState({
       path: root,
-      tabs: [{ type: 'script', file: ws.toStatePath(file), connectionId: 'c1' }],
-      activeTab: 0,
+      tabs: [
+        { type: 'script', file: ws.toStatePath(file), connectionId: 'c1' },
+        { type: 'script', file: 'borrado.sql' },
+      ],
+      activeTab: 1,
     });
     const reopened = await new WorkspaceService(userData, root).open(null);
+    expect(reopened.state?.tabs).toHaveLength(1);
     expect(reopened.state?.tabs[0]).toMatchObject({ file: join('sub', 'Script-1.sql'), connectionId: 'c1' });
+    expect(reopened.state?.activeTab).toBe(0);
+    expect(reopened.missing).toEqual(['borrado.sql']);
     expect(ws.resolve(reopened.state!.tabs[0]!.file)).toBe(file);
   });
 

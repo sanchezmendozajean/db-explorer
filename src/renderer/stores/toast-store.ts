@@ -12,6 +12,8 @@ export interface Toast {
   severity: ToastSeverity;
   message: string;
   actions?: ToastAction[];
+  /** No se oculta sola (avisos que piden una decisión). */
+  sticky?: boolean;
 }
 
 interface ToastStore {
@@ -30,12 +32,21 @@ export const useToastStore = create<ToastStore>((set, get) => ({
   show: (toast) => {
     const id = nextId++;
     set((s) => ({ toasts: [...s.toasts, { ...toast, id }] }));
-    if (toast.severity !== 'error') setTimeout(() => get().dismiss(id), TOAST_TIMEOUT_MS);
+    if (toast.severity !== 'error' && !toast.sticky) setTimeout(() => get().dismiss(id), TOAST_TIMEOUT_MS);
     return id;
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }));
 
-export function showToast(severity: ToastSeverity, message: string, actions?: ToastAction[]): number {
-  return useToastStore.getState().show({ severity, message, actions });
+export function showToast(
+  severity: ToastSeverity,
+  message: string,
+  actions?: ToastAction[],
+  options: { sticky?: boolean } = {},
+): number {
+  return useToastStore.getState().show({ severity, message, actions, sticky: options.sticky });
+}
+
+export function isToastVisible(id: number | undefined): boolean {
+  return id !== undefined && useToastStore.getState().toasts.some((t) => t.id === id);
 }

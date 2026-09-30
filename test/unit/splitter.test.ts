@@ -19,10 +19,7 @@ describe('splitStatements (PostgreSQL)', () => {
   });
 
   it('respeta comentarios de línea y de bloque anidados', () => {
-    expect(texts('select 1 -- ; no\n; /* a; /* b; */ c; */ select 2')).toEqual([
-      'select 1',
-      'select 2',
-    ]);
+    expect(texts('select 1 -- ; no\n; /* a; /* b; */ c; */ select 2')).toEqual(['select 1', 'select 2']);
   });
 
   it('omite sentencias que solo tienen comentarios', () => {
@@ -77,10 +74,9 @@ select 3;`;
 
 describe('otros dialectos (comillas)', () => {
   it('MariaDB: backticks, comentarios # y barra invertida', () => {
-    expect(splitStatements("select `a;b`, 'x\\';y' # ; c\n; select 2", 'mariadb').map((s) => s.text)).toEqual([
-      "select `a;b`, 'x\\';y'",
-      'select 2',
-    ]);
+    expect(splitStatements("select `a;b`, 'x\\';y' # ; c\n; select 2", 'mariadb').map((s) => s.text)).toEqual(
+      ["select `a;b`, 'x\\';y'", 'select 2'],
+    );
   });
 
   it('SQL Server: corchetes', () => {

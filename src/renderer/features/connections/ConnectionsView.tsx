@@ -3,7 +3,7 @@ import type { ConnectionConfig, Environment } from '@shared/connection';
 import { connectionAddress } from '@shared/connection';
 import type { TreeNodeData, TreeNodeRef } from '@shared/metadata';
 import { nodeKey } from '@shared/metadata';
-import { qualifiedName } from '@shared/sql-quote';
+import { qualifiedName, quoteIdent } from '@shared/sql-quote';
 import { Codicon } from '../../components/Codicon';
 import { Button, IconButton } from '../../components/Button';
 import { TextInput } from '../../components/Inputs';
@@ -17,6 +17,8 @@ import { es } from '../../i18n/es';
 import { useConnectionsStore } from '../../stores/connections-store';
 import { Highlight, SideBarHeader } from '../side-bar/SideBarHeader';
 import * as actions from './actions';
+import { newScript } from '../editor/scripts';
+import { countRows, newTableScript, targetOfRef } from './table-scripts';
 
 const ENGINE_BADGE: Record<string, string> = { postgres: 'PG', mariadb: 'MY', sqlite: 'LT', sqlserver: 'MS' };
 const ENVIRONMENTS: Environment[] = ['local', 'dev', 'qa', 'prod'];
@@ -107,6 +109,10 @@ function filterNodes(nodes: UiNode[], query: string, forced: Set<string>): UiNod
 }
 
 const HAS_DATA = ['table', 'view', 'materializedView'];
+
+function isDataObject(ref: TreeNodeRef): ref is Extract<TreeNodeRef, { kind: 'object' }> {
+  return ref.kind === 'object' && HAS_DATA.includes(ref.objectKind);
+}
 
 export function ConnectionsView(): React.JSX.Element {
   const {
@@ -260,14 +266,12 @@ export function ConnectionsView(): React.JSX.Element {
               run: () => void actions.disconnect(cfg.id),
             }
           : { type: 'item', id: 'connect', label: t.connect, run: () => void toggleNode(node, true) },
-        // Scripts: hito M3.
         {
           type: 'item',
           id: 'script',
           label: t.newScript,
           keybinding: 'Ctrl+]',
-          disabled: true,
-          run: () => undefined,
+          run: () => void newScript({ connectionId: cfg.id }),
         },
         SEPARATOR,
         {
@@ -353,11 +357,30 @@ export function ConnectionsView(): React.JSX.Element {
     };
     if (ref.kind === 'object' && HAS_DATA.includes(ref.objectKind)) {
       const engine = connections.find((x) => x.id === node.connectionId)?.engine ?? 'postgres';
+      const isTable = ref.objectKind === 'table';
+      const script = (id: 'select' | 'insert' | 'update' | 'delete', label: string): MenuEntry => ({
+        type: 'item',
+        id,
+        label,
+        disabled: id !== 'select' && !isTable,
+        run: () => void newTableScript(node.connectionId, ref, id),
+      });
       return [
-        // Pestaña de objeto: hito M7. Scripts y contar filas: hito M3.
+        // Pestaña de objeto (Ver datos / Ver estructura) y DDL: hito M7.
         { type: 'item', id: 'data', label: t.viewData, disabled: true, run: () => undefined },
         { type: 'item', id: 'structure', label: t.viewStructure, disabled: true, run: () => undefined },
-        { type: 'submenu', id: 'script', label: t.newScriptOf, disabled: true, entries: [] },
+        {
+          type: 'submenu',
+          id: 'script',
+          label: t.newScriptOf,
+          entries: [
+            script('select', t.scriptSelect),
+            script('insert', t.scriptInsert),
+            script('update', t.scriptUpdate),
+            script('delete', t.scriptDelete),
+            { type: 'item', id: 'ddl', label: t.scriptDdl, disabled: true, run: () => undefined },
+          ],
+        },
         SEPARATOR,
         copyName,
         {
@@ -368,7 +391,7 @@ export function ConnectionsView(): React.JSX.Element {
         },
         SEPARATOR,
         refreshEntry,
-        { type: 'item', id: 'count', label: t.countRows, disabled: true, run: () => undefined },
+        { type: 'item', id: 'count', label: t.countRows, run: () => void countRows(node.connectionId, ref) },
       ];
     }
     return [refreshEntry, copyName];
@@ -376,6 +399,15 @@ export function ConnectionsView(): React.JSX.Element {
 
   const onRowKeyDown = (e: React.KeyboardEvent, row: Row): boolean => {
     const node = row.node;
+    if (e.ctrlKey && e.key === ']' && node.type !== 'folder') {
+      const connectionId = node.type === 'connection' ? node.config.id : node.connectionId;
+      void newScript(targetOfRef(connectionId, node.type === 'meta' ? node.data.ref : null));
+      return true;
+    }
+    if (e.ctrlKey && e.key === 'Enter' && node.type === 'meta' && isDataObject(node.data.ref)) {
+      void newTableScript(node.connectionId, node.data.ref, 'select');
+      return true;
+    }
     switch (e.key) {
       case 'F2':
         if (node.type === 'folder') actions.renameFolder(node.name);
@@ -411,6 +443,18 @@ export function ConnectionsView(): React.JSX.Element {
     if (query) return null;
     if (row.node.type === 'folder') return JSON.stringify({ type: 'folder', name: row.node.name });
     if (row.node.type === 'connection') return JSON.stringify({ type: 'connection', id: row.node.config.id });
+    return null;
+  };
+
+  /** Texto al arrastrar tablas o columnas al editor: nombre calificado y entrecomillado (specs/04 §6). */
+  const dragText = (row: Row): string | null => {
+    if (row.node.type !== 'meta') return null;
+    const ref = row.node.data.ref;
+    const engine =
+      connections.find((x) => x.id === (row.node as { connectionId: string }).connectionId)?.engine ??
+      'postgres';
+    if (ref.kind === 'object') return qualifiedName(engine, { schema: ref.schema, name: ref.name });
+    if (ref.kind === 'column') return quoteIdent(engine, ref.name);
     return null;
   };
 
@@ -565,7 +609,20 @@ export function ConnectionsView(): React.JSX.Element {
               rows={rows}
               ariaLabel={es.sideBar.connectionsTitle}
               selectedId={selected}
-              onSelect={setSelected}
+              onSelect={(id) => {
+                setSelected(id);
+                const row = rows.find((r) => r.id === id);
+                const node = row?.node;
+                useConnectionsStore.setState({
+                  treeSelection:
+                    !node || node.type === 'folder'
+                      ? null
+                      : targetOfRef(
+                          node.type === 'connection' ? node.config.id : node.connectionId,
+                          node.type === 'meta' ? node.data.ref : null,
+                        ),
+                });
+              }}
               onToggle={(id, open) => {
                 const row = rows.find((r) => r.id === id);
                 if (row) void toggleNode(row.node, open);
@@ -578,6 +635,11 @@ export function ConnectionsView(): React.JSX.Element {
               onRowKeyDown={onRowKeyDown}
               onContextMenu={(row, e) => showContextMenu(e, contextEntries(row.node))}
               dragData={dragData}
+              dragText={dragText}
+              onMiddleClick={(row) => {
+                if (row.node.type === 'meta' && isDataObject(row.node.data.ref))
+                  void newTableScript(row.node.connectionId, row.node.data.ref, 'select');
+              }}
               canDrop={canDrop}
               onDrop={onDrop}
               renderRow={renderRow}

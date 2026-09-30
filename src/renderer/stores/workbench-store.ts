@@ -7,7 +7,12 @@ export interface EditorTab {
   kind: EditorTabKind;
   title: string;
   tooltip: string;
+  /** Ruta absoluta del archivo (scripts). */
+  path?: string;
   connectionId?: string;
+  /** Base y esquema elegidos en la barra del editor (sin valor: los predeterminados de la conexión). */
+  database?: string;
+  schema?: string;
   dirty: boolean;
   /** Pestaña de vista previa (cursiva): se reemplaza al abrir otra desde el árbol. */
   preview: boolean;
@@ -30,6 +35,14 @@ interface WorkbenchStore {
   move: (id: string, toIndex: number) => void;
   /** Abre (o enfoca) una pestaña; si es preview, reemplaza a la preview existente. */
   open: (tab: EditorTab) => void;
+  /** Cambia campos de una pestaña (cambios sin guardar, conexión, base…). */
+  update: (id: string, patch: Partial<Omit<EditorTab, 'id' | 'kind'>>) => void;
+  /** Quita pestañas ya confirmadas para cerrar (las guarda para "Reabrir pestaña cerrada"). */
+  remove: (ids: readonly string[], options?: { remember?: boolean }) => void;
+  /** Reemplaza todas las pestañas (restauración del espacio de trabajo). */
+  restore: (tabs: EditorTab[], activeId: string | null) => void;
+  /** Olvida pestañas cerradas (p. ej. scripts vacíos eliminados de disco). */
+  forgetClosed: (ids: readonly string[]) => void;
 }
 
 const MAX_CLOSED = 20;
@@ -125,6 +138,26 @@ export const useWorkbenchStore = create<WorkbenchStore>((set, get) => ({
       tabs.splice(Math.max(0, Math.min(toIndex, tabs.length)), 0, tab!);
       return { tabs };
     }),
+
+  update: (id, patch) => set((s) => ({ tabs: s.tabs.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
+
+  remove: (ids, options = {}) =>
+    set((s) => {
+      const removed = s.tabs.filter((t) => ids.includes(t.id));
+      if (removed.length === 0) return s;
+      const tabs = s.tabs.filter((t) => !ids.includes(t.id));
+      let activeId = s.activeId;
+      if (activeId && ids.includes(activeId)) {
+        const index = s.tabs.findIndex((t) => t.id === activeId);
+        activeId = nextActive(tabs, Math.min(index, tabs.length));
+      }
+      const closed = options.remember === false ? s.closed : [...s.closed, ...removed].slice(-MAX_CLOSED);
+      return { tabs, activeId, closed };
+    }),
+
+  restore: (tabs, activeId) => set({ tabs, activeId: activeId ?? tabs[0]?.id ?? null, closed: [] }),
+
+  forgetClosed: (ids) => set((s) => ({ closed: s.closed.filter((t) => !ids.includes(t.id)) })),
 
   open: (tab) =>
     set((s) => {

@@ -9,7 +9,9 @@ import { SEPARATOR } from '../../components/menu-types';
 import { keybindingLabel } from '../../commands/service';
 import { es } from '../../i18n/es';
 import { notAvailable } from '../../app/app-commands';
-import { sampleConnection } from '../../sample/sample-data';
+import { useConnectionsStore } from '../../stores/connections-store';
+import { showToast } from '../../stores/toast-store';
+import { closeTabs } from './scripts';
 import type { EditorTab } from '../../stores/workbench-store';
 import { useWorkbenchStore } from '../../stores/workbench-store';
 
@@ -19,27 +21,47 @@ const TAB_ICON: Record<EditorTab['kind'], { icon: string; color: string }> = {
 };
 
 function tabMenu(tab: EditorTab): MenuEntry[] {
-  const wb = useWorkbenchStore.getState();
+  const tabs = useWorkbenchStore.getState().tabs;
   const t = es.editor.tabs;
+  const ids = (list: EditorTab[]): string[] => list.map((x) => x.id);
+  const index = tabs.findIndex((x) => x.id === tab.id);
   return [
     {
       type: 'item',
       id: 'close',
       label: t.close,
       keybinding: keybindingLabel('db.closeTab'),
-      run: () => wb.close(tab.id),
+      run: () => void closeTabs([tab.id]),
     },
-    { type: 'item', id: 'others', label: t.closeOthers, run: () => wb.closeOthers(tab.id) },
-    { type: 'item', id: 'right', label: t.closeToRight, run: () => wb.closeToRight(tab.id) },
-    { type: 'item', id: 'saved', label: t.closeSaved, run: () => wb.closeSaved() },
-    { type: 'item', id: 'all', label: t.closeAll, run: () => wb.closeAll() },
+    {
+      type: 'item',
+      id: 'others',
+      label: t.closeOthers,
+      run: () => void closeTabs(ids(tabs.filter((x) => x.id !== tab.id))),
+    },
+    {
+      type: 'item',
+      id: 'right',
+      label: t.closeToRight,
+      run: () => void closeTabs(ids(tabs.slice(index + 1))),
+    },
+    {
+      type: 'item',
+      id: 'saved',
+      label: t.closeSaved,
+      run: () => void closeTabs(ids(tabs.filter((x) => !x.dirty))),
+    },
+    { type: 'item', id: 'all', label: t.closeAll, run: () => void closeTabs(ids(tabs)) },
     SEPARATOR,
     {
       type: 'item',
       id: 'path',
       label: t.copyPath,
-      disabled: tab.kind !== 'script',
-      run: () => notAvailable(t.copyPath),
+      disabled: !tab.path,
+      run: () =>
+        void window.api.app
+          .clipboardWrite({ text: tab.path ?? '' })
+          .then((r) => r.ok && showToast('info', es.toasts.copied)),
     },
     {
       type: 'item',
@@ -54,7 +76,9 @@ function tabMenu(tab: EditorTab): MenuEntry[] {
 export function EditorTabs(): React.JSX.Element {
   const tabs = useWorkbenchStore((s) => s.tabs);
   const activeId = useWorkbenchStore((s) => s.activeId);
-  const { activate, close, pin, move } = useWorkbenchStore.getState();
+  const { activate, pin, move } = useWorkbenchStore.getState();
+  const connections = useConnectionsStore((s) => s.connections);
+  const close = (id: string): void => void closeTabs([id]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
 
@@ -71,7 +95,8 @@ export function EditorTabs(): React.JSX.Element {
       >
         {tabs.map((tab, index) => {
           const active = tab.id === activeId;
-          const env = sampleConnection(tab.connectionId)?.environment;
+          const conn = connections.find((c) => c.id === tab.connectionId);
+          const env = conn ? (conn.color ?? `var(--env-${conn.environment})`) : undefined;
           const icon = TAB_ICON[tab.kind];
           return (
             <div
@@ -80,6 +105,7 @@ export function EditorTabs(): React.JSX.Element {
               aria-selected={active}
               tabIndex={active ? 0 : -1}
               title={tab.tooltip}
+              data-testid="editor-tab"
               draggable
               className={[
                 'editor-tab',
@@ -89,7 +115,7 @@ export function EditorTabs(): React.JSX.Element {
                 dragOver === tab.id ? 'is-drop-target' : '',
                 env ? 'has-env' : '',
               ].join(' ')}
-              style={env ? ({ '--tab-env': `var(--env-${env})` } as CSSProperties) : undefined}
+              style={env ? ({ '--tab-env': env } as CSSProperties) : undefined}
               onMouseDown={(e) => {
                 if (e.button === 0) activate(tab.id);
                 if (e.button === 1) e.preventDefault();

@@ -141,6 +141,13 @@ export const es = {
     newScriptOf: 'Nuevo script',
     copyQualifiedName: 'Copiar nombre calificado',
     countRows: 'Contar filas',
+    countResult: (name: string, n: number) =>
+      `${name}: ${n.toLocaleString('es')} ${n === 1 ? 'fila' : 'filas'}`,
+    scriptSelect: 'SELECT',
+    scriptInsert: 'INSERT',
+    scriptUpdate: 'UPDATE',
+    scriptDelete: 'DELETE',
+    scriptDdl: 'DDL',
     rootFolder: '(Raíz)',
   },
 
@@ -302,8 +309,10 @@ export const es = {
       manual: 'Manual',
       format: 'Formatear (Shift+Alt+F)',
       togglePanel: 'Mostrar/ocultar resultados (Ctrl+J)',
+      defaultDatabase: '(predeterminada)',
+      defaultSchema: '(predeterminado)',
     },
-    previewNotice: 'Vista previa estática: el editor Monaco se integra en el hito M3.',
+    ariaLabel: 'Editor SQL',
     object: {
       data: 'Datos',
       structure: 'Estructura',
@@ -338,6 +347,27 @@ export const es = {
     limitAll: 'Todo',
     empty: 'Ejecuta una consulta con Ctrl+Enter',
     rows: (n: number) => `${n.toLocaleString('es')} ${n === 1 ? 'fila' : 'filas'}`,
+    truncated: 'truncado',
+    loadMore: 'Cargar más',
+    loadAll: 'Cargar todo',
+    loading: 'cargando…',
+    loadAllTitle: 'Cargar todo',
+    loadAllConfirm: (n: number) =>
+      `Ya se cargaron ${n.toLocaleString('es')} filas y el resultado tiene más. ¿Cargar el resto? Puede usar mucha memoria.`,
+    loadAllContinue: 'Cargar el resto',
+    copyTable: 'Copiar tabla',
+    copyTableWithHeaders: 'Copiar tabla (con cabeceras)',
+    copiedTruncated: (n: number) =>
+      `Se copiaron ${n.toLocaleString('es')} filas cargadas (el resultado está truncado).`,
+    loadAllAndCopy: 'Cargar todo y copiar',
+    copyLargeTitle: 'Copiar selección',
+    copyLarge: (n: number) =>
+      `La selección tiene ${n.toLocaleString('es')} celdas. ¿Copiarlas al portapapeles?`,
+    unpin: 'Dejar de fijar resultado',
+    inList: 'Lista IN (…)',
+    showHidden: (n: number) => `Mostrar columnas ocultas (${n})`,
+    goToLine: (line: number) => `Ir a la línea ${line}`,
+    valueViewer: 'Visor de valor',
     summary: (sum: string, avg: string, min: string, max: string) =>
       `Suma: ${sum} · Prom.: ${avg} · Mín.: ${min} · Máx.: ${max}`,
     noMessages: 'Sin mensajes',
@@ -358,7 +388,12 @@ export const es = {
 
   statusBar: {
     position: (line: number, col: number) => `Ln ${line}, Col ${col}`,
+    selected: (n: number) => `${n.toLocaleString('es')} sel.`,
     autoSave: 'Autoguardado',
+    autoSaveOff: 'Autoguardado: no',
+    toggleAutoSave: 'Activar o desactivar el guardado automático',
+    executing: (elapsed: string) => `Ejecutando… ${elapsed}`,
+    changeTarget: 'Cambiar base/esquema (Ctrl+0)',
     spaces: (n: number) => `Espacios: ${n}`,
     autoCommit: 'Auto-commit',
     notifications: 'Notificaciones',
@@ -366,6 +401,72 @@ export const es = {
     changeConnection: 'Cambiar conexión (Ctrl+9)',
     chordPending: (key: string) => `(${key}) presionado. Esperando la segunda tecla del atajo…`,
     chordUnknown: (keys: string) => `La combinación de teclas (${keys}) no es un comando.`,
+  },
+
+  files: {
+    openNonSql: 'Abrir archivos que no son SQL',
+  },
+
+  scripts: {
+    readFailed: (name: string, message: string) => `No se pudo abrir ${name}: ${message}`,
+    saveFailed: (name: string, message: string) => `No se pudo guardar ${name}: ${message}`,
+    createFailed: (message: string) => `No se pudo crear el script: ${message}`,
+    workspaceFailed: (message: string) => `No se pudo abrir el espacio de trabajo: ${message}`,
+    changedOnDisk: (name: string) => `${name} cambió en disco. No se guardó para no perder esos cambios.`,
+    overwrite: 'Sobrescribir',
+    reload: 'Recargar',
+    missingFiles: (n: number) =>
+      `No se ${n === 1 ? 'encontró 1 archivo' : `encontraron ${n} archivos`} del espacio de trabajo`,
+    details: 'Ver detalles',
+    missingTitle: 'Archivos no encontrados',
+    missingMessage: 'Estos archivos ya no existen y sus pestañas no se restauraron:',
+    saveChangesTitle: 'Cambios sin guardar',
+    saveChanges: (name: string) => `¿Guardar los cambios en ${name}?`,
+    save: 'Guardar',
+    dontSave: 'No guardar',
+    saveAll: 'Guardar todo',
+    closeAppTitle: 'Cerrar DB Explorer',
+    closeAppMessage: (n: number) =>
+      `Hay ${n === 1 ? '1 archivo modificado' : `${n} archivos modificados`} sin guardar:`,
+    savesPending: 'Los guardados no terminaron en 5 segundos. ¿Cerrar igual? Se pueden perder cambios.',
+    closeAnyway: 'Cerrar igual',
+  },
+
+  execution: {
+    running: 'Ejecutando…',
+    alreadyRunning: 'La pestaña ya está ejecutando una consulta.',
+    noConnection: 'Elige una conexión para la pestaña (Ctrl+9).',
+    nothingToRun: 'No hay ninguna sentencia para ejecutar.',
+    readOnlyBlocked: (name: string) =>
+      `La conexión "${name}" es de solo lectura: no se ejecutan sentencias que modifican datos o estructura.`,
+    affected: (command: string, n: number) =>
+      `${command}: ${n.toLocaleString('es')} ${n === 1 ? 'fila afectada' : 'filas afectadas'}`,
+    returned: (n: number, truncated: boolean) =>
+      `${n.toLocaleString('es')} ${n === 1 ? 'fila' : 'filas'}${truncated ? ' (truncado)' : ''}`,
+    completed: (command: string) => `${command}: completado`,
+    cancelled: 'Consulta cancelada por el usuario.',
+    detail: (text: string) => `Detalle: ${text}`,
+    hint: (text: string) => `Sugerencia: ${text}`,
+    statementOk: 'Sentencia ejecutada',
+    statementFailed: 'La sentencia falló (ver Mensajes)',
+    confirm: {
+      productionTitle: 'Confirmar ejecución en Producción',
+      unboundedTitle: 'Sentencia sin WHERE',
+      productionBefore: (n: number) =>
+        `Vas a ejecutar ${n === 1 ? '1 sentencia que modifica' : `${n} sentencias que modifican`} datos en `,
+      productionAfter: ' (Producción).',
+      unbounded: 'UPDATE o DELETE sin WHERE: afectará a todas las filas de la tabla.',
+      dontAskAgain: 'No volver a preguntar en esta pestaña',
+      execute: 'Ejecutar',
+    },
+  },
+
+  pickers: {
+    connection: 'Elige la conexión de la pestaña',
+    database: 'Elige la base de datos',
+    schema: 'Elige el esquema',
+    databaseOrSchema: 'Elige el esquema o la base de datos',
+    otherDatabase: 'otra base de datos',
   },
 
   palette: {

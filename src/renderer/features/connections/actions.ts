@@ -25,6 +25,23 @@ export async function connect(id: string, password?: string): Promise<boolean> {
   return false;
 }
 
+/**
+ * Asegura que la conexión esté abierta antes de usarla (p. ej. al ejecutar):
+ * conecta y, si hace falta, pide la contraseña y espera la respuesta.
+ */
+export async function ensureConnected(id: string): Promise<boolean> {
+  if (store().status[id]?.state === 'connected') return true;
+  const result = await store().connect(id);
+  if (result.ok) return true;
+  if (!result.passwordRequired) {
+    showToast('error', c.connectFailed(connectionById(id)?.name ?? id, result.error.message));
+    return false;
+  }
+  return new Promise((resolve) => {
+    overlay().openDialog({ id: 'password', connectionId: id, onResult: resolve });
+  });
+}
+
 export function disconnect(id: string): Promise<void> {
   return store().disconnect(id);
 }
