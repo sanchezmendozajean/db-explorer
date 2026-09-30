@@ -80,3 +80,16 @@ Completado con datos falsos (tomados de `specs/maqueta`). Criterios de aceptaci�
 - Los datos de ejemplo (`renderer/sample/`, `stores/sample-store.ts`) se eliminan a medida que lleguen datos reales (M2 conexiones, M3 editor/resultados, M5 archivos).
 - No se persiste el tamaño/posición de la ventana (no lo pide la spec); se puede añadir a `ui-state.json` si se desea.
 - El bundle del renderer pesa ~1,1 MB sin dividir; se revisará en M8.
+
+---
+
+## Cambio de alcance solicitado (2026-09-30): selección y copia en la grilla
+
+Pedido del usuario: seleccionar celdas, filas y columnas; Ctrl+C / Ctrl+Shift+C copian solo lo seleccionado; en Exportar, "Copiar tabla" y "Copiar tabla (con cabeceras)". Pertenece a **M3** (la grilla actual de M1 es provisional), así que solo se actualizó la documentación: `04` §10, `06` §Copiar y exportar y `09` (tareas y aceptación de M3).
+
+Definiciones que faltaban (se eligió lo más simple, compatible con Excel y DBeaver):
+- **Clic en la cabecera selecciona la columna**; el orden pasa a un botón ▲▼ dentro de la cabecera (antes la spec no aclaraba qué hacía el clic en la cabecera).
+- **Selección no rectangular**: se copian las filas y columnas que tienen alguna celda seleccionada; las celdas no seleccionadas dentro de ese contorno van vacías, para que cada valor caiga en su columna al pegar.
+- **Copiar tabla**: todas las filas *cargadas* y las columnas visibles, respetando orden y filtro rápido; si el resultado está truncado se avisa con la opción "Cargar todo y copiar".
+- `NULL` se copia como cadena vacía (`results.copy.nullAs`); una sola celda se copia sin salto de línea final; confirmación si la selección supera 100 000 celdas.
+- En M3 el menú Exportar tendrá habilitadas solo las dos opciones de copiar tabla; CSV/JSON/XLSX/INSERT/Markdown siguen en M7.
