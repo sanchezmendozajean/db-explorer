@@ -1,0 +1,17 @@
+# Configuración mínima de empaquetado. Se completa en el hito M8 (fuses, iconos, nombre final).
+appId: com.dbexplorer.app
+productName: DB Explorer
+directories:
+  output: dist
+  buildResources: resources
+files:
+  - out/**
+  - package.json
+asar: true
+win:
+  target:
+    - nsis
+    - portable
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
