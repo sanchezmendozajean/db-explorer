@@ -1,13 +1,17 @@
-import { ipcMain } from 'electron';
+import { BrowserWindow, clipboard, ipcMain, nativeTheme } from 'electron';
 import type { IpcMainInvokeEvent } from 'electron';
 import type { IpcInvokeChannel } from '@shared/channels';
 import type { IpcError, IpcRequest, IpcResponse, IpcResult } from '@shared/ipc';
 import { ipcInvokeContract } from '@shared/ipc';
 import type { DbHostClient } from '../services/db-host-client';
 import { DbHostTimeoutError, DbHostUnavailableError } from '../services/db-host-client';
+import type { UiStateStore } from '../services/ui-state-store';
 import { isTrustedRendererUrl } from '../security';
 
-type Handler<C extends IpcInvokeChannel> = (request: IpcRequest<C>) => Promise<IpcResponse<C>>;
+type Handler<C extends IpcInvokeChannel> = (
+  request: IpcRequest<C>,
+  event: IpcMainInvokeEvent,
+) => Promise<IpcResponse<C>> | IpcResponse<C>;
 
 function toIpcError(err: unknown): IpcError {
   if (err instanceof DbHostUnavailableError) return { code: 'db-host-unavailable', message: err.message };
@@ -33,7 +37,7 @@ function handle<C extends IpcInvokeChannel>(channel: C, handler: Handler<C>): vo
         return { ok: false, error: { code: 'invalid-payload', message: parsed.error.message } };
       }
       try {
-        return { ok: true, data: await handler(parsed.data as IpcRequest<C>) };
+        return { ok: true, data: await handler(parsed.data as IpcRequest<C>, event) };
       } catch (err) {
         return { ok: false, error: toIpcError(err) };
       }
@@ -41,7 +45,23 @@ function handle<C extends IpcInvokeChannel>(channel: C, handler: Handler<C>): vo
   );
 }
 
-export function registerIpcHandlers(dbHost: DbHostClient): void {
+function windowOf(event: IpcMainInvokeEvent): BrowserWindow {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) throw new Error('Ventana no encontrada');
+  return win;
+}
+
+/** Límites de zoom equivalentes a los de VS Code (niveles de Chromium). */
+const ZOOM_MIN = -5;
+const ZOOM_MAX = 9;
+
+export function applyThemeSource(theme: 'dark' | 'light' | 'system'): void {
+  nativeTheme.themeSource = theme;
+}
+
+export function registerIpcHandlers(deps: { dbHost: DbHostClient; uiState: UiStateStore }): void {
+  const { dbHost, uiState } = deps;
+
   handle('app:ping', async ({ message }) => {
     const start = performance.now();
     const pong = await dbHost.request('ping', { message });
@@ -52,5 +72,43 @@ export function registerIpcHandlers(dbHost: DbHostClient): void {
       roundTripMs: Math.round((performance.now() - start) * 100) / 100,
       versions: pong.versions,
     };
+  });
+
+  handle('app:get-ui-state', () => uiState.state);
+
+  handle('app:set-ui-state', async (state) => {
+    if (state.theme !== uiState.state.theme) applyThemeSource(state.theme);
+    await uiState.save(state);
+    return {};
+  });
+
+  handle('app:get-window-state', (_req, event) => ({ maximized: windowOf(event).isMaximized() }));
+
+  handle('app:window-control', ({ action }, event) => {
+    const win = windowOf(event);
+    if (action === 'minimize') win.minimize();
+    else if (action === 'close') win.close();
+    else if (win.isMaximized()) win.unmaximize();
+    else win.maximize();
+    return { maximized: win.isMaximized() };
+  });
+
+  handle('app:zoom', ({ action }, event) => {
+    const contents = event.sender;
+    const current = contents.getZoomLevel();
+    const next =
+      action === 'reset' ? 0 : Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, current + (action === 'in' ? 1 : -1)));
+    contents.setZoomLevel(next);
+    return { level: next };
+  });
+
+  handle('app:edit', ({ action }, event) => {
+    event.sender[action]();
+    return {};
+  });
+
+  handle('app:clipboard-write', ({ text }) => {
+    clipboard.writeText(text);
+    return {};
   });
 }
