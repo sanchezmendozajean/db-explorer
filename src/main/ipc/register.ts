@@ -3,6 +3,7 @@ import type { IpcMainInvokeEvent } from 'electron';
 import type { DbHostClient } from '../services/db-host-client';
 import type { UiStateStore } from '../services/ui-state-store';
 import { handle } from './handle';
+import { setClosePhase } from '../windows/main-window';
 
 function windowOf(event: IpcMainInvokeEvent): BrowserWindow {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -63,6 +64,13 @@ export function registerIpcHandlers(deps: { dbHost: DbHostClient; uiState: UiSta
 
   handle('app:edit', ({ action }, event) => {
     event.sender[action]();
+    return {};
+  });
+
+  handle('app:close-ready', ({ phase }, event) => {
+    const win = windowOf(event);
+    // Se cierra en el siguiente ciclo para responder antes de destruir la ventana.
+    setImmediate(() => setClosePhase(win, phase));
     return {};
   });
 

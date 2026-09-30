@@ -12,6 +12,15 @@ export const IPC_INVOKE_CHANNELS = [
   'app:edit',
   'app:clipboard-write',
   'app:open-file-dialog',
+  'app:close-ready',
+  'settings:get',
+  'settings:update',
+  'workspace:open',
+  'workspace:save-state',
+  'workspace:new-script',
+  'fs:read-script',
+  'fs:write-script',
+  'fs:delete-empty-script',
   'conn:list',
   'conn:save',
   'conn:delete',
@@ -27,7 +36,13 @@ export const IPC_INVOKE_CHANNELS = [
   'query:close-session',
 ] as const;
 
-export const IPC_EVENT_CHANNELS = ['app:db-host-restarted', 'app:window-state', 'query:event'] as const;
+export const IPC_EVENT_CHANNELS = [
+  'app:db-host-restarted',
+  'app:window-state',
+  'app:before-close',
+  'settings:changed',
+  'query:event',
+] as const;
 
 export type IpcInvokeChannel = (typeof IPC_INVOKE_CHANNELS)[number];
 export type IpcEventChannel = (typeof IPC_EVENT_CHANNELS)[number];

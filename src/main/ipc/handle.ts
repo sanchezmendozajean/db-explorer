@@ -4,6 +4,7 @@ import type { IpcInvokeChannel } from '@shared/channels';
 import type { IpcError, IpcErrorCode, IpcRequest, IpcResponse, IpcResult } from '@shared/ipc';
 import { ipcInvokeContract } from '@shared/ipc';
 import { DbHostRequestError, DbHostTimeoutError, DbHostUnavailableError } from '../services/db-host-client';
+import { FileAccessError, FileConflictError } from '../services/workspace-service';
 import { isTrustedRendererUrl } from '../security';
 
 export type Handler<C extends IpcInvokeChannel> = (
@@ -31,6 +32,10 @@ export function toIpcError(err: unknown): IpcError {
     const code = err.code && passthrough.includes(err.code) ? (err.code as IpcErrorCode) : 'db-error';
     return { code, message: err.message };
   }
+  if (err instanceof FileConflictError) return { code: 'conflict', message: err.message };
+  if (err instanceof FileAccessError) return { code: 'forbidden', message: err.message };
+  const errno = (err as NodeJS.ErrnoException | null)?.code;
+  if (errno === 'ENOENT') return { code: 'not-found', message: 'El archivo no existe' };
   return { code: 'internal', message: err instanceof Error ? err.message : 'Error interno' };
 }
 

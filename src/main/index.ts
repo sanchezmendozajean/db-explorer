@@ -11,6 +11,9 @@ import { UiStateStore } from './services/ui-state-store';
 import { ConnectionStore } from './services/connection-store';
 import { SecretStore } from './services/secret-store';
 import { registerConnectionHandlers } from './ipc/connections';
+import { registerWorkspaceHandlers } from './ipc/workspace';
+import { SettingsStore } from './services/settings-store';
+import { WorkspaceService } from './services/workspace-service';
 
 function broadcast<C extends IpcEventChannel>(channel: C, payload: IpcEventPayload<C>): void {
   for (const win of BrowserWindow.getAllWindows()) win.webContents.send(channel, payload);
@@ -18,7 +21,11 @@ function broadcast<C extends IpcEventChannel>(channel: C, payload: IpcEventPaylo
 
 // Solo desarrollo/pruebas: aislar `userData` (las pruebas e2e no tocan los datos reales del usuario).
 const userDataOverride = process.env['DBX_USER_DATA_DIR'];
-if (userDataOverride && !app.isPackaged) app.setPath('userData', userDataOverride);
+if (userDataOverride && !app.isPackaged) {
+  app.setPath('userData', userDataOverride);
+  // El espacio de trabajo por defecto (DocumentosDB Explorer) también queda aislado.
+  app.setPath('documents', join(userDataOverride, 'Documents'));
+}
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -55,9 +62,14 @@ if (!app.requestSingleInstanceLock()) {
     });
     await secrets.load();
 
+    const settings = new SettingsStore(join(userData, 'settings.json'));
+    await settings.load();
+    const workspace = new WorkspaceService(userData, join(app.getPath('documents'), 'DB Explorer'));
+
     dbHost.start();
     registerIpcHandlers({ dbHost, uiState });
     registerConnectionHandlers({ dbHost, connections, secrets, skippedOnLoad: skipped });
+    registerWorkspaceHandlers({ settings, workspace });
 
     const open = (): BrowserWindow => createMainWindow({ dark: nativeTheme.shouldUseDarkColors });
     open();

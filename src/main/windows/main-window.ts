@@ -11,6 +11,20 @@ function send<C extends IpcEventChannel>(win: BrowserWindow, channel: C, payload
   if (!win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
+/** Ventanas cuyo renderer guarda los scripts antes de cerrar (specs/11 §4). */
+const closeGuards = new WeakMap<BrowserWindow, { listening: boolean; allowed: boolean }>();
+
+/** El renderer avisa que atiende el cierre (`listening`) o que ya terminó de guardar (`ready`). */
+export function setClosePhase(win: BrowserWindow, phase: 'listening' | 'ready'): void {
+  const guard = closeGuards.get(win);
+  if (!guard) return;
+  if (phase === 'listening') guard.listening = true;
+  else {
+    guard.allowed = true;
+    win.close();
+  }
+}
+
 export function createMainWindow(options: { dark: boolean }): BrowserWindow {
   const win = new BrowserWindow({
     width: 1400,
@@ -33,6 +47,22 @@ export function createMainWindow(options: { dark: boolean }): BrowserWindow {
   });
 
   win.once('ready-to-show', () => win.show());
+
+  // Al cerrar (botón, Alt+F4 o salir) se da al renderer la oportunidad de guardar los scripts.
+  const guard = { listening: false, allowed: false };
+  closeGuards.set(win, guard);
+  win.on('close', (event) => {
+    if (guard.allowed || !guard.listening || win.webContents.isCrashed()) return;
+    event.preventDefault();
+    send(win, 'app:before-close', {});
+  });
+  // Al recargar o si el renderer se cae, deja de atender el cierre hasta que vuelva a avisar.
+  win.webContents.on('did-start-navigation', (_e, _url, _inPlace, isMainFrame) => {
+    if (isMainFrame) guard.listening = false;
+  });
+  win.webContents.on('render-process-gone', () => {
+    guard.listening = false;
+  });
 
   const notify = (): void => send(win, 'app:window-state', { maximized: win.isMaximized() });
   win.on('maximize', notify);

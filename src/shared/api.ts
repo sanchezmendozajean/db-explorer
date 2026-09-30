@@ -15,6 +15,21 @@ export interface DbExplorerApi {
     edit: Invoke<'app:edit'>;
     clipboardWrite: Invoke<'app:clipboard-write'>;
     openFileDialog: Invoke<'app:open-file-dialog'>;
+    closeReady: Invoke<'app:close-ready'>;
+  };
+  settings: {
+    get: Invoke<'settings:get'>;
+    update: Invoke<'settings:update'>;
+  };
+  workspace: {
+    open: Invoke<'workspace:open'>;
+    saveState: Invoke<'workspace:save-state'>;
+    newScript: Invoke<'workspace:new-script'>;
+  };
+  fs: {
+    readScript: Invoke<'fs:read-script'>;
+    writeScript: Invoke<'fs:write-script'>;
+    deleteEmptyScript: Invoke<'fs:delete-empty-script'>;
   };
   conn: {
     list: Invoke<'conn:list'>;

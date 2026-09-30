@@ -6,6 +6,9 @@ import { ConnectionConfigSchema } from './connection';
 import type { TreeNodeData } from './metadata';
 import { TreeNodeRefSchema } from './metadata';
 import type { ExecuteSummary, FetchMoreResult, QueryEvent } from './query';
+import type { Settings } from './settings';
+import type { ScriptFile, WorkspaceInfo } from './workspace';
+import { WorkspaceStateSchema } from './workspace';
 
 /**
  * Contrato IPC entre renderer y main. Cada canal de petición declara el
@@ -120,6 +123,23 @@ export const FetchMoreRequestSchema = z.object({
   count: z.number().int().positive().nullable(),
 });
 
+export const SettingsUpdateSchema = z.object({
+  key: z.string().min(1).max(200),
+  /** `undefined` quita la clave del archivo. */
+  value: z.unknown(),
+});
+
+const FilePath = z.string().min(1).max(4096);
+
+export const WriteScriptSchema = z.object({
+  path: FilePath,
+  content: z.string().max(100_000_000),
+  bom: z.boolean(),
+  /** `mtime` de la última lectura/escritura; si el archivo cambió, no se sobrescribe. */
+  expectedMtimeMs: z.number().optional(),
+  force: z.boolean().optional(),
+});
+
 export const ipcInvokeContract = {
   'app:ping': { request: PingRequestSchema, response: PingResultSchema },
   'app:get-ui-state': { request: Empty, response: UiStateSchema },
@@ -133,6 +153,19 @@ export const ipcInvokeContract = {
     request: OpenFileDialogSchema,
     response: z.object({ path: z.string().nullable() }),
   },
+  'app:close-ready': {
+    /** `listening`: el renderer se encarga de guardar antes de cerrar; `ready`: ya puede cerrarse. */
+    request: z.object({ phase: z.enum(['listening', 'ready']) }),
+    response: Empty,
+  },
+  'settings:get': { request: Empty, response: z.custom<Settings>() },
+  'settings:update': { request: SettingsUpdateSchema, response: z.custom<Settings>() },
+  'workspace:open': { request: Empty, response: z.custom<WorkspaceInfo>() },
+  'workspace:save-state': { request: WorkspaceStateSchema, response: Empty },
+  'workspace:new-script': { request: Empty, response: z.object({ path: z.string() }) },
+  'fs:read-script': { request: z.object({ path: FilePath }), response: z.custom<ScriptFile>() },
+  'fs:write-script': { request: WriteScriptSchema, response: z.object({ mtimeMs: z.number() }) },
+  'fs:delete-empty-script': { request: z.object({ path: FilePath }), response: z.object({ deleted: z.boolean() }) },
   'conn:list': { request: Empty, response: ConnectionListSchema },
   'conn:save': { request: SaveConnectionSchema, response: z.object({ config: ConnectionConfigSchema }) },
   'conn:delete': { request: z.object({ id: Id }), response: Empty },
@@ -155,6 +188,9 @@ export const DbHostRestartedEventSchema = z.object({
 export const ipcEventContract = {
   'app:db-host-restarted': DbHostRestartedEventSchema,
   'app:window-state': WindowStateSchema,
+  /** La ventana se va a cerrar: el renderer guarda y responde con `app:close-ready`. */
+  'app:before-close': Empty,
+  'settings:changed': z.custom<Settings>(),
   'query:event': z.custom<QueryEvent>(),
 } as const satisfies Record<IpcEventChannel, z.ZodType>;
 
@@ -177,7 +213,9 @@ export type IpcErrorCode =
   /** La conexión no está abierta en el db-host (p. ej. tras reiniciarse). */
   | 'not-connected'
   /** La sesión ya está ejecutando otra consulta. */
-  | 'busy';
+  | 'busy'
+  /** El archivo cambió en disco desde la última lectura. */
+  | 'conflict';
 
 export interface IpcError {
   code: IpcErrorCode;

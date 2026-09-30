@@ -28,6 +28,21 @@ const api: DbExplorerApi = {
     edit: invoke('app:edit'),
     clipboardWrite: invoke('app:clipboard-write'),
     openFileDialog: invoke('app:open-file-dialog'),
+    closeReady: invoke('app:close-ready'),
+  },
+  settings: {
+    get: invoke('settings:get'),
+    update: invoke('settings:update'),
+  },
+  workspace: {
+    open: invoke('workspace:open'),
+    saveState: invoke('workspace:save-state'),
+    newScript: invoke('workspace:new-script'),
+  },
+  fs: {
+    readScript: invoke('fs:read-script'),
+    writeScript: invoke('fs:write-script'),
+    deleteEmptyScript: invoke('fs:delete-empty-script'),
   },
   conn: {
     list: invoke('conn:list'),
