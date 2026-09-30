@@ -142,7 +142,7 @@ export class WorkspaceService {
   async deleteIfEmpty(path: string): Promise<boolean> {
     const target = this.check(path);
     const data = await readFile(target, 'utf8').catch(() => null);
-    if (data === null || data.replace(/^﻿/, '').trim() !== '') return false;
+    if (data === null || data.replace(/^\uFEFF/, '').trim() !== '') return false;
     await unlink(target);
     return true;
   }
