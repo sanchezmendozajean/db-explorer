@@ -1,27 +1,23 @@
-import { _electron as electron, expect, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import type { ElectronApplication } from '@playwright/test';
-import { resolve } from 'node:path';
+import { launchApp } from './helpers';
 
 let app: ElectronApplication;
 
 test.beforeAll(async () => {
-  // Terminales integradas de VS Code heredan ELECTRON_RUN_AS_NODE=1, que haría arrancar Electron como Node.
-  const env = Object.fromEntries(
-    Object.entries(process.env).filter(
-      (entry): entry is [string, string] => entry[0] !== 'ELECTRON_RUN_AS_NODE' && entry[1] !== undefined,
-    ),
-  );
-  app = await electron.launch({ args: [resolve(__dirname, '../../out/main/index.js')], env });
+  app = await launchApp();
 });
 
 test.afterAll(async () => {
   await app.close();
 });
 
-test('el renderer muestra la respuesta del ping al db-host', async () => {
+test('"Acerca de" muestra la respuesta del ping al db-host', async () => {
   const page = await app.firstWindow();
-  await expect(page.getByTestId('ping-status')).toHaveText('El db-host respondió');
-  await expect(page.getByTestId('ping-echo')).toHaveText('ping');
+  await page.getByRole('menuitem', { name: 'Ayuda' }).click();
+  await page.getByRole('menuitem', { name: 'Acerca de' }).click();
+  await expect(page.getByTestId('ping-status')).toHaveText(/^Responde \(PID \d+/);
+  await page.keyboard.press('Escape');
 });
 
 test('el renderer no tiene acceso a Node', async () => {
@@ -59,4 +55,23 @@ test('la CSP está presente y bloquea scripts inline', async () => {
     return (window as unknown as Record<string, unknown>)['__inline'] === true;
   });
   expect(executed).toBe(false);
+});
+
+test('no se cargan recursos remotos (fuentes, estilos, scripts)', async () => {
+  const page = await app.firstWindow();
+  const remote = await page.evaluate(() =>
+    performance
+      .getEntriesByType('resource')
+      .map((e) => e.name)
+      .filter((url) => !url.startsWith('file:') && !url.startsWith('data:')),
+  );
+  expect(remote).toEqual([]);
+  const fonts = await page.evaluate(async () => {
+    await document.fonts.ready;
+    return {
+      cascadia: document.fonts.check('13px "Cascadia Code"'),
+      codicon: document.fonts.check('16px codicon'),
+    };
+  });
+  expect(fonts).toEqual({ cascadia: true, codicon: true });
 });

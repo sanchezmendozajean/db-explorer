@@ -15,6 +15,8 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
+      // Con `noUncheckedIndexedAccess` el compilador ya obliga a verificar accesos; `!` tras comprobar límites es legítimo.
+      '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
   {
@@ -22,10 +24,6 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.browser } },
     plugins: { 'react-hooks': reactHooks },
     rules: reactHooks.configs.recommended.rules,
-  },
-  {
-    files: ['test/**/*.ts'],
-    rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
   prettier,
 );

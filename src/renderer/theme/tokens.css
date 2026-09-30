@@ -1,0 +1,138 @@
+/*
+ * Tokens de color de specs/04 §2 (VS Code Dark Modern / Light Modern).
+ * Los tokens marcados "(maqueta)" no están en la tabla de 04 y se tomaron de specs/maqueta.
+ */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-title-bar: #181818;
+  --bg-activity-bar: #181818;
+  --bg-side-bar: #181818;
+  --bg-editor: #1f1f1f;
+  --bg-panel: #181818;
+  --bg-status-bar: #181818;
+  --bg-tab-active: #1f1f1f;
+  --bg-tab-inactive: #181818;
+  --bg-input: #313131;
+  --bg-hover: #2a2d2e;
+  --bg-selection: #04395e;
+  --bg-selection-inactive: #37373d;
+  --bg-menu: #1f1f1f;
+  --bg-grid-header: #252526;
+  --bg-grid-row-alt: #232323;
+  --bg-cell-edited: #3a3d1f;
+  --bg-row-deleted: #4b1818;
+  --bg-row-inserted: #1e3a1e;
+  --bg-button-secondary: #313131; /* (maqueta) */
+  --bg-backdrop: rgba(0, 0, 0, 0.35); /* (maqueta) */
+  --border: #2b2b2b;
+  --border-input: #3c3c3c; /* (maqueta) */
+  --border-menu: #454545; /* (maqueta) */
+  --border-focus: #0078d4;
+  --fg: #cccccc;
+  --fg-muted: #9d9d9d;
+  --fg-disabled: #6e6e6e;
+  --fg-null: #6e6e6e;
+  --accent: #0078d4;
+  --accent-fg: #ffffff;
+  --accent-hover: #026ec1;
+  --link: #3794ff; /* (maqueta) */
+  --error: #f85149;
+  --warning: #cca700;
+  --success: #2ea043;
+  --icon-table: #75beff; /* (maqueta) */
+  --icon-sql: #519aba; /* (maqueta) */
+  --status-prod-bg: #5a1d1d;
+  --status-prod-fg: #cccccc;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+  --shadow-dialog: 0 8px 24px rgba(0, 0, 0, 0.36);
+  --scrollbar: rgba(121, 121, 121, 0.4);
+  --scrollbar-hover: rgba(100, 100, 100, 0.7);
+  /* Sintaxis SQL (maqueta) — usada hasta integrar Monaco en M3. */
+  --syntax-keyword: #569cd6;
+  --syntax-string: #ce9178;
+  --syntax-number: #b5cea8;
+  --syntax-identifier: #9cdcfe;
+  --syntax-comment: #6a9955;
+  --editor-line-number: #6e7681;
+  --editor-line-number-active: #cccccc;
+  --editor-current-line: #282828;
+  --editor-cursor: #aeafad;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg-title-bar: #f8f8f8;
+  --bg-activity-bar: #f8f8f8;
+  --bg-side-bar: #f8f8f8;
+  --bg-editor: #ffffff;
+  --bg-panel: #f8f8f8;
+  --bg-status-bar: #f8f8f8;
+  --bg-tab-active: #ffffff;
+  --bg-tab-inactive: #f8f8f8;
+  --bg-input: #ffffff;
+  --bg-hover: #f2f2f2;
+  --bg-selection: #e4f0fb;
+  --bg-selection-inactive: #e4e6f1;
+  --bg-menu: #ffffff;
+  --bg-grid-header: #f3f3f3;
+  --bg-grid-row-alt: #fafafa;
+  --bg-cell-edited: #fff8c5;
+  --bg-row-deleted: #fde7e9;
+  --bg-row-inserted: #e6f4ea;
+  --bg-button-secondary: #e5e5e5;
+  --bg-backdrop: rgba(0, 0, 0, 0.2);
+  --border: #e5e5e5;
+  --border-input: #cecece;
+  --border-menu: #cecece;
+  --border-focus: #005fb8;
+  --fg: #3b3b3b;
+  --fg-muted: #6e6e6e;
+  --fg-disabled: #a0a0a0;
+  --fg-null: #a0a0a0;
+  --accent: #005fb8;
+  --accent-fg: #ffffff;
+  --accent-hover: #0258a8;
+  --link: #005fb8;
+  --error: #e51400;
+  --warning: #bf8803;
+  --success: #388a34;
+  --icon-table: #007acc;
+  --icon-sql: #498ba7;
+  --status-prod-bg: #fde7e9;
+  --status-prod-fg: #3b3b3b;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  --shadow-dialog: 0 8px 24px rgba(0, 0, 0, 0.2);
+  --scrollbar: rgba(100, 100, 100, 0.4);
+  --scrollbar-hover: rgba(100, 100, 100, 0.7);
+  --syntax-keyword: #0000ff;
+  --syntax-string: #a31515;
+  --syntax-number: #098658;
+  --syntax-identifier: #001080;
+  --syntax-comment: #008000;
+  --editor-line-number: #6e7681;
+  --editor-line-number-active: #171184;
+  --editor-current-line: #eeeeee;
+  --editor-cursor: #000000;
+}
+
+:root {
+  /* Colores de entorno (D10), iguales en ambos temas. */
+  --env-local: #2ea043;
+  --env-dev: #3794ff;
+  --env-qa: #cca700;
+  --env-prod: #f85149;
+
+  --font-ui: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-code: 'Cascadia Code', Consolas, 'Courier New', monospace;
+  --font-size: 13px;
+  --radius-control: 2px;
+  --radius-popup: 4px;
+  --height-title-bar: 35px;
+  --height-tabs: 35px;
+  --height-toolbar: 30px;
+  --height-status-bar: 22px;
+  --height-row: 22px;
+  --width-activity-bar: 48px;
+  --window-close-hover: #c42b1c;
+}

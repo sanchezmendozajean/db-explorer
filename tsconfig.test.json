@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "lib": ["ES2023", "DOM"],
+    "types": ["node", "vite/client"],
+    "noEmit": true
+  },
+  "include": ["test/unit/**/*", "test/integration/**/*", "src/renderer/env.d.ts"]
+}

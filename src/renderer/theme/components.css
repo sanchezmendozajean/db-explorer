@@ -1,0 +1,664 @@
+/* Componentes base estilo VS Code (specs/04 §3). */
+
+/* ---------- Botones ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-small {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: var(--bg-button-secondary);
+  color: var(--fg);
+  border-color: var(--border-input);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.btn-danger {
+  background: var(--error);
+  color: #ffffff;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn:focus-visible {
+  outline: 1px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  flex: none;
+}
+
+.icon-btn:hover:not(:disabled),
+.icon-btn.is-active,
+.icon-btn.is-open {
+  background: var(--bg-hover);
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.link-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--link);
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Inputs ---------- */
+.input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 24px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+}
+
+.input:focus-within {
+  border-color: var(--border-focus);
+}
+
+.input.is-invalid {
+  border-color: var(--error);
+}
+
+.input input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  padding: 0 6px;
+  font-size: 13px;
+  outline: none;
+  user-select: text;
+}
+
+.input.has-icon input {
+  padding-left: 24px;
+}
+
+.input-icon {
+  position: absolute;
+  left: 6px;
+  color: var(--fg-muted);
+  pointer-events: none;
+}
+
+.input input::placeholder {
+  color: var(--fg-muted);
+}
+
+.select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.select select {
+  appearance: none;
+  height: 24px;
+  padding: 0 24px 0 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  font-size: 13px;
+  outline: none;
+}
+
+.select select:focus-visible {
+  border-color: var(--border-focus);
+}
+
+.select option {
+  background: var(--bg-menu);
+  color: var(--fg);
+}
+
+.select-chevron {
+  position: absolute;
+  right: 5px;
+  pointer-events: none;
+  color: var(--fg);
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.checkbox input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.checkbox-box {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-input);
+  border-radius: 3px;
+  background: var(--bg-input);
+  color: transparent;
+}
+
+.checkbox input:checked + .checkbox-box {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.checkbox input:focus-visible + .checkbox-box {
+  outline: 1px solid var(--border-focus);
+  outline-offset: 1px;
+}
+
+/* ---------- Desplegables y chips ---------- */
+.dropdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dropdown-chevron {
+  color: var(--fg-muted);
+}
+
+.chip,
+.toolbar-btn {
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-control);
+}
+
+.chip {
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+}
+
+.chip:hover,
+.toolbar-btn:hover,
+.dropdown.is-open {
+  background: var(--bg-hover);
+}
+
+.segmented {
+  display: inline-flex;
+  margin-left: 8px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+
+.segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border: none;
+  border-right: 1px solid var(--border-input);
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.segmented button:last-child {
+  border-right: none;
+}
+
+.segmented button.is-active {
+  background: var(--bg-selection-inactive);
+  color: var(--fg);
+}
+
+/* ---------- Menús ---------- */
+.menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 220px;
+  max-width: 420px;
+  padding: 4px;
+  background: var(--bg-menu);
+  border: 1px solid var(--border-menu);
+  border-radius: var(--radius-popup);
+  box-shadow: var(--shadow);
+  outline: none;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px 0 0;
+  border-radius: 3px;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.menu-item.is-active:not(.is-disabled) {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.menu-item.is-active:not(.is-disabled) .menu-keybinding {
+  color: var(--accent-fg);
+}
+
+.menu-item.is-disabled {
+  color: var(--fg-disabled);
+}
+
+.menu-check {
+  width: 24px;
+  display: flex;
+  justify-content: center;
+  flex: none;
+}
+
+.menu-label {
+  flex: 1;
+  padding-right: 24px;
+}
+
+.menu-keybinding {
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
+.menu-item.is-disabled .menu-keybinding {
+  color: var(--fg-disabled);
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border-menu);
+}
+
+/* ---------- Pestañas planas (panel) ---------- */
+.tabs {
+  display: flex;
+  height: 100%;
+  gap: 4px;
+}
+
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab:hover,
+.tab.is-active {
+  color: var(--fg);
+}
+
+.tab.is-active::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 3px;
+  height: 1px;
+  background: var(--border-focus);
+}
+
+/* ---------- Árbol ---------- */
+.tree {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  outline: none;
+}
+
+.tree-row {
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  padding-right: 8px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tree-row:hover {
+  background: var(--bg-hover);
+}
+
+.tree-row.is-selected {
+  background: var(--bg-selection-inactive);
+}
+
+.tree:focus .tree-row.is-selected {
+  background: var(--bg-selection);
+  outline: 1px solid var(--border-focus);
+  outline-offset: -1px;
+}
+
+.tree-twistie {
+  width: 16px;
+  height: 16px;
+  margin-right: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.tree-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-menu);
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.tree:hover .tree-guide,
+.tree:focus-within .tree-guide {
+  opacity: 1;
+}
+
+/* ---------- Modal ---------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-backdrop);
+}
+
+.modal {
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-editor);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-popup);
+  box-shadow: var(--shadow-dialog);
+  outline: none;
+  user-select: text;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 6px 16px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 16px 12px;
+}
+
+.modal-body p {
+  margin: 0 0 12px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.about-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.about-list dt {
+  color: var(--fg-muted);
+}
+
+.about-list dd {
+  margin: 0;
+}
+
+.keybindings-table {
+  margin-top: 8px;
+}
+
+.keybindings-row {
+  display: grid;
+  grid-template-columns: 2fr 1.4fr 1.6fr;
+  gap: 12px;
+  padding: 0 6px;
+  line-height: 24px;
+}
+
+.keybindings-row:nth-child(even) {
+  background: var(--bg-grid-row-alt);
+}
+
+.keybindings-row.is-header {
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+
+.keybindings-row.is-pending {
+  color: var(--fg-muted);
+}
+
+.keybindings-keys {
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+
+.keybindings-id {
+  color: var(--fg-muted);
+  font-family: var(--font-code);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Paleta rápida ---------- */
+.quick-input-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+}
+
+.quick-input {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  background: var(--bg-menu);
+  border: 1px solid var(--border-menu);
+  border-radius: 6px;
+  box-shadow: var(--shadow-dialog);
+}
+
+.quick-input .input {
+  height: 26px;
+  border-color: var(--border-focus);
+}
+
+.quick-input-list {
+  max-height: 440px;
+  overflow-y: auto;
+  margin-top: 6px;
+}
+
+.quick-input-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.quick-input-item.has-separator {
+  border-top: 1px solid var(--border-menu);
+}
+
+.quick-input-item.is-active {
+  background: var(--bg-selection);
+  outline: 1px solid var(--border-focus);
+  outline-offset: -1px;
+}
+
+.quick-input-label {
+  flex: none;
+}
+
+.quick-input-detail {
+  color: var(--fg-muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quick-input-spacer {
+  flex: 1;
+}
+
+.quick-input-group,
+.quick-input-keys {
+  color: var(--fg-muted);
+  font-size: 12px;
+  display: flex;
+  gap: 3px;
+}
+
+.quick-input-empty {
+  padding: 4px 8px;
+  color: var(--fg-muted);
+}
+
+/* ---------- Notificaciones ---------- */
+.toasts {
+  position: fixed;
+  right: 12px;
+  bottom: 34px;
+  z-index: 800;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 400px;
+  max-width: calc(100vw - 24px);
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 8px 10px 12px;
+  background: var(--bg-menu);
+  border: 1px solid var(--border-menu);
+  border-radius: var(--radius-popup);
+  box-shadow: var(--shadow);
+  user-select: text;
+}
+
+.toast > .codicon {
+  margin-top: 3px;
+}
+
+.toast-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 6px;
+}

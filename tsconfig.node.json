@@ -13,8 +13,6 @@
     "src/main/**/*",
     "src/preload/**/*",
     "src/db-host/**/*",
-    "src/shared/**/*",
-    "test/unit/**/*",
-    "test/integration/**/*"
+    "src/shared/**/*"
   ]
 }

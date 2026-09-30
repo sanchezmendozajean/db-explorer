@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig } from 'electron-vite';
 import type { Plugin } from 'vite';
@@ -45,6 +46,8 @@ function cspPlugin(): Plugin {
   };
 }
 
+const appVersion = (JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as { version: string }).version;
+
 const sharedAlias = { '@shared': resolve('src/shared') };
 
 export default defineConfig({
@@ -73,6 +76,7 @@ export default defineConfig({
       alias: { ...sharedAlias, '@renderer': resolve('src/renderer') },
     },
     plugins: [react(), cspPlugin()],
+    define: { __APP_VERSION__: JSON.stringify(appVersion) },
     build: {
       rollupOptions: {
         input: { index: resolve('src/renderer/index.html') },
