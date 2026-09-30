@@ -8,6 +8,8 @@ import { DEFAULT_KEYBINDINGS } from '../../commands/default-keybindings';
 import { formatSequence } from '../../commands/keybindings';
 import { commandTitle, es } from '../../i18n/es';
 import { useOverlayStore } from '../../stores/overlay-store';
+import { ConnectionDialog } from '../connections/ConnectionDialog';
+import { ConfirmDialog, PasswordDialog, PromptDialog } from './SimpleDialogs';
 
 type PingState =
   { status: 'pending' } | { status: 'ok'; result: PingResult } | { status: 'error'; error: IpcError };
@@ -121,7 +123,26 @@ function KeybindingsDialog({ onClose }: { onClose: () => void }): React.JSX.Elem
 export function Dialogs(): React.JSX.Element | null {
   const dialog = useOverlayStore((s) => s.dialog);
   const close = useOverlayStore((s) => s.closeDialog);
-  if (dialog === 'about') return <AboutDialog onClose={close} />;
-  if (dialog === 'keybindings') return <KeybindingsDialog onClose={close} />;
-  return null;
+  if (!dialog) return null;
+  switch (dialog.id) {
+    case 'about':
+      return <AboutDialog onClose={close} />;
+    case 'keybindings':
+      return <KeybindingsDialog onClose={close} />;
+    case 'connection':
+      return (
+        <ConnectionDialog
+          key={dialog.editId ?? 'new'}
+          editId={dialog.editId}
+          folder={dialog.folder}
+          onClose={close}
+        />
+      );
+    case 'password':
+      return <PasswordDialog connectionId={dialog.connectionId} onClose={close} />;
+    case 'confirm':
+      return <ConfirmDialog {...dialog} onClose={close} />;
+    case 'prompt':
+      return <PromptDialog {...dialog} onClose={close} />;
+  }
 }

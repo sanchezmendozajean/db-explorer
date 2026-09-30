@@ -19,3 +19,16 @@ export async function launchApp(userDataDir: string = tempUserData()): Promise<E
   env['DBX_USER_DATA_DIR'] = userDataDir;
   return electron.launch({ args: [resolve(__dirname, '../../out/main/index.js')], env });
 }
+
+export interface PgE2eConfig {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+  database: string;
+}
+
+/** Configuración del PostgreSQL de pruebas (definida por global-setup). */
+export function pgConfig(): PgE2eConfig {
+  return JSON.parse(process.env['DBX_PG'] ?? '{}') as PgE2eConfig;
+}

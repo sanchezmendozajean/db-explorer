@@ -5,6 +5,7 @@ import { useUiStore } from '../stores/ui-store';
 import { useOverlayStore } from '../stores/overlay-store';
 import { useWorkbenchStore } from '../stores/workbench-store';
 import { showToast } from '../stores/toast-store';
+import { newConnection } from '../features/connections/actions';
 
 const cat = es.commandCategories;
 
@@ -101,8 +102,9 @@ export function registerAppCommands(): () => void {
       run: () => wb().activateIndex(i),
     })),
 
-    { id: 'db.help.keybindings', category: cat.help, run: () => overlay().openDialog('keybindings') },
-    { id: 'db.help.about', category: cat.help, run: () => overlay().openDialog('about') },
+    { id: 'db.newConnection', category: cat.file, run: () => newConnection() },
+    { id: 'db.help.keybindings', category: cat.help, run: () => overlay().openDialog({ id: 'keybindings' }) },
+    { id: 'db.help.about', category: cat.help, run: () => overlay().openDialog({ id: 'about' }) },
     {
       id: 'db.window.quit',
       category: cat.file,

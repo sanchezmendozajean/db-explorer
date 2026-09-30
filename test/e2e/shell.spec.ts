@@ -109,12 +109,12 @@ test('los tamaños de paneles y el tema se recuerdan al reiniciar', async () => 
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 });
 
-test('el menú contextual del árbol se navega con teclado y Esc lo cierra', async () => {
-  await page.getByRole('treeitem', { name: /Usuarios/ }).click({ button: 'right' });
+test('el menú contextual se navega con teclado y Esc lo cierra', async () => {
+  await page.locator('.editor-tab', { hasText: 'Script-1' }).click({ button: 'right' });
   const menu = page.locator('.menu');
   await expect(menu).toBeFocused();
   await page.keyboard.press('ArrowDown');
-  await expect(menu.locator('.menu-item.is-active')).toHaveText('Ver datos');
+  await expect(menu.locator('.menu-item.is-active')).toHaveText(/^Cerrar/);
   await page.keyboard.press('Escape');
   await expect(menu).toHaveCount(0);
 });

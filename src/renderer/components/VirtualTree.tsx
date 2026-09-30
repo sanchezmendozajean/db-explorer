@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Codicon } from './Codicon';
 
@@ -29,7 +29,20 @@ export interface VirtualTreeProps<T extends TreeRow> {
   basePadding?: number;
   /** Contexto de foco para cláusulas `when` (p. ej. `treeFocus`). */
   focusContext?: string;
+  /**
+   * Si es false, un clic simple solo selecciona; se expande con el chevron,
+   * las flechas o doble clic (árbol de conexiones: conectar es explícito).
+   */
+  toggleOnClick?: boolean;
+  /** Teclas extra (F2, Supr, F5…). Devuelve true si la manejó. */
+  onRowKeyDown?: (event: React.KeyboardEvent, row: T) => boolean;
+  /** Arrastrar y soltar: datos a arrastrar desde una fila (`null` = no arrastrable). */
+  dragData?: (row: T) => string | null;
+  canDrop?: (data: string, target: T) => boolean;
+  onDrop?: (data: string, target: T) => void;
 }
+
+const DRAG_TYPE = 'application/x-dbx-tree';
 
 /**
  * Árbol virtualizado estilo VS Code. Recibe las filas visibles ya aplanadas;
@@ -48,6 +61,11 @@ export function VirtualTree<T extends TreeRow>({
   indent = 8,
   basePadding = 8,
   focusContext = 'treeFocus',
+  toggleOnClick = true,
+  onRowKeyDown,
+  dragData,
+  canDrop,
+  onDrop,
 }: VirtualTreeProps<T>): React.JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null);
   const baseId = useId();
@@ -61,6 +79,8 @@ export function VirtualTree<T extends TreeRow>({
   });
 
   const selectedIndex = rows.findIndex((r) => r.id === selectedId);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const dragging = useRef<string | null>(null);
 
   useEffect(() => {
     if (selectedIndex >= 0) virtualizer.scrollToIndex(selectedIndex, { align: 'auto' });
@@ -78,6 +98,10 @@ export function VirtualTree<T extends TreeRow>({
     const row = rows[index]!;
     const select = (i: number): void => onSelect(rows[Math.max(0, Math.min(rows.length - 1, i))]!.id);
     const page = Math.max(1, Math.floor((scrollRef.current?.clientHeight ?? rowHeight) / rowHeight) - 1);
+    if (selectedIndex >= 0 && onRowKeyDown?.(e, row)) {
+      e.preventDefault();
+      return;
+    }
     switch (e.key) {
       case 'ArrowDown':
         select(selectedIndex < 0 ? 0 : index + 1);
@@ -143,7 +167,39 @@ export function VirtualTree<T extends TreeRow>({
               aria-level={row.depth + 1}
               aria-expanded={row.expandable ? row.expanded : undefined}
               aria-selected={selected}
-              className={['tree-row', selected ? 'is-selected' : ''].join(' ')}
+              className={[
+                'tree-row',
+                selected ? 'is-selected' : '',
+                dropTarget === row.id ? 'is-drop-target' : '',
+              ].join(' ')}
+              draggable={dragData ? dragData(row) !== null : undefined}
+              onDragStart={(e) => {
+                const data = dragData?.(row);
+                if (!data) return;
+                dragging.current = data;
+                e.dataTransfer.setData(DRAG_TYPE, data);
+                e.dataTransfer.effectAllowed = 'move';
+              }}
+              onDragEnd={() => {
+                dragging.current = null;
+                setDropTarget(null);
+              }}
+              onDragOver={(e) => {
+                const data = dragging.current;
+                if (!data || !e.dataTransfer.types.includes(DRAG_TYPE) || !canDrop?.(data, row)) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                setDropTarget(row.id);
+              }}
+              onDragLeave={() => setDropTarget((t) => (t === row.id ? null : t))}
+              onDrop={(e) => {
+                const data = e.dataTransfer.getData(DRAG_TYPE);
+                setDropTarget(null);
+                if (data && canDrop?.(data, row)) {
+                  e.preventDefault();
+                  onDrop?.(data, row);
+                }
+              }}
               style={{
                 height: rowHeight,
                 transform: `translateY(${item.start}px)`,
@@ -153,7 +209,9 @@ export function VirtualTree<T extends TreeRow>({
                 if (e.button === 0 || e.button === 2) onSelect(row.id);
               }}
               onClick={(e) => {
-                if (row.expandable && e.detail === 1) onToggle(row.id, !row.expanded);
+                const onTwistie = (e.target as Element).closest('.tree-twistie') !== null;
+                if (row.expandable && e.detail === 1 && (toggleOnClick || onTwistie))
+                  onToggle(row.id, !row.expanded);
               }}
               onDoubleClick={() => onOpen?.(row)}
               onContextMenu={(e) => onContextMenu?.(row, e)}

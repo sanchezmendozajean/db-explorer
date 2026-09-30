@@ -17,6 +17,7 @@ import { startUiStatePersistence, useUiStore } from './stores/ui-store';
 import { showToast } from './stores/toast-store';
 import { useWorkbenchStore } from './stores/workbench-store';
 import { useSampleStore } from './stores/sample-store';
+import { useConnectionsStore } from './stores/connections-store';
 
 async function bootstrap(): Promise<void> {
   // El estado de UI se carga antes del primer render para no parpadear tamaños ni tema.
@@ -75,7 +76,13 @@ async function bootstrap(): Promise<void> {
 
   document.title = es.app.windowTitle(SAMPLE_WORKSPACE.name);
 
-  window.api.on('app:db-host-restarted', () => showToast('warning', es.toasts.dbHostRestarted));
+  window.api.on('app:db-host-restarted', () => {
+    useConnectionsStore.getState().resetSessions();
+    showToast('warning', es.toasts.dbHostRestarted);
+  });
+
+  const skipped = await useConnectionsStore.getState().load();
+  if (skipped > 0) showToast('warning', es.connections.skippedEntries(skipped));
 
   const container = document.getElementById('root');
   if (!container) throw new Error('No se encontró el elemento raíz');

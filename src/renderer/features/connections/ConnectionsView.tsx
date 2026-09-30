@@ -1,148 +1,195 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ConnectionConfig, Environment } from '@shared/connection';
+import { connectionAddress } from '@shared/connection';
+import type { TreeNodeData, TreeNodeRef } from '@shared/metadata';
+import { nodeKey } from '@shared/metadata';
+import { qualifiedName } from '@shared/sql-quote';
 import { Codicon } from '../../components/Codicon';
 import { Button, IconButton } from '../../components/Button';
 import { TextInput } from '../../components/Inputs';
 import { Dropdown } from '../../components/Dropdown';
-import { VirtualTree, flattenTree } from '../../components/VirtualTree';
+import type { TreeRow } from '../../components/VirtualTree';
+import { VirtualTree } from '../../components/VirtualTree';
 import type { MenuEntry } from '../../components/menu-types';
 import { SEPARATOR } from '../../components/menu-types';
 import { showContextMenu } from '../../components/ContextMenuHost';
 import { es } from '../../i18n/es';
-import { notAvailable } from '../../app/app-commands';
-import type { SampleTreeNode } from '../../sample/sample-data';
-import { SAMPLE_CONNECTION_TREE, SAMPLE_EXPANDED, sampleConnection } from '../../sample/sample-data';
-import { useSampleStore } from '../../stores/sample-store';
-import { useWorkbenchStore } from '../../stores/workbench-store';
-import { showToast } from '../../stores/toast-store';
+import { useConnectionsStore } from '../../stores/connections-store';
 import { Highlight, SideBarHeader } from '../side-bar/SideBarHeader';
+import * as actions from './actions';
 
 const ENGINE_BADGE: Record<string, string> = { postgres: 'PG', mariadb: 'MY', sqlite: 'LT', sqlserver: 'MS' };
+const ENVIRONMENTS: Environment[] = ['local', 'dev', 'qa', 'prod'];
 
-const KIND_ICON: Partial<Record<SampleTreeNode['kind'], string>> = {
-  database: 'database',
-  schema: 'symbol-namespace',
-  folder: 'folder',
-  table: 'table',
-  view: 'eye',
-  function: 'symbol-method',
-  sequence: 'symbol-number',
-};
+type UiNode =
+  | { type: 'folder'; id: string; name: string; children: UiNode[] }
+  | { type: 'connection'; id: string; config: ConnectionConfig; children: UiNode[] }
+  | { type: 'meta'; id: string; connectionId: string; data: TreeNodeData; children: UiNode[] };
 
-/** Filtra conservando ancestros de las coincidencias. */
-function filterTree(nodes: SampleTreeNode[], query: string, expandOut: Set<string>): SampleTreeNode[] {
+type Row = TreeRow & { node: UiNode };
+
+const folderId = (name: string): string => `folder:${encodeURIComponent(name)}`;
+const connectionKey = (id: string): string => nodeKey(id, { kind: 'connection' });
+
+function metaLabel(data: TreeNodeData): string {
+  const f = es.connections.folders;
+  switch (data.ref.kind) {
+    case 'objectFolder':
+      return f[data.ref.objectKind];
+    case 'indexFolder':
+      return f.indexes;
+    case 'systemSchemas':
+      return f.systemSchemas;
+    default:
+      return data.label;
+  }
+}
+
+function metaSecondary(data: TreeNodeData): string | undefined {
+  return data.count !== undefined ? `(${data.count})` : data.secondary;
+}
+
+function metaIcon(data: TreeNodeData): { name: string; color?: string } {
+  const ref = data.ref;
+  switch (ref.kind) {
+    case 'database':
+      return { name: 'database' };
+    case 'schema':
+      return { name: 'symbol-namespace' };
+    case 'systemSchemas':
+    case 'objectFolder':
+    case 'indexFolder':
+      return { name: 'folder' };
+    case 'object':
+      switch (ref.objectKind) {
+        case 'table':
+          return { name: 'table', color: 'var(--icon-table)' };
+        case 'view':
+        case 'materializedView':
+          return { name: 'eye' };
+        case 'function':
+        case 'procedure':
+          return { name: 'symbol-method' };
+        case 'sequence':
+          return { name: 'symbol-number' };
+        default:
+          return { name: 'symbol-misc' };
+      }
+    case 'column':
+      return data.primaryKey ? { name: 'key', color: 'var(--warning)' } : { name: 'symbol-field' };
+    case 'index':
+      return data.primaryKey ? { name: 'key', color: 'var(--warning)' } : { name: 'list-tree' };
+    default:
+      return { name: 'circle-outline' };
+  }
+}
+
+function nodeLabel(node: UiNode): string {
+  if (node.type === 'folder') return node.name;
+  if (node.type === 'connection') return node.config.name;
+  return metaLabel(node.data);
+}
+
+/** Poda el árbol dejando coincidencias y sus ancestros (que quedan expandidos). */
+function filterNodes(nodes: UiNode[], query: string, forced: Set<string>): UiNode[] {
   const q = query.toLowerCase();
-  const out: SampleTreeNode[] = [];
+  const out: UiNode[] = [];
   for (const node of nodes) {
-    const children = node.children ? filterTree(node.children, query, expandOut) : undefined;
-    const matches = node.label.toLowerCase().includes(q);
-    if (children && children.length > 0) {
-      expandOut.add(node.id);
+    const children = filterNodes(node.children, query, forced);
+    if (children.length > 0) {
+      forced.add(node.id);
       out.push({ ...node, children });
-    } else if (matches) {
-      out.push(node.children ? { ...node, children: [] } : node);
+    } else if (nodeLabel(node).toLowerCase().includes(q)) {
+      out.push({ ...node, children: [] });
     }
   }
   return out;
 }
 
-function copyText(text: string): void {
-  void window.api.app.clipboardWrite({ text }).then((r) => r.ok && showToast('info', es.toasts.copied));
-}
-
-function contextEntries(node: SampleTreeNode): MenuEntry[] {
-  const pending = (label: string, id = label): MenuEntry => ({
-    type: 'item',
-    id,
-    label,
-    run: () => notAvailable(label),
-  });
-  if (node.kind === 'connection') {
-    return [
-      pending(es.tree.connect),
-      pending(es.tree.newScript),
-      SEPARATOR,
-      pending(es.tree.editConnection),
-      pending(es.tree.duplicate),
-      pending(es.tree.rename),
-      {
-        type: 'submenu',
-        id: 'move',
-        label: es.tree.moveToFolder,
-        entries: [pending(es.tree.rootFolder)],
-      },
-      pending(es.tree.delete),
-      SEPARATOR,
-      pending(es.tree.refresh),
-      { type: 'item', id: 'copy', label: es.tree.copyName, run: () => copyText(node.label) },
-    ];
-  }
-  if (node.kind === 'table' || node.kind === 'view') {
-    return [
-      { type: 'item', id: 'data', label: es.tree.viewData, run: () => openObject(node) },
-      pending(es.tree.viewStructure),
-      {
-        type: 'submenu',
-        id: 'script',
-        label: es.tree.newScriptOf,
-        entries: ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'DDL'].map((s) => pending(s)),
-      },
-      SEPARATOR,
-      { type: 'item', id: 'copy', label: es.tree.copyName, run: () => copyText(node.label) },
-      {
-        type: 'item',
-        id: 'copyq',
-        label: es.tree.copyQualifiedName,
-        run: () => copyText(`public."${node.label}"`),
-      },
-      SEPARATOR,
-      { ...(pending(es.tree.refresh) as Extract<MenuEntry, { type: 'item' }>), keybinding: 'F5' },
-      pending(es.tree.countRows),
-    ];
-  }
-  return [
-    pending(es.tree.refresh),
-    { type: 'item', id: 'copy', label: es.tree.copyName, run: () => copyText(node.label) },
-  ];
-}
-
-function openObject(node: SampleTreeNode): void {
-  const connectionId = node.id.startsWith('pb/')
-    ? 'paybox-prod'
-    : node.id.startsWith('sga/')
-      ? 'sga-test'
-      : node.id.startsWith('req/')
-        ? 'requerimientos'
-        : 'local';
-  const conn = sampleConnection(connectionId);
-  useWorkbenchStore.getState().open({
-    id: `object:${node.id}`,
-    kind: 'object',
-    title: node.label,
-    tooltip: [conn?.name, conn?.database, conn?.schema, node.label].filter(Boolean).join(' › '),
-    connectionId,
-    dirty: false,
-    preview: true,
-  });
-}
+const HAS_DATA = ['table', 'view', 'materializedView'];
 
 export function ConnectionsView(): React.JSX.Element {
-  const sampleEnabled = useSampleStore((s) => s.enabled);
-  const nodes = useMemo(() => (sampleEnabled ? SAMPLE_CONNECTION_TREE : []), [sampleEnabled]);
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(SAMPLE_EXPANDED));
-  const [selected, setSelected] = useState<string | null>(
-    'pb/paybox/public/tables/CRendiciones_Conf_Generales',
-  );
+  const {
+    loaded,
+    folders,
+    connections,
+    status,
+    children,
+    loading,
+    nodeErrors,
+    loadChildren,
+    expandOnConnect,
+  } = useConnectionsStore();
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [envFilter, setEnvFilter] = useState<Set<Environment>>(() => new Set(ENVIRONMENTS));
   const filterRef = useRef<HTMLInputElement>(null);
 
-  const rows = useMemo(() => {
-    if (!query) return flattenTree(nodes, expanded);
-    const forced = new Set<string>();
-    const filtered = filterTree(nodes, query, forced);
-    return flattenTree(filtered, new Set([...expanded, ...forced]));
-  }, [nodes, expanded, query]);
+  const tree = useMemo(() => {
+    const metaChildren = (connectionId: string, key: string): UiNode[] =>
+      (children[key] ?? []).map((data) => {
+        const id = nodeKey(connectionId, data.ref);
+        return { type: 'meta', id, connectionId, data, children: metaChildren(connectionId, id) };
+      });
+    const connectionNode = (config: ConnectionConfig): UiNode => {
+      const id = connectionKey(config.id);
+      return { type: 'connection', id, config, children: metaChildren(config.id, id) };
+    };
+    const visible = connections.filter((c) => envFilter.has(c.environment));
+    const folderNodes: UiNode[] = folders.map((name) => ({
+      type: 'folder',
+      id: folderId(name),
+      name,
+      children: visible.filter((c) => c.folder === name).map(connectionNode),
+    }));
+    const rootNodes = visible.filter((c) => !c.folder || !folders.includes(c.folder)).map(connectionNode);
+    return [...folderNodes, ...rootNodes];
+  }, [connections, folders, children, envFilter]);
 
-  const toggle = (id: string, open: boolean): void =>
+  const rows = useMemo(() => {
+    const forced = new Set<string>();
+    const nodes = query ? filterNodes(tree, query, forced) : tree;
+    const out: Row[] = [];
+    const walk = (list: UiNode[], depth: number): void => {
+      for (const node of list) {
+        const expandable = node.type !== 'meta' || node.data.expandable;
+        // Una conexión cerrada nunca se muestra expandida.
+        const closed = node.type === 'connection' && status[node.config.id]?.state !== 'connected';
+        const isExpanded = expandable && !closed && (expanded.has(node.id) || forced.has(node.id));
+        const isLoading =
+          !!loading[node.id] ||
+          (node.type === 'connection' && status[node.config.id]?.state === 'connecting');
+        out.push({ id: node.id, depth, expandable, expanded: isExpanded, loading: isLoading, node });
+        if (isExpanded) walk(node.children, depth + 1);
+      }
+    };
+    walk(nodes, 0);
+    return out;
+  }, [tree, query, expanded, loading, status]);
+
+  // Carga perezosa: todo nodo expandido de una conexión abierta carga sus hijos si aún no los tiene.
+  useEffect(() => {
+    for (const row of rows) {
+      if (!row.expanded || row.node.type === 'folder') continue;
+      const connectionId = row.node.type === 'connection' ? row.node.config.id : row.node.connectionId;
+      if (status[connectionId]?.state !== 'connected') continue;
+      if (children[row.id] || loading[row.id] || nodeErrors[row.id]) continue;
+      const ref: TreeNodeRef = row.node.type === 'connection' ? { kind: 'connection' } : row.node.data.ref;
+      void loadChildren(connectionId, ref);
+    }
+  }, [rows, status, children, loading, nodeErrors, loadChildren]);
+
+  // Tras conectar desde el diálogo de contraseña, se completa la expansión pedida.
+  useEffect(() => {
+    if (!expandOnConnect || status[expandOnConnect]?.state !== 'connected') return;
+    const key = connectionKey(expandOnConnect);
+    useConnectionsStore.setState({ expandOnConnect: null });
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- responde a un cambio externo del store
+    setExpanded((prev) => new Set(prev).add(key));
+  }, [expandOnConnect, status]);
+
+  const setOpen = (id: string, open: boolean): void =>
     setExpanded((prev) => {
       const next = new Set(prev);
       if (open) next.add(id);
@@ -150,43 +197,277 @@ export function ConnectionsView(): React.JSX.Element {
       return next;
     });
 
-  const actions = (
+  /** Expandir una conexión cerrada la conecta primero (pidiendo la contraseña si hace falta). */
+  const toggleNode = async (node: UiNode, open: boolean): Promise<void> => {
+    if (node.type === 'connection' && open && status[node.config.id]?.state !== 'connected') {
+      if (!(await actions.connect(node.config.id))) return;
+    }
+    setOpen(node.id, open);
+  };
+
+  const refresh = (node: UiNode): void => {
+    if (node.type === 'connection') {
+      if (status[node.config.id]?.state === 'connected')
+        void loadChildren(node.config.id, { kind: 'connection' }, true);
+    } else if (node.type === 'meta') {
+      void loadChildren(node.connectionId, node.data.ref, true);
+    }
+  };
+
+  const refreshSelectedOrAll = (): void => {
+    const row = rows.find((r) => r.id === selected);
+    if (row && row.node.type !== 'folder') {
+      refresh(row.node);
+      return;
+    }
+    for (const c of connections) {
+      if (status[c.id]?.state === 'connected') void loadChildren(c.id, { kind: 'connection' }, true);
+    }
+  };
+
+  const contextEntries = (node: UiNode): MenuEntry[] => {
+    const t = es.tree;
+    const c = es.connections;
+    if (node.type === 'folder') {
+      return [
+        { type: 'item', id: 'new', label: c.newConnectionHere, run: () => actions.newConnection(node.name) },
+        SEPARATOR,
+        {
+          type: 'item',
+          id: 'rename',
+          label: t.rename,
+          keybinding: 'F2',
+          run: () => actions.renameFolder(node.name),
+        },
+        {
+          type: 'item',
+          id: 'delete',
+          label: t.delete,
+          keybinding: 'Supr',
+          run: () => actions.deleteFolder(node.name),
+        },
+      ];
+    }
+    if (node.type === 'connection') {
+      const cfg = node.config;
+      const connected = status[cfg.id]?.state === 'connected';
+      return [
+        connected
+          ? {
+              type: 'item',
+              id: 'disconnect',
+              label: t.disconnect,
+              run: () => void actions.disconnect(cfg.id),
+            }
+          : { type: 'item', id: 'connect', label: t.connect, run: () => void toggleNode(node, true) },
+        // Scripts: hito M3.
+        {
+          type: 'item',
+          id: 'script',
+          label: t.newScript,
+          keybinding: 'Ctrl+]',
+          disabled: true,
+          run: () => undefined,
+        },
+        SEPARATOR,
+        {
+          type: 'item',
+          id: 'edit',
+          label: t.editConnection,
+          keybinding: 'F4',
+          run: () => actions.editConnection(cfg.id),
+        },
+        {
+          type: 'item',
+          id: 'duplicate',
+          label: t.duplicate,
+          run: () => void actions.duplicateConnection(cfg.id),
+        },
+        {
+          type: 'item',
+          id: 'rename',
+          label: t.rename,
+          keybinding: 'F2',
+          run: () => actions.renameConnection(cfg.id),
+        },
+        {
+          type: 'submenu',
+          id: 'move',
+          label: t.moveToFolder,
+          entries: [
+            {
+              type: 'item',
+              id: 'root',
+              label: t.rootFolder,
+              checked: !cfg.folder,
+              run: () => void actions.moveToFolder(cfg.id, undefined),
+            },
+            ...folders.map((f): MenuEntry => ({
+              type: 'item',
+              id: `f-${f}`,
+              label: f,
+              checked: cfg.folder === f,
+              run: () => void actions.moveToFolder(cfg.id, f),
+            })),
+            SEPARATOR,
+            {
+              type: 'item',
+              id: 'new-folder',
+              label: c.newFolderInside,
+              run: () => actions.newFolder(cfg.id),
+            },
+          ],
+        },
+        {
+          type: 'item',
+          id: 'delete',
+          label: t.delete,
+          keybinding: 'Supr',
+          run: () => actions.deleteConnection(cfg.id),
+        },
+        SEPARATOR,
+        {
+          type: 'item',
+          id: 'refresh',
+          label: t.refresh,
+          keybinding: 'F5',
+          disabled: !connected,
+          run: () => refresh(node),
+        },
+        { type: 'item', id: 'copy', label: t.copyName, run: () => actions.copyText(cfg.name) },
+      ];
+    }
+    const ref = node.data.ref;
+    const copyName: MenuEntry = {
+      type: 'item',
+      id: 'copy',
+      label: t.copyName,
+      run: () => actions.copyText(node.data.label),
+    };
+    const refreshEntry: MenuEntry = {
+      type: 'item',
+      id: 'refresh',
+      label: t.refresh,
+      keybinding: 'F5',
+      run: () => refresh(node),
+    };
+    if (ref.kind === 'object' && HAS_DATA.includes(ref.objectKind)) {
+      const engine = connections.find((x) => x.id === node.connectionId)?.engine ?? 'postgres';
+      return [
+        // Pestaña de objeto: hito M7. Scripts y contar filas: hito M3.
+        { type: 'item', id: 'data', label: t.viewData, disabled: true, run: () => undefined },
+        { type: 'item', id: 'structure', label: t.viewStructure, disabled: true, run: () => undefined },
+        { type: 'submenu', id: 'script', label: t.newScriptOf, disabled: true, entries: [] },
+        SEPARATOR,
+        copyName,
+        {
+          type: 'item',
+          id: 'copyq',
+          label: t.copyQualifiedName,
+          run: () => actions.copyText(qualifiedName(engine, { schema: ref.schema, name: ref.name })),
+        },
+        SEPARATOR,
+        refreshEntry,
+        { type: 'item', id: 'count', label: t.countRows, disabled: true, run: () => undefined },
+      ];
+    }
+    return [refreshEntry, copyName];
+  };
+
+  const onRowKeyDown = (e: React.KeyboardEvent, row: Row): boolean => {
+    const node = row.node;
+    switch (e.key) {
+      case 'F2':
+        if (node.type === 'folder') actions.renameFolder(node.name);
+        else if (node.type === 'connection') actions.renameConnection(node.config.id);
+        else return false;
+        return true;
+      case 'Delete':
+        if (node.type === 'folder') actions.deleteFolder(node.name);
+        else if (node.type === 'connection') actions.deleteConnection(node.config.id);
+        else return false;
+        return true;
+      case 'F4':
+        if (node.type !== 'connection') return false;
+        actions.editConnection(node.config.id);
+        return true;
+      case 'F5':
+        refresh(node);
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  const parseDrag = (data: string): actions.DropTarget | null => {
+    try {
+      return JSON.parse(data) as actions.DropTarget;
+    } catch {
+      return null;
+    }
+  };
+
+  const dragData = (row: Row): string | null => {
+    if (query) return null;
+    if (row.node.type === 'folder') return JSON.stringify({ type: 'folder', name: row.node.name });
+    if (row.node.type === 'connection') return JSON.stringify({ type: 'connection', id: row.node.config.id });
+    return null;
+  };
+
+  const canDrop = (data: string, target: Row): boolean => {
+    const dragged = parseDrag(data);
+    if (!dragged) return false;
+    if (dragged.type === 'folder') return target.node.type === 'folder' && target.node.name !== dragged.name;
+    return (
+      target.node.type === 'folder' ||
+      (target.node.type === 'connection' && target.node.config.id !== dragged.id)
+    );
+  };
+
+  const onDrop = (data: string, target: Row): void => {
+    const dragged = parseDrag(data);
+    if (!dragged) return;
+    if (target.node.type === 'folder')
+      void actions.dropOnto(dragged, { type: 'folder', name: target.node.name });
+    else if (target.node.type === 'connection')
+      void actions.dropOnto(dragged, { type: 'connection', id: target.node.config.id });
+  };
+
+  const envEntries = (): MenuEntry[] => [
+    ...ENVIRONMENTS.map((env): MenuEntry => ({
+      type: 'item',
+      id: env,
+      label: es.environments[env],
+      checked: envFilter.has(env),
+      run: () =>
+        setEnvFilter((prev) => {
+          const next = new Set(prev);
+          if (next.has(env)) next.delete(env);
+          else next.add(env);
+          return next;
+        }),
+    })),
+    SEPARATOR,
+    {
+      type: 'item',
+      id: 'all',
+      label: es.connections.envFilterAll,
+      run: () => setEnvFilter(new Set(ENVIRONMENTS)),
+    },
+  ];
+
+  const headerActions = (
     <>
-      <IconButton
-        icon="add"
-        label={es.sideBar.newConnection}
-        onClick={() => notAvailable(es.sideBar.newConnection)}
-      />
-      <IconButton
-        icon="new-folder"
-        label={es.sideBar.newFolder}
-        onClick={() => notAvailable(es.sideBar.newFolder)}
-      />
-      <IconButton
-        icon="refresh"
-        label={es.sideBar.refresh}
-        onClick={() => notAvailable(es.sideBar.refresh)}
-      />
+      <IconButton icon="add" label={es.sideBar.newConnection} onClick={() => actions.newConnection()} />
+      <IconButton icon="new-folder" label={es.sideBar.newFolder} onClick={() => actions.newFolder()} />
+      <IconButton icon="refresh" label={es.sideBar.refresh} onClick={refreshSelectedOrAll} />
       <IconButton icon="collapse-all" label={es.sideBar.collapseAll} onClick={() => setExpanded(new Set())} />
       <Dropdown
         className="icon-btn"
         chevron={false}
         title={es.sideBar.more}
-        entries={[
-          {
-            type: 'item',
-            id: 'env',
-            label: es.sideBar.filterByEnvironment,
-            disabled: true,
-            run: () => undefined,
-          },
-          {
-            type: 'item',
-            id: 'sys',
-            label: es.sideBar.showSystemObjects,
-            disabled: true,
-            run: () => undefined,
-          },
+        entries={() => [
+          { type: 'submenu', id: 'env', label: es.sideBar.filterByEnvironment, entries: envEntries() },
         ]}
       >
         <Codicon name="ellipsis" />
@@ -194,14 +475,67 @@ export function ConnectionsView(): React.JSX.Element {
     </>
   );
 
+  const renderRow = (row: Row): React.JSX.Element => {
+    const node = row.node;
+    if (node.type === 'folder') {
+      return (
+        <>
+          <Codicon name="folder" className="tree-icon" />
+          <span className="tree-label">
+            <Highlight text={node.name} query={query} />
+          </span>
+        </>
+      );
+    }
+    if (node.type === 'connection') {
+      const cfg = node.config;
+      const st = status[cfg.id];
+      const error = st?.state === 'error' ? st.message : nodeErrors[node.id];
+      return (
+        <>
+          <span className="env-dot" style={{ background: cfg.color ?? `var(--env-${cfg.environment})` }} />
+          <span className={['engine-badge', st?.state === 'connected' ? '' : 'is-disconnected'].join(' ')}>
+            {ENGINE_BADGE[cfg.engine]}
+          </span>
+          <span className="tree-label">
+            <Highlight text={cfg.name} query={query} />
+          </span>
+          <span className="tree-secondary">{connectionAddress(cfg)}</span>
+          {error && (
+            <span className="tree-error" title={es.connections.status.error(error)} data-testid="tree-error">
+              <Codicon name="error" color="var(--error)" size={14} />
+            </span>
+          )}
+        </>
+      );
+    }
+    const icon = metaIcon(node.data);
+    const secondary = metaSecondary(node.data);
+    const error = nodeErrors[node.id];
+    return (
+      <>
+        <Codicon name={icon.name} color={icon.color} className="tree-icon" />
+        <span className="tree-label">
+          <Highlight text={metaLabel(node.data)} query={query} />
+        </span>
+        {secondary && <span className="tree-secondary">{secondary}</span>}
+        {error && (
+          <span className="tree-error" title={es.connections.loadFailed(error)} data-testid="tree-error">
+            <Codicon name="error" color="var(--error)" size={14} />
+          </span>
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="sidebar-view" data-view="connections">
-      <SideBarHeader title={es.sideBar.connectionsTitle} actions={actions} />
-      {nodes.length === 0 ? (
+      <SideBarHeader title={es.sideBar.connectionsTitle} actions={headerActions} />
+      {loaded && connections.length === 0 && folders.length === 0 ? (
         <div className="empty-state">
           <Codicon name="database" size={48} color="var(--fg-muted)" />
           <p>{es.sideBar.noConnections}</p>
-          <Button icon="add" onClick={() => notAvailable(es.sideBar.newConnection)}>
+          <Button icon="add" onClick={() => actions.newConnection()}>
             {es.sideBar.newConnection}
           </Button>
         </div>
@@ -232,46 +566,22 @@ export function ConnectionsView(): React.JSX.Element {
               ariaLabel={es.sideBar.connectionsTitle}
               selectedId={selected}
               onSelect={setSelected}
-              onToggle={toggle}
+              onToggle={(id, open) => {
+                const row = rows.find((r) => r.id === id);
+                if (row) void toggleNode(row.node, open);
+              }}
+              toggleOnClick={false}
               indent={10}
               basePadding={6}
               onOpen={(row) => {
-                if (row.node.kind === 'table' || row.node.kind === 'view') openObject(row.node);
-                else if (row.expandable) toggle(row.id, !row.expanded);
+                if (row.expandable) void toggleNode(row.node, !row.expanded);
               }}
+              onRowKeyDown={onRowKeyDown}
               onContextMenu={(row, e) => showContextMenu(e, contextEntries(row.node))}
-              renderRow={(row) => {
-                const n = row.node;
-                if (n.kind === 'connection') {
-                  const conn = sampleConnection(n.connectionId);
-                  return (
-                    <>
-                      <span
-                        className="env-dot"
-                        style={{ background: `var(--env-${conn?.environment ?? 'local'})` }}
-                      />
-                      <span className="engine-badge">{ENGINE_BADGE[conn?.engine ?? 'postgres']}</span>
-                      <span className="tree-label">
-                        <Highlight text={n.label} query={query} />
-                      </span>
-                      {n.secondary && <span className="tree-secondary">{n.secondary}</span>}
-                    </>
-                  );
-                }
-                return (
-                  <>
-                    <Codicon
-                      name={KIND_ICON[n.kind] ?? 'circle-outline'}
-                      color={n.kind === 'table' ? 'var(--icon-table)' : undefined}
-                      className="tree-icon"
-                    />
-                    <span className="tree-label">
-                      <Highlight text={n.label} query={query} />
-                    </span>
-                    {n.secondary && <span className="tree-secondary">{n.secondary}</span>}
-                  </>
-                );
-              }}
+              dragData={dragData}
+              canDrop={canDrop}
+              onDrop={onDrop}
+              renderRow={renderRow}
             />
           )}
         </>
