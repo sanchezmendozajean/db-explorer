@@ -217,8 +217,14 @@ function flushNow(): void {
   });
 }
 
+/** Resultados de una sentencia, en orden (una sentencia puede devolver varios: `EXEC`, `CALL`, bloques). */
+function resultsOf(tabId: string, queryId: string, index: number): ResultSet[] {
+  return tabResults(tabId).results.filter((r) => r.queryId === queryId && r.statementIndex === index);
+}
+
+/** Resultado que recibe las filas: el último de la sentencia. */
 function findResult(tabId: string, queryId: string, index: number): ResultSet | undefined {
-  return tabResults(tabId).results.find((r) => r.queryId === queryId && r.statementIndex === index);
+  return resultsOf(tabId, queryId, index).at(-1);
 }
 
 function updateResult(tabId: string, id: string, changes: Partial<ResultSet>): void {
@@ -285,8 +291,11 @@ export function applyQueryEvent(event: QueryEvent): void {
       break;
     case 'columns': {
       const ordinal = tab.results.length + 1;
+      const previous = resultsOf(tabId, event.queryId, event.index);
+      // El resultado anterior de la misma sentencia ya recibió todas sus filas.
+      for (const r of previous) if (!r.done) updateResult(tabId, r.id, { done: true });
       const result: ResultSet = {
-        id: `${event.queryId}:${event.index}`,
+        id: `${event.queryId}:${event.index}${previous.length > 0 ? `:${previous.length}` : ''}`,
         queryId: event.queryId,
         statementIndex: event.index,
         title: resultTitle(event.columns, ordinal),
@@ -304,7 +313,10 @@ export function applyQueryEvent(event: QueryEvent): void {
       };
       // El primer resultado de la ejecución pasa a ser la vista activa.
       const first = !tab.results.some((r) => r.queryId === event.queryId);
-      put(tabId, { results: [...tab.results, result], activeView: first ? result.id : tab.activeView });
+      put(tabId, {
+        results: [...tabResults(tabId).results, result],
+        activeView: first ? result.id : tab.activeView,
+      });
       break;
     }
     case 'rows': {
@@ -316,11 +328,13 @@ export function applyQueryEvent(event: QueryEvent): void {
     }
     case 'statement-done': {
       flushNow();
-      const result = findResult(tabId, event.queryId, event.index);
-      if (result) {
-        updateResult(tabId, result.id, {
-          truncated: event.truncated,
-          hasMore: event.hasMore,
+      const results = resultsOf(tabId, event.queryId, event.index);
+      const result = results.at(-1);
+      for (const r of results) {
+        // Truncado y "Cargar más" se refieren al último resultado de la sentencia.
+        updateResult(tabId, r.id, {
+          truncated: r === result ? event.truncated : false,
+          hasMore: r === result ? event.hasMore : false,
           done: true,
           durationMs: event.durationMs,
         });

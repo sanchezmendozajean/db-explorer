@@ -1,4 +1,5 @@
 import { connectionAddress } from '@shared/connection';
+import type { Engine } from '@shared/connection';
 import type { TreeNodeRef } from '@shared/metadata';
 import { nodeKey } from '@shared/metadata';
 import { es } from '../../i18n/es';
@@ -9,6 +10,15 @@ import { useWorkbenchStore } from '../../stores/workbench-store';
 import type { EditorTab } from '../../stores/workbench-store';
 import { ensureConnected } from '../connections/actions';
 import { setTabTarget } from './scripts';
+
+/**
+ * El esquema se elige por sesión solo en PostgreSQL (`search_path`). En SQL
+ * Server el esquema por defecto es del usuario y en MariaDB base y esquema son
+ * lo mismo; en SQLite no hay esquemas.
+ */
+export function hasSessionSchema(engine: Engine | undefined): boolean {
+  return engine === 'postgres';
+}
 
 /** Base y esquema efectivos de una pestaña (los elegidos o los predeterminados de la conexión). */
 export function effectiveTarget(tab: EditorTab | undefined): { database?: string; schema?: string } {
@@ -113,7 +123,7 @@ export async function pickDatabaseOrSchema(tabId: string): Promise<void> {
   if (!(await ensureConnected(connectionId))) return;
   const { database, schema } = effectiveTarget(tabById(tabId));
   const items: QuickPickItem[] = [];
-  if (database) {
+  if (database && hasSessionSchema(connectionById(connectionId)?.engine)) {
     for (const s of await schemas(connectionId, database)) {
       items.push({
         id: `s:${s}`,

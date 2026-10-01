@@ -3,7 +3,10 @@ import type { TreeNodeData, TreeNodeRef } from '@shared/metadata';
 import type { ExecuteRequest, ExecuteSummary, FetchMoreRequest, FetchMoreResult } from '@shared/query';
 import type { DbDriver, ObjectRef } from './drivers/types';
 import { DriverError } from './drivers/types';
+import { MariaDbDriver } from './drivers/mariadb/mariadb-driver';
 import { PostgresDriver } from './drivers/postgres/postgres-driver';
+import { SqliteDriver } from './drivers/sqlite/sqlite-driver';
+import { SqlServerDriver } from './drivers/sqlserver/sqlserver-driver';
 import type { EmitQueryEvent } from './query-runner';
 import { QueryRunner } from './query-runner';
 import { childrenOf } from './tree';
@@ -14,9 +17,12 @@ export const defaultDriverFactory: DriverFactory = (engine) => {
   switch (engine) {
     case 'postgres':
       return new PostgresDriver();
-    default:
-      // MariaDB, SQLite y SQL Server llegan en el hito M4.
-      throw new DriverError(`El motor "${engine}" todavía no está disponible`, 'engine-unavailable');
+    case 'sqlite':
+      return new SqliteDriver();
+    case 'sqlserver':
+      return new SqlServerDriver();
+    case 'mariadb':
+      return new MariaDbDriver();
   }
 };
 

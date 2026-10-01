@@ -8,7 +8,7 @@ import { notAvailable } from '../../app/app-commands';
 import { useConnectionsStore } from '../../stores/connections-store';
 import type { EditorTab } from '../../stores/workbench-store';
 import { EMPTY_TAB_RESULTS, useResultsStore } from '../results/results-store';
-import { effectiveTarget, pickConnection, pickDatabase, pickSchema } from './target-pickers';
+import { effectiveTarget, hasSessionSchema, pickConnection, pickDatabase, pickSchema } from './target-pickers';
 
 /** Cronómetro "00:03.2" de la ejecución en curso (specs/04 §8). */
 export function useElapsed(startedAt: number | undefined): string | null {
@@ -35,7 +35,7 @@ export function EditorToolbar({ tab }: { tab: EditorTab }): React.JSX.Element {
   const elapsed = useElapsed(running?.startedAt);
   const { database, schema } = effectiveTarget(tab);
   const hasDatabases = conn && conn.engine !== 'sqlite';
-  const hasSchemas = conn && (conn.engine === 'postgres' || conn.engine === 'sqlserver');
+  const hasSchemas = conn && hasSessionSchema(conn.engine);
 
   return (
     <div className="editor-toolbar-wrap">
