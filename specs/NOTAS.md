@@ -232,3 +232,37 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 - El usuario pidió la **versión completa** de *Explicar plan*. Se especifica en la nueva `12-plan-de-ejecucion.md` y se agrega al alcance (`01`).
 - Nuevo hito **M8 — Plan de ejecución**, después de M7 (usa los cuatro motores y el `SAVEPOINT` del modo manual) y antes del empaquetado, que pasa a ser **M9**. Se actualizaron las referencias a M8 en specs, NOTAS y comentarios del código.
 - Decisiones de la spec: comando nuevo *Explicar y ejecutar* (Ctrl+Alt+Shift+E) que revierte siempre las escrituras; en SQLite solo hay plan estimado; MySQL usa el formato `TREE` (su `EXPLAIN ANALYZE` no da JSON) y MariaDB el JSON; umbrales de avisos fijos, sin configuración; el diagrama gráfico queda fuera de v1.
+
+## M4 — Resto de motores (2026-10-01)
+
+### Criterios de aceptación
+
+| Criterio | Estado |
+|---|---|
+| Suite de integración común en PostgreSQL | ✅ `common-suite.test.ts` (clúster temporal local) |
+| Suite de integración común en SQLite | ✅ archivo temporal |
+| Suite de integración común en SQL Server | ✅ SQL Server 2019 de pruebas del usuario; solo escribe en la base `dbx_test`, creada para las pruebas |
+| Suite de integración común en MariaDB/MySQL | ⚠️ **sin verificar**: el servidor indicado (RDS de desarrollo, solo lectura) no responde en el puerto 3306 desde este equipo (DNS resuelve, TCP no conecta: probablemente grupo de seguridad o VPN). Las pruebas se saltan con el motivo |
+| Mismo flujo de M3 en cada motor | ✅ e2e `engines.spec.ts` en SQLite y SQL Server (conectar, script con varios resultados, error con su línea, cancelar); MariaDB se salta por lo mismo |
+| Pruebas | ✅ 129 unitarias, 53 de integración (+13 saltadas de MariaDB), 48 e2e (+3 saltadas); lint y tipos limpios |
+
+### Decisiones
+- **SQLite con `node:sqlite`** (incluido en Electron 44 / Node 24) en lugar de `better-sqlite3` (**desvío de D14, pendiente de confirmar**): no hay módulo nativo que recompilar para Electron y para Node (pruebas), y `stmt.columns()` da la tabla de origen de cada columna. La API es la misma en lo que se usa (`prepare`, `iterate`, enteros grandes). Si se prefiere `better-sqlite3`, el cambio queda acotado a `drivers/sqlite`.
+- **SQL Server con `tedious` directo** (D13 dice `mssql (tedious)`): hacen falta conexiones dedicadas por pestaña, pausar la lectura (`request.pause()`) y reemplazar el lector de valores; `mssql` agrega un pool que aquí estorba. Sigue siendo JavaScript puro.
+- **Valores exactos en SQL Server** (`exact-values.ts`): `tedious` convierte `decimal`/`money` a `Number` y las fechas a `Date`; se envuelve `valueParser.readValue` en tiempo de ejecución para leer esos tipos como texto exacto (sin parches en `node_modules`). `datetimeoffset` conserva su desplazamiento.
+- **Tabla de origen en SQL Server** con `sys.dm_exec_describe_first_result_set` en la conexión de metadatos (solo el primer resultado de cada sentencia; con tablas `#temp` no hay datos y la grilla funciona igual).
+- **Varios resultados por sentencia** (bloques y `EXEC` en SQL Server, `CALL` en MariaDB): cada conjunto es una pestaña de resultado; "Cargar más" aplica al último. Si un conjunto intermedio llega al límite, los siguientes solo se leen al pedir "Cargar más".
+- **Separador de sentencias**: `GO` (SQL Server, `GO n` se acepta sin repetir el lote), `DELIMITER` (MariaDB, también pegado a una palabra: `END$$`), bloques `BEGIN … END` (con `IF`/`CASE`/`LOOP`/`WHILE`/`REPEAT` en MariaDB, `TRY`/`CATCH` en SQL Server, cuerpos de `CREATE TRIGGER` en SQLite) y cuerpos de `CREATE PROCEDURE/FUNCTION/TRIGGER/VIEW` de SQL Server hasta el `GO`.
+- **Esquema por sesión solo en PostgreSQL**: en SQL Server el esquema por defecto es del usuario (no se puede cambiar por sesión) y en MariaDB base = esquema; el chip de esquema y la parte de esquemas de Ctrl+0 solo aparecen en PostgreSQL.
+- **Binarios** de MariaDB, SQLite y SQL Server como `0x…` (formato de literal de esos motores); la grilla formatea `\x…` y `0x…`.
+- **Pruebas contra servidores compartidos**: credenciales solo en `test/integration/.env` (ignorado por git). `MARIADB_READONLY=1` marca el servidor como de solo lectura y la suite salta las pruebas que escriben; en SQL Server solo se escribe en la base de pruebas.
+
+### Limitaciones conocidas
+- **Cancelar en SQLite**: termina el hilo de la sesión al instante (la pestaña queda libre y se pierde una transacción abierta), pero si SQLite está dentro de un paso nativo largo (p. ej. un `count(*)` sobre millones de filas) ese hilo sigue hasta terminar el paso. `node:sqlite` (y `better-sqlite3`) no tienen `interrupt()` y matar un proceso aparte requiere `RunAsNode`, que `08` deshabilita.
+- MariaDB: los avisos de un `SELECT` (p. ej. división por cero) no se muestran; sí los de sentencias con respuesta OK (`DO`, DML).
+- SQLite: no se muestran las bases adjuntas (`ATTACH`).
+
+### Pendientes / avisos
+- **Confirmar D14** (`node:sqlite` o `better-sqlite3`).
+- **Verificar MariaDB/MySQL** con un servidor alcanzable (habilitar el acceso al RDS desde este equipo, o un MariaDB local de pruebas); hasta entonces el driver está escrito y probado solo en unidades.
+- Ancho de columnas de la grilla: es fijo por tipo (M3) y un decimal largo con separadores queda recortado a la izquierda sin `…`; conviene calcularlo por el contenido de las primeras filas.

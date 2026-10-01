@@ -14,7 +14,7 @@
 | Grilla | Glide Data Grid (D4) — ver `06` |
 | Iconos | `@vscode/codicons` |
 | Formato SQL | `sql-formatter` |
-| Drivers | `pg`, `mysql2`, `better-sqlite3`, `mssql` — ver `03` |
+| Drivers | `pg`, `mysql2`, `node:sqlite`, `tedious` — ver `03` |
 | Exportación XLSX | `exceljs` |
 | Validación | `zod` (config, mensajes IPC) |
 | Tests | Vitest (unit), Docker Compose + Vitest (integración drivers), Playwright para Electron (e2e) |
@@ -39,7 +39,7 @@
 ```
 
 - **Main**: ciclo de vida, ventana sin marco (title bar propio), menú nativo oculto (el menú se dibuja en el title bar como VS Code), acceso a disco, `safeStorage`, `settings.json`, watchers de archivos.
-- **DB Host** (`utilityProcess`): todos los drivers corren aquí. Aísla bloqueos (better-sqlite3 es síncrono) y caídas nativas. Si se cae, main lo reinicia y el renderer muestra "Conexiones reiniciadas".
+- **DB Host** (`utilityProcess`): todos los drivers corren aquí. Aísla bloqueos (SQLite es síncrono; sus sesiones corren en `worker_thread`) y caídas nativas. Si se cae, main lo reinicia y el renderer muestra "Conexiones reiniciadas".
 - **Renderer**: `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`. Solo accede a `window.api` expuesto por el preload.
 
 ## Contrato IPC

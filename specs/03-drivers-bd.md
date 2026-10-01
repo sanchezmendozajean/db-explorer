@@ -80,27 +80,30 @@ interface ResultSink {
 - "Base" y "esquema" son lo mismo: el árbol muestra Conexión → Bases → Tablas… (sin nivel esquema).
 - Metadatos: `information_schema`.
 - Cancelación: `KILL QUERY <thread_id>` desde la conexión de metadatos.
-- Streaming: `query().stream()`.
-- `multipleStatements: true` solo en sesiones de editor para ejecutar scripts; o mejor, separar sentencias en la app (ver "Separación").
-- `decimalNumbers: false`, `dateStrings: true`, `supportBigNumbers: true`, `bigNumberStrings: true`.
+- Streaming: eventos `fields` / `result` de `query()`; al llegar al límite se pausa el socket (`connection.pause()`) y la consulta queda como cursor para "Cargar más".
+- `multipleStatements: false`: la app separa las sentencias (ver "Separación"); `CALL` puede devolver varios resultados.
+- `decimalNumbers: false`, `dateStrings: true`, `supportBigNumbers: true`, `bigNumberStrings: true`; `typeCast`: enteros de hasta 32 bits como número, `BIT(1)` como booleano, binarios como `0x…`, el resto como texto crudo.
+- Avisos del servidor: cuando una respuesta OK informa avisos se lee `SHOW WARNINGS` y se muestran en Mensajes (`mysql2` no informa la cantidad de avisos de un `SELECT`).
+- Tiempo límite de consulta: `max_statement_time` (MariaDB) o `max_execution_time` (MySQL, solo `SELECT`).
 
-### SQLite — `better-sqlite3`
+### SQLite — `node:sqlite` (ver `NOTAS.md`, M4: desvío de D14 pendiente de confirmar)
 - "Conexión" = ruta a archivo (+ opción "solo lectura" y "crear si no existe").
-- Sin bases ni esquemas (mostrar `main` y bases adjuntas si las hay).
-- Metadatos: `sqlite_schema`, `pragma_table_info`, `pragma_index_list`, `pragma_foreign_key_list`.
-- Síncrono: al correr en el DB Host no bloquea la UI. Cancelación: `db.interrupt()` no existe en better-sqlite3 → ejecutar cada sesión SQLite en un `worker_thread` dentro del DB Host para poder terminarlo; documentarlo como limitación si no se implementa.
-- Iteración por lotes con `stmt.iterate()`.
-- `safeIntegers(true)` para enteros grandes.
+- Sin bases ni esquemas: el árbol muestra directamente las carpetas de `main` (las bases adjuntas no se muestran en v1).
+- Metadatos: `sqlite_schema`, `pragma_table_info`, `pragma_index_list`, `pragma_index_info`. Una clave `INTEGER PRIMARY KEY` (rowid) se muestra como índice primario.
+- Síncrono y sin `interrupt()`: cada sesión de editor corre en un `worker_thread` del DB Host; cancelar termina el hilo y la siguiente ejecución abre otro (se pierde una transacción abierta). Limitación: V8 detiene el hilo al volver de SQLite a JavaScript; un paso nativo largo (p. ej. un `count(*)` enorme) sigue hasta terminar ese paso, aunque la pestaña queda libre de inmediato.
+- Iteración por lotes con `stmt.iterate()`, `setReturnArrays(true)` y `setReadBigInts(true)` (enteros fuera del rango seguro como texto). Tabla de origen de cada columna con `stmt.columns()`.
 
-### SQL Server — `mssql` (tedious)
-- Árbol: Conexión → Bases → Esquemas → Tablas…
-- Metadatos: `sys.*` (`sys.tables`, `sys.columns`, `sys.indexes`, …) en la base seleccionada.
-- Separador de lotes `GO` (línea sola, insensible a mayúsculas, opcional `GO n`), resuelto en la app, no en el servidor.
-- Cancelación: `request.cancel()`.
-- Streaming: `request.stream = true` con eventos `row` / `recordset` / `done`.
+### SQL Server — `tedious` (la base de `mssql`, usada directamente; ver `NOTAS.md`, M4)
+- Árbol: Conexión → Bases → Esquemas → Tablas… (roles fijos `db_*`, `sys`, `INFORMATION_SCHEMA` y `guest` en "Esquemas del sistema").
+- Metadatos: `sys.*` con nombres de tres partes (`[base].sys.tables`) en una conexión compartida con cola (`tedious` atiende una petición a la vez).
+- Separador de lotes `GO` (línea sola, insensible a mayúsculas, opcional `GO n`: el número se acepta pero no repite el lote), resuelto en la app, no en el servidor.
+- Cada sentencia se envía como lote (`execSqlBatch`) para que las tablas `#temp` y las variables de sesión se conserven.
+- Cancelación: `connection.cancel()`. Streaming: eventos `columnMetadata` / `row` / `done` con `request.pause()` al llegar al límite. Una sentencia puede devolver varios resultados (bloques, `EXEC`).
+- Tabla de origen, tipo exacto y clave del primer resultado: `sys.dm_exec_describe_first_result_set` en la conexión de metadatos (`tedious` no lee los tokens de tabla del protocolo).
 - `PRINT` y mensajes informativos → `sink.message`.
-- Opciones: `encrypt`, `trustServerCertificate`, instancia con nombre, puerto.
-- Tipos: `decimal/money` como string, `datetime2` sin conversión de zona (`useUTC: false`), `uniqueidentifier` como texto.
+- Opciones: `encrypt`, `trustServerCertificate`, instancia con nombre, puerto; con "solo lectura" se pide `ApplicationIntent=ReadOnly` (no lo garantiza: el bloqueo real es el del cliente).
+- Tipos: `decimal`, `numeric` y `money` como texto exacto y fechas (`date`, `time`, `datetime`, `datetime2`, `datetimeoffset` con su desplazamiento) como texto sin conversión de zona. `tedious` los convierte a `Number`/`Date`; se reemplaza su lector de valores para esos tipos en tiempo de ejecución, sin parchear `node_modules` (`exact-values.ts`). `uniqueidentifier` como texto, `bigint` como texto.
+- El esquema por defecto es del usuario, no de la sesión: el editor no muestra selector de esquema (solo PostgreSQL lo tiene).
 
 ## Separación de sentencias
 Módulo `splitter/` por dialecto, usado para "ejecutar sentencia bajo el cursor" y para scripts:
@@ -109,4 +112,4 @@ Módulo `splitter/` por dialecto, usado para "ejecutar sentencia bajo el cursor"
 - Cobertura de tests unitarios amplia (es la pieza más propensa a bugs).
 
 ## Tests de integración
-`test/integration/docker-compose.yml` con `postgres:16`, `mariadb:11`, `mcr.microsoft.com/mssql/server:2022-latest` y SQLite en archivo temporal. Un mismo set de tests corre contra los 4 drivers: conectar, listar, columnas, DDL, ejecutar SELECT/INSERT/error, cancelar, transacción manual, tipos (decimal, fecha, json, binario, null, unicode).
+`test/integration/docker-compose.yml` con `postgres:16`, `mariadb:11`, `mcr.microsoft.com/mssql/server:2022-latest` y SQLite en archivo temporal. Un mismo set de tests corre contra los 4 drivers: conectar, listar, columnas, DDL, ejecutar SELECT/INSERT/error, cancelar, transacción manual, tipos (decimal, fecha, json, binario, null, unicode). Implementado en `test/integration/common-suite.test.ts` + `engines.ts`; un motor sin servidor alcanzable se salta con el motivo, y uno marcado de solo lectura (`MARIADB_READONLY=1`) salta las pruebas que escriben. DDL y la transacción manual con Commit/Rollback llegan con M7 (hoy se prueba `BEGIN … ROLLBACK` en la misma sesión).
