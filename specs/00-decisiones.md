@@ -63,8 +63,8 @@ Formato: marca con `[x]` la opción elegida.
 > Si necesitas **autenticación de Windows** hacia SQL Server, la respuesta en D13 cambia.
 
 ### D14. Driver de SQLite
-- [ ] ✅ **`better-sqlite3`** (el más rápido y estable; nativo, se recompila para Electron con `electron-rebuild`). Corre en el proceso de BD, no en el principal.
-- [ ] `node:sqlite` nativo de Node (sin compilación, API aún experimental según versión de Electron).
+- [ ] `better-sqlite3` (el más rápido y estable; nativo, se recompila para Electron con `electron-rebuild`). Corre en el proceso de BD, no en el principal.
+- [ ] ✅ **`node:sqlite`** nativo de Node (sin compilación; estable en Electron 44 / Node 24). Corre en el proceso de BD, una sesión por `worker_thread`. *Cambiado en M4 (2026-10-01) con la conformidad del usuario; ver `NOTAS.md`.*
 
 ### D15. Guardado automático por defecto
 - [ ] ✅ **Activado** (se puede desactivar en Preferencias). Guarda 5 s después de dejar de escribir, al ejecutar y al cerrar el programa.

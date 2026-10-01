@@ -86,7 +86,7 @@ interface ResultSink {
 - Avisos del servidor: cuando una respuesta OK informa avisos se lee `SHOW WARNINGS` y se muestran en Mensajes (`mysql2` no informa la cantidad de avisos de un `SELECT`).
 - Tiempo límite de consulta: `max_statement_time` (MariaDB) o `max_execution_time` (MySQL, solo `SELECT`).
 
-### SQLite — `node:sqlite` (ver `NOTAS.md`, M4: desvío de D14 pendiente de confirmar)
+### SQLite — `node:sqlite` (D14, ver `NOTAS.md`, M4)
 - "Conexión" = ruta a archivo (+ opción "solo lectura" y "crear si no existe").
 - Sin bases ni esquemas: el árbol muestra directamente las carpetas de `main` (las bases adjuntas no se muestran en v1).
 - Metadatos: `sqlite_schema`, `pragma_table_info`, `pragma_index_list`, `pragma_index_info`. Una clave `INTEGER PRIMARY KEY` (rowid) se muestra como índice primario.

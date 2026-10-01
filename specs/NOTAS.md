@@ -247,7 +247,7 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 | Pruebas | ✅ 129 unitarias, 63 de integración (+3 que no aplican: mensajes en SQLite, varios resultados en PostgreSQL y SQLite), 51 e2e; lint y tipos limpios |
 
 ### Decisiones
-- **SQLite con `node:sqlite`** (incluido en Electron 44 / Node 24) en lugar de `better-sqlite3` (**desvío de D14, pendiente de confirmar**): no hay módulo nativo que recompilar para Electron y para Node (pruebas), y `stmt.columns()` da la tabla de origen de cada columna. La API es la misma en lo que se usa (`prepare`, `iterate`, enteros grandes). Si se prefiere `better-sqlite3`, el cambio queda acotado a `drivers/sqlite`.
+- **SQLite con `node:sqlite`** (incluido en Electron 44 / Node 24) en lugar de `better-sqlite3` (cambio de D14, **confirmado por el usuario** el 2026-10-01): no hay módulo nativo que recompilar para Electron y para Node (pruebas), y `stmt.columns()` da la tabla de origen de cada columna. La API es la misma en lo que se usa (`prepare`, `iterate`, enteros grandes). Si se prefiere `better-sqlite3`, el cambio queda acotado a `drivers/sqlite`.
 - **SQL Server con `tedious` directo** (D13 dice `mssql (tedious)`): hacen falta conexiones dedicadas por pestaña, pausar la lectura (`request.pause()`) y reemplazar el lector de valores; `mssql` agrega un pool que aquí estorba. Sigue siendo JavaScript puro.
 - **Valores exactos en SQL Server** (`exact-values.ts`): `tedious` convierte `decimal`/`money` a `Number` y las fechas a `Date`; se envuelve `valueParser.readValue` en tiempo de ejecución para leer esos tipos como texto exacto (sin parches en `node_modules`). `datetimeoffset` conserva su desplazamiento.
 - **Tabla de origen en SQL Server** con `sys.dm_exec_describe_first_result_set` en la conexión de metadatos (solo el primer resultado de cada sentencia; con tablas `#temp` no hay datos y la grilla funciona igual).
@@ -264,6 +264,5 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 - SQLite: no se muestran las bases adjuntas (`ATTACH`).
 
 ### Pendientes / avisos
-- **Confirmar D14** (`node:sqlite` o `better-sqlite3`).
 - MySQL (no MariaDB) no se ha probado: el driver distingue ambos (secuencias, tiempo límite), pero solo hay un servidor MariaDB disponible.
 - Ancho de columnas de la grilla: es fijo por tipo (M3) y un decimal largo con separadores queda recortado a la izquierda sin `…`; conviene calcularlo por el contenido de las primeras filas.

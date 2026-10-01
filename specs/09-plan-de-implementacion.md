@@ -85,7 +85,7 @@ Va después de M7 porque necesita los cuatro motores (M4) y el modo de transacci
 
 ## M9 — Pulido y empaquetado
 - Preferencias con UI (`04` §15) incluyendo Formatos de datos con vista previa.
-- Fuses de Electron, iconos, nombre final (D1), `electron-builder` NSIS + portable, `better-sqlite3` recompilado.
+- Fuses de Electron, iconos, nombre final (D1), `electron-builder` NSIS + portable.
 - Revisión de accesibilidad básica (foco visible, navegación por teclado en todos los paneles, contraste).
 - Medir arranque en frío y memoria en reposo; documentar resultados.
 
