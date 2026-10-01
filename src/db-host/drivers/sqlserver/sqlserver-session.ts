@@ -268,7 +268,9 @@ export class SqlServerSession implements DbSession {
     if (!waiter) return;
     if (err) {
       waiter.reject(
-        this.cancelling ? new DriverError('Consulta cancelada', 'cancelled') : toSqlServerError(err, state.sql),
+        this.cancelling
+          ? new DriverError('Consulta cancelada', 'cancelled')
+          : toSqlServerError(err, state.sql),
       );
     } else {
       waiter.resolve(false);

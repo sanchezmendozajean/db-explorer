@@ -8,7 +8,13 @@ import { notAvailable } from '../../app/app-commands';
 import { useConnectionsStore } from '../../stores/connections-store';
 import type { EditorTab } from '../../stores/workbench-store';
 import { EMPTY_TAB_RESULTS, useResultsStore } from '../results/results-store';
-import { effectiveTarget, hasSessionSchema, pickConnection, pickDatabase, pickSchema } from './target-pickers';
+import {
+  effectiveTarget,
+  hasSessionSchema,
+  pickConnection,
+  pickDatabase,
+  pickSchema,
+} from './target-pickers';
 
 /** Cronómetro "00:03.2" de la ejecución en curso (specs/04 §8). */
 export function useElapsed(startedAt: number | undefined): string | null {

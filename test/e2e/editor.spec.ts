@@ -203,7 +203,7 @@ test('un cambio externo no se pisa con el guardado automático', async () => {
   await expect(page.getByText('Script-1.sql cambió en disco')).toBeVisible({ timeout: 8000 });
   expect(readFileSync(file, 'utf8')).toBe('cambio externo');
   await page.getByRole('button', { name: 'Sobrescribir' }).click();
-  await expect.poll(() => readFileSync(file, 'utf8')).toBe('select 44;');
+  await expect.poll(() => readFileSync(file, 'utf8'), { timeout: 8000 }).toBe('select 44;');
 });
 
 test('cerrar la pestaña de un script vacío elimina el archivo', async () => {

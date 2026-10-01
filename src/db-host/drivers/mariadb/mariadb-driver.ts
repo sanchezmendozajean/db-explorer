@@ -81,7 +81,9 @@ export class MariaDbDriver implements DbDriver {
   }
 
   async listDatabases(): Promise<DbObject[]> {
-    const rows = await this.query('SELECT schema_name AS name FROM information_schema.schemata ORDER BY schema_name');
+    const rows = await this.query(
+      'SELECT schema_name AS name FROM information_schema.schemata ORDER BY schema_name',
+    );
     return rows.map((r) => {
       const name = String(r['name']);
       return { name, system: SYSTEM_DATABASES.has(name.toLowerCase()) };
@@ -122,7 +124,8 @@ export class MariaDbDriver implements DbDriver {
       );
       return rows.map((r) => ({
         name: String(r['name']),
-        detail: kind === 'table' && r['estimate'] !== null ? formatRowEstimate(Number(r['estimate'])) : undefined,
+        detail:
+          kind === 'table' && r['estimate'] !== null ? formatRowEstimate(Number(r['estimate'])) : undefined,
       }));
     }
     const routineType = ROUTINE_TYPES[kind];
@@ -132,7 +135,10 @@ export class MariaDbDriver implements DbDriver {
           WHERE routine_schema = ? AND routine_type = ? ORDER BY routine_name`,
         [scope.database, routineType],
       );
-      return rows.map((r) => ({ name: String(r['name']), detail: r['result'] ? String(r['result']) : undefined }));
+      return rows.map((r) => ({
+        name: String(r['name']),
+        detail: r['result'] ? String(r['result']) : undefined,
+      }));
     }
     return [];
   }

@@ -65,7 +65,10 @@ describe.each(cases)('$label', (c: EngineCase) => {
             (ch.ref.kind === 'objectFolder' && ch.ref.objectKind === 'table') ||
             (ch.ref.kind === 'object' && ch.ref.name === table.name),
         );
-        expect(next, `nivel ${depth}: ${children.map((ch) => ch.ref.kind + ':' + ch.label).join(', ')}`).toBeDefined();
+        expect(
+          next,
+          `nivel ${depth}: ${children.map((ch) => ch.ref.kind + ':' + ch.label).join(', ')}`,
+        ).toBeDefined();
         if (next!.ref.kind === 'objectFolder') expect(next!.count).toBeGreaterThan(0);
         level = next!.ref;
         found = level.kind === 'object';
@@ -99,9 +102,19 @@ describe.each(cases)('$label', (c: EngineCase) => {
       const { queryId } = await exec([c.sql.rows(1200)], 500);
       expect(rowsOf(queryId)).toHaveLength(500);
       expect(of(queryId, 'rows').every((e) => e.rows.length <= 500)).toBe(true);
-      expect(of(queryId, 'statement-done')[0]).toMatchObject({ truncated: true, hasMore: true, rowCount: 500 });
-      expect(await manager.fetchMore({ queryId, statementIndex: 0, count: 500 })).toEqual({ loaded: 500, hasMore: true });
-      expect(await manager.fetchMore({ queryId, statementIndex: 0, count: null })).toEqual({ loaded: 200, hasMore: false });
+      expect(of(queryId, 'statement-done')[0]).toMatchObject({
+        truncated: true,
+        hasMore: true,
+        rowCount: 500,
+      });
+      expect(await manager.fetchMore({ queryId, statementIndex: 0, count: 500 })).toEqual({
+        loaded: 500,
+        hasMore: true,
+      });
+      expect(await manager.fetchMore({ queryId, statementIndex: 0, count: null })).toEqual({
+        loaded: 200,
+        hasMore: false,
+      });
       const all = rowsOf(queryId).map((r) => Number(r[0]));
       expect(all).toHaveLength(1200);
       expect(all[1199]).toBe(1200);
@@ -159,6 +172,7 @@ describe.each(cases)('$label', (c: EngineCase) => {
         `UPDATE ${t} SET nombre = 'x' WHERE id >= 2`,
         `SELECT count(*) AS n FROM ${t}`,
       ]);
+      expect(of(queryId, 'statement-error').map((e) => e.message)).toEqual([]);
       const done = of(queryId, 'statement-done');
       expect(done[1]).toMatchObject({ command: 'INSERT', affected: 1 });
       expect(done[2]).toMatchObject({ command: 'UPDATE', affected: 3 });

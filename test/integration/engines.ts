@@ -127,10 +127,21 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
         TIMESTAMP '2026-09-30 08:42:52.658' AS ts, '{"a": 1}'::jsonb AS js, '\\x89504e47'::bytea AS bin,
         NULL::text AS nada, 'ñandú 🦆' AS uni`,
       expected: {
-        values: ['12345678901234.123456', '2026-02-28', '2026-09-30 08:42:52.658', '{"a": 1}', '\\x89504e47', null, 'ñandú 🦆'],
+        values: [
+          '12345678901234.123456',
+          '2026-02-28',
+          '2026-09-30 08:42:52.658',
+          '{"a": 1}',
+          '\\x89504e47',
+          null,
+          'ñandú 🦆',
+        ],
         types: ['decimal', 'date', 'datetime', 'json', 'binary', 'text', 'text'],
       },
-      message: { sql: "DO $$ BEGIN RAISE NOTICE 'hola desde el servidor'; END $$", text: /hola desde el servidor/ },
+      message: {
+        sql: "DO $$ BEGIN RAISE NOTICE 'hola desde el servidor'; END $$",
+        text: /hola desde el servidor/,
+      },
       begin: 'BEGIN',
       rollback: 'ROLLBACK',
     },
@@ -161,7 +172,8 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
       rows: (n) =>
         `WITH RECURSIVE s(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM s WHERE n < ${n}) SELECT n FROM s`,
       // Sin función de espera: una recursión infinita que entrega filas hasta que se cancela.
-      sleep: 'WITH RECURSIVE s(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM s) SELECT n FROM s WHERE n % 1000 = 0',
+      sleep:
+        'WITH RECURSIVE s(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM s) SELECT n FROM s WHERE n % 1000 = 0',
       literals: `SELECT 9007199254740993 AS grande, 0.5 AS medio, X'89504E47' AS bin, NULL AS nada,
         'ñandú 🦆' AS uni, json_object('a', 1) AS js`,
       expected: {
@@ -229,7 +241,20 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
           'A0EEBC99-9C0B-4EF8-BB6D-6BB9BD380A11',
           '9223372036854775807',
         ],
-        types: ['decimal', 'date', 'datetime', 'datetime', 'datetimetz', 'decimal', 'binary', 'text', 'text', 'boolean', 'uuid', 'integer'],
+        types: [
+          'decimal',
+          'date',
+          'datetime',
+          'datetime',
+          'datetimetz',
+          'decimal',
+          'binary',
+          'text',
+          'text',
+          'boolean',
+          'uuid',
+          'integer',
+        ],
       },
       message: { sql: "PRINT 'hola desde el servidor'", text: /hola desde el servidor/ },
       multipleResults: 'IF 1 = 1 BEGIN SELECT 1 AS a; SELECT 2 AS b, 3 AS c; END',
@@ -289,7 +314,15 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
         CAST('2026-09-30 08:42:52.658' AS DATETIME(3)) AS ts, X'89504E47' AS bin, NULL AS nada,
         'ñandú 🦆' AS uni, CAST(9223372036854775807 AS UNSIGNED) AS grande`,
       expected: {
-        values: ['12345678901234.123456', '2026-02-28', '2026-09-30 08:42:52.658', '0x89504E47', null, 'ñandú 🦆', '9223372036854775807'],
+        values: [
+          '12345678901234.123456',
+          '2026-02-28',
+          '2026-09-30 08:42:52.658',
+          '0x89504E47',
+          null,
+          'ñandú 🦆',
+          '9223372036854775807',
+        ],
         types: ['decimal', 'date', 'datetime', 'binary', 'other', 'text', 'integer'],
       },
       // mysql2 solo informa la cantidad de avisos en respuestas OK (no en SELECT): se usa DO.

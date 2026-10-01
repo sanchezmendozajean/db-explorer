@@ -218,7 +218,9 @@ export class MariaDbSession implements DbSession {
     state.waiter = null;
     if (!waiter) return;
     if (err) {
-      waiter.reject(this.cancelling ? new DriverError('Consulta cancelada', 'cancelled') : toMariaDbError(err, state.sql));
+      waiter.reject(
+        this.cancelling ? new DriverError('Consulta cancelada', 'cancelled') : toMariaDbError(err, state.sql),
+      );
     } else {
       waiter.resolve(false);
     }

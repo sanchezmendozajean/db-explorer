@@ -180,7 +180,11 @@ describe('SQL Server', () => {
   const ms = (sql: string, opts = {}): string[] => splitStatements(sql, 'sqlserver', opts).map((s) => s.text);
 
   it('GO termina el lote, con número y comentario opcionales, sin distinguir mayúsculas', () => {
-    expect(ms('select 1\nGO\nselect 2\n  go 3 -- repetir\nselect 3')).toEqual(['select 1', 'select 2', 'select 3']);
+    expect(ms('select 1\nGO\nselect 2\n  go 3 -- repetir\nselect 3')).toEqual([
+      'select 1',
+      'select 2',
+      'select 3',
+    ]);
   });
 
   it('GO dentro de una línea, una cadena o un comentario no separa', () => {
@@ -188,7 +192,8 @@ describe('SQL Server', () => {
   });
 
   it('el cuerpo de CREATE PROCEDURE llega hasta GO aunque tenga punto y coma y líneas en blanco', () => {
-    const sql = 'create or alter procedure dbo.p as\nset nocount on;\n\nselect 1;\nselect 2;\ngo\nexec dbo.p;';
+    const sql =
+      'create or alter procedure dbo.p as\nset nocount on;\n\nselect 1;\nselect 2;\ngo\nexec dbo.p;';
     expect(ms(sql, { blankLineSeparator: true })).toEqual([
       'create or alter procedure dbo.p as\nset nocount on;\n\nselect 1;\nselect 2;',
       'exec dbo.p',
@@ -255,7 +260,11 @@ select 3;`;
   });
 
   it('BEGIN al inicio es una transacción; BEGIN NOT ATOMIC es un bloque', () => {
-    expect(my('begin; insert into t values (1); commit;')).toEqual(['begin', 'insert into t values (1)', 'commit']);
+    expect(my('begin; insert into t values (1); commit;')).toEqual([
+      'begin',
+      'insert into t values (1)',
+      'commit',
+    ]);
     expect(my('begin not atomic select 1; select 2; end; select 3')).toEqual([
       'begin not atomic select 1; select 2; end',
       'select 3',
@@ -285,7 +294,9 @@ describe('analyzeStatement (otros dialectos)', () => {
   it('bloques y PRAGMA', () => {
     expect(analyzeStatement('begin tran', 'sqlserver').isWrite).toBe(false);
     expect(analyzeStatement("if exists (select 1 from t) print 'x'", 'sqlserver').isWrite).toBe(false);
-    expect(analyzeStatement('if @a = 1 begin delete from t where id = 1 end', 'sqlserver').isWrite).toBe(true);
+    expect(analyzeStatement('if @a = 1 begin delete from t where id = 1 end', 'sqlserver').isWrite).toBe(
+      true,
+    );
     expect(analyzeStatement('declare @x int = 1', 'sqlserver').isWrite).toBe(false);
     expect(analyzeStatement('select * into nueva from t', 'sqlserver').isWrite).toBe(true);
     expect(analyzeStatement('pragma table_info(t)', 'sqlite').isWrite).toBe(false);

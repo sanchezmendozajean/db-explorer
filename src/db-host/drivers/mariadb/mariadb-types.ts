@@ -39,7 +39,16 @@ const UNSIGNED_FLAG = 32;
 /** Juego de caracteres `binary`: columnas BLOB/BINARY/VARBINARY (no texto). */
 const BINARY_CHARSET = 63;
 
-const STRING_TYPES = new Set(['VARCHAR', 'VAR_STRING', 'STRING', 'TINY_BLOB', 'MEDIUM_BLOB', 'LONG_BLOB', 'BLOB', 'GEOMETRY']);
+const STRING_TYPES = new Set([
+  'VARCHAR',
+  'VAR_STRING',
+  'STRING',
+  'TINY_BLOB',
+  'MEDIUM_BLOB',
+  'LONG_BLOB',
+  'BLOB',
+  'GEOMETRY',
+]);
 
 /** Campo tal como lo recibe `typeCast` (el objeto real es la definición de columna completa). */
 interface CastField {

@@ -7,7 +7,12 @@ import { commandOf, positionOfSnippet } from '../../src/db-host/drivers/common';
 
 const require = createRequire(import.meta.url);
 
-type ReadValue = (buf: Buffer, offset: number, meta: object, options: object) => { value: unknown; offset: number };
+type ReadValue = (
+  buf: Buffer,
+  offset: number,
+  meta: object,
+  options: object,
+) => { value: unknown; offset: number };
 
 describe('valores exactos de SQL Server', () => {
   installExactValues();
@@ -58,7 +63,10 @@ describe('posiciones de error', () => {
 
   it('MariaDB: fragmento y línea', () => {
     const err = toMariaDbError(
-      { sqlMessage: "You have an error in your SQL syntax; check the manual … near 'FROM x' at line 2", code: 'ER_PARSE_ERROR' },
+      {
+        sqlMessage: "You have an error in your SQL syntax; check the manual … near 'FROM x' at line 2",
+        code: 'ER_PARSE_ERROR',
+      },
       sql,
     );
     expect(err.extra.position).toBe(11);
@@ -67,7 +75,12 @@ describe('posiciones de error', () => {
 
   it('SQL Server: palabra clave citada y varios errores', () => {
     const err = toSqlServerError(
-      { errors: [{ message: "Incorrect syntax near the keyword 'FROM'.", number: 156, lineNumber: 2 }, { message: 'Otro' }] },
+      {
+        errors: [
+          { message: "Incorrect syntax near the keyword 'FROM'.", number: 156, lineNumber: 2 },
+          { message: 'Otro' },
+        ],
+      },
       sql,
     );
     expect(err.extra.position).toBe(11);

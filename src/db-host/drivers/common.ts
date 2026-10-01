@@ -1,4 +1,3 @@
-import type { DbObject } from '@shared/metadata';
 import { tokenize } from '@shared/splitter';
 import type { SqlDialect } from '@shared/splitter';
 
@@ -29,7 +28,11 @@ export function hexText(bytes: Uint8Array): string {
  * Posición 1-based del fragmento que cita un error ("near 'x'") dentro de la
  * sentencia, buscando desde el inicio de la línea indicada si se conoce.
  */
-export function positionOfSnippet(sql: string, snippet: string | undefined, line?: number): number | undefined {
+export function positionOfSnippet(
+  sql: string,
+  snippet: string | undefined,
+  line?: number,
+): number | undefined {
   let from = 0;
   if (line && line > 1) {
     for (let i = 1; i < line; i++) {
@@ -49,11 +52,7 @@ export function positionOfSnippet(sql: string, snippet: string | undefined, line
 export function formatRowEstimate(estimate: number): string | undefined {
   if (!(estimate >= 0)) return undefined;
   if (estimate < 1000) return String(Math.round(estimate));
-  if (estimate < 1_000_000) return `${(estimate / 1000).toLocaleString('es', { maximumFractionDigits: 1 })} k`;
+  if (estimate < 1_000_000)
+    return `${(estimate / 1000).toLocaleString('es', { maximumFractionDigits: 1 })} k`;
   return `${(estimate / 1_000_000).toLocaleString('es', { maximumFractionDigits: 1 })} M`;
-}
-
-/** Ordena objetos por nombre sin distinguir mayúsculas. */
-export function byName(a: DbObject, b: DbObject): number {
-  return a.name.localeCompare(b.name, 'en', { sensitivity: 'base' });
 }

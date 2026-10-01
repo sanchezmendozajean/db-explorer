@@ -25,7 +25,15 @@ const OBJECT_TYPES: Partial<Record<ObjectKind, string[]>> = {
 
 const SYSTEM_SCHEMAS = new Set(['sys', 'INFORMATION_SCHEMA', 'guest']);
 
-const PRODUCT_YEARS: Record<number, string> = { 11: '2012', 12: '2014', 13: '2016', 14: '2017', 15: '2019', 16: '2022', 17: '2025' };
+const PRODUCT_YEARS: Record<number, string> = {
+  11: '2012',
+  12: '2014',
+  13: '2016',
+  14: '2017',
+  15: '2019',
+  16: '2022',
+  17: '2025',
+};
 
 /** `[nombre]` con los `]` duplicados, para usar un nombre de base en consultas de catálogo. */
 function bracket(name: string): string {
@@ -81,7 +89,8 @@ export class SqlServerDriver implements DbDriver {
     const year = PRODUCT_YEARS[Number(version.split('.')[0])];
     this.defaultDatabase = String(row?.['db'] ?? 'master');
     return {
-      product: edition === 5 || edition === 8 ? 'Azure SQL' : year ? `SQL Server ${year}` : `SQL Server ${version}`,
+      product:
+        edition === 5 || edition === 8 ? 'Azure SQL' : year ? `SQL Server ${year}` : `SQL Server ${version}`,
       version,
       latencyMs,
       defaultDatabase: this.defaultDatabase,

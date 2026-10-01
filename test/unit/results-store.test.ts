@@ -11,9 +11,8 @@ beforeAll(() => {
 
 describe('results-store: varios resultados en una sentencia', () => {
   it('crea un resultado por cada conjunto y las filas van al último', async () => {
-    const { applyQueryEvent, beginExecution, tabResults } = await import(
-      '../../src/renderer/features/results/results-store'
-    );
+    const { applyQueryEvent, beginExecution, tabResults } =
+      await import('../../src/renderer/features/results/results-store');
     const meta = { text: 'exec p', start: 0, startLine: 1, startColumn: 1 };
     beginExecution('t1', 'q1', [meta], { keepPrevious: false });
     const col = (name: string) => ({ name, nativeType: 'int', logicalType: 'integer' as const });
