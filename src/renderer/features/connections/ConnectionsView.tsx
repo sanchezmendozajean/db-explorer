@@ -19,6 +19,7 @@ import { Highlight, SideBarHeader } from '../side-bar/SideBarHeader';
 import * as actions from './actions';
 import { newScript } from '../editor/scripts';
 import { countRows, newTableScript, targetOfRef } from './table-scripts';
+import { dotStyle } from '../../components/env-dot';
 
 const ENGINE_BADGE: Record<string, string> = { postgres: 'PG', mariadb: 'MY', sqlite: 'LT', sqlserver: 'MS' };
 const ENVIRONMENTS: Environment[] = ['local', 'dev', 'qa', 'prod'];
@@ -537,7 +538,11 @@ export function ConnectionsView(): React.JSX.Element {
       const error = st?.state === 'error' ? st.message : nodeErrors[node.id];
       return (
         <>
-          <span className="env-dot" style={{ background: cfg.color ?? `var(--env-${cfg.environment})` }} />
+          <span
+            className={st?.state === 'connected' ? 'env-dot' : 'env-dot is-hollow'}
+            style={dotStyle(cfg.color ?? `var(--env-${cfg.environment})`)}
+            data-testid="connection-dot"
+          />
           <span className={['engine-badge', st?.state === 'connected' ? '' : 'is-disconnected'].join(' ')}>
             {ENGINE_BADGE[cfg.engine]}
           </span>

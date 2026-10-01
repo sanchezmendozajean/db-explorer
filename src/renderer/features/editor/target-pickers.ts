@@ -54,7 +54,9 @@ export function pickConnection(tabId: string, anchor?: PickAnchor): void {
   const items: QuickPickItem[] = useConnectionsStore.getState().connections.map((c) => ({
     id: c.id,
     label: c.name,
-    icon: 'circle-filled',
+    // Relleno = conectada; hueco = cerrada (igual que el punto del árbol).
+    icon:
+      useConnectionsStore.getState().status[c.id]?.state === 'connected' ? 'circle-filled' : 'circle-outline',
     iconColor: c.color ?? `var(--env-${c.environment})`,
     detail: `${es.connections.engines[c.engine]} · ${connectionAddress(c)}`,
     current: c.id === tab?.connectionId,

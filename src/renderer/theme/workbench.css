@@ -307,6 +307,13 @@
   border-radius: 50%;
   flex: none;
   display: inline-block;
+  box-sizing: border-box;
+}
+
+/* Conexión cerrada: punto hueco con el color de la conexión (relleno = conectada). */
+.env-dot.is-hollow {
+  background: transparent !important;
+  border: 1.5px solid var(--dot-color);
 }
 
 .engine-badge {

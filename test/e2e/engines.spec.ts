@@ -139,6 +139,13 @@ for (const flow of flows) {
       await dialog.getByLabel('Nombre', { exact: true }).fill(flow.name);
       await flow.fill(dialog);
       await dialog.getByRole('button', { name: 'Guardar' }).click();
+      // Sin conectar, el punto de color de la conexión está hueco.
+      await expect(page.getByTestId('connection-dot')).toHaveClass(/is-hollow/);
+      if (SHOTS)
+        await page.screenshot({
+          path: join(SHOTS, `dot-off-${flow.engine.replace(/W+/g, '-')}.png`),
+          clip: { x: 0, y: 0, width: 700, height: 140 },
+        });
       await page
         .locator('[data-view="connections"] .tree')
         .getByRole('treeitem', { name: new RegExp(flow.name) })
@@ -156,6 +163,17 @@ for (const flow of flows) {
       await expect(page.getByTestId('results-grid')).toHaveAttribute('data-columns', 'texto,importe');
       await expect(page.getByTestId('results-footer')).toContainText('1 fila');
       await expect(page.getByTestId('statusbar')).toContainText(flow.name);
+      // Conectada: punto relleno en el árbol, en el selector y en su lista.
+      await expect(page.getByTestId('connection-dot')).not.toHaveClass(/is-hollow/);
+      await expect(page.getByTestId('connection-chip-dot')).not.toHaveClass(/is-hollow/);
+      await page.getByTestId('connection-chip').click();
+      await expect(page.locator('.quick-input-item .codicon-circle-filled')).toHaveCount(1);
+      if (SHOTS)
+        await page.screenshot({
+          path: join(SHOTS, `dot-${flow.engine.replace(/W+/g, '-')}.png`),
+          clip: { x: 0, y: 0, width: 900, height: 200 },
+        });
+      await page.keyboard.press('Escape');
       if (SHOTS) {
         // Árbol expandido hasta las carpetas de objetos, para revisar la distribución por motor.
         const tree = page.locator('[data-view="connections"] .tree');

@@ -7,6 +7,7 @@ import { es } from '../../i18n/es';
 import { notAvailable } from '../../app/app-commands';
 import { useConnectionsStore } from '../../stores/connections-store';
 import { anchorOf } from '../../stores/overlay-store';
+import { dotStyle } from '../../components/env-dot';
 import type { EditorTab } from '../../stores/workbench-store';
 import { EMPTY_TAB_RESULTS, useResultsStore } from '../results/results-store';
 import {
@@ -37,7 +38,9 @@ export function EditorToolbar({ tab }: { tab: EditorTab }): React.JSX.Element {
   const t = es.editor.toolbar;
   const conn = useConnectionsStore((s) => s.connections.find((c) => c.id === tab.connectionId));
   // Suscripción al estado para refrescar base/esquema predeterminados al conectar.
-  useConnectionsStore((s) => (tab.connectionId ? s.status[tab.connectionId] : undefined));
+  const connected = useConnectionsStore(
+    (s) => !!tab.connectionId && s.status[tab.connectionId]?.state === 'connected',
+  );
   const running = useResultsStore((s) => (s.byTab[tab.id] ?? EMPTY_TAB_RESULTS).running);
   const elapsed = useElapsed(running?.startedAt);
   const { database, schema } = effectiveTarget(tab);
@@ -82,10 +85,9 @@ export function EditorToolbar({ tab }: { tab: EditorTab }): React.JSX.Element {
           onClick={(e) => pickConnection(tab.id, anchorOf(e.currentTarget))}
         >
           <span
-            className="env-dot"
-            style={{
-              background: conn ? (conn.color ?? `var(--env-${conn.environment})`) : 'var(--fg-disabled)',
-            }}
+            className={connected ? 'env-dot' : 'env-dot is-hollow'}
+            style={dotStyle(conn ? (conn.color ?? `var(--env-${conn.environment})`) : 'var(--fg-disabled)')}
+            data-testid="connection-chip-dot"
           />
           <span>{conn?.name ?? es.statusBar.noConnection}</span>
           <Codicon name="chevron-down" size={14} className="chip-chevron" />
