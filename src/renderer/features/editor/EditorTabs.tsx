@@ -101,7 +101,11 @@ export function EditorTabs(): React.JSX.Element {
           const active = tab.id === activeId;
           const conn = connections.find((c) => c.id === tab.connectionId);
           const env = conn ? (conn.color ?? `var(--env-${conn.environment})`) : undefined;
-          const icon = TAB_ICON[tab.kind];
+          // Los archivos de texto que no son SQL usan el ícono de archivo genérico.
+          const icon =
+            tab.kind === 'script' && tab.path && !/\.sql$/i.test(tab.path)
+              ? { icon: 'file', color: 'var(--fg-muted)' }
+              : TAB_ICON[tab.kind];
           return (
             <div
               key={tab.id}

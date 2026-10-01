@@ -410,6 +410,7 @@ export const es = {
   },
 
   statusBar: {
+    plainText: 'Texto sin formato',
     position: (line: number, col: number) => `Ln ${line}, Col ${col}`,
     selected: (n: number) => `${n.toLocaleString('es')} sel.`,
     autoSave: 'Autoguardado',

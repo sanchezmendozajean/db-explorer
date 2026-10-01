@@ -18,6 +18,22 @@ const ENGINE_LANGUAGE: Record<string, string> = {
   sqlserver: 'SQL (T-SQL)',
 };
 
+/** Lenguajes de los archivos de texto que no son SQL (specs/07). */
+const FILE_LANGUAGE: Record<string, string> = {
+  json: 'JSON',
+  md: 'Markdown',
+  xml: 'XML',
+  yml: 'YAML',
+  yaml: 'YAML',
+  csv: 'CSV',
+};
+
+function languageLabel(path: string | undefined, engine: string | undefined): string {
+  const ext = path ? path.slice(path.lastIndexOf('.') + 1).toLowerCase() : 'sql';
+  if (ext === 'sql') return engine ? (ENGINE_LANGUAGE[engine] ?? 'SQL') : 'SQL';
+  return FILE_LANGUAGE[ext] ?? es.statusBar.plainText;
+}
+
 /** Status bar (specs/04 §11). En Producción se tiñe entera. */
 export function StatusBar(): React.JSX.Element {
   const tab = useWorkbenchStore((s) => s.tabs.find((t) => t.id === s.activeId));
@@ -114,7 +130,7 @@ export function StatusBar(): React.JSX.Element {
             >
               {eol}
             </button>
-            <span className="statusbar-item">{connection ? ENGINE_LANGUAGE[connection.engine] : 'SQL'}</span>
+            <span className="statusbar-item">{languageLabel(tab?.path, connection?.engine)}</span>
             {connection && <span className="statusbar-item">{es.statusBar.autoCommit}</span>}
           </>
         )}

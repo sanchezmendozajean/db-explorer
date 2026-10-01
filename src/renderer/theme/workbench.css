@@ -1214,7 +1214,13 @@ button.statusbar-item:hover {
   white-space: nowrap;
 }
 
-/* Campo en línea para crear o renombrar un archivo (como en VS Code). */
+/* Campo en línea para crear o renombrar un archivo (como en VS Code). El aviso de nombre
+   no válido sale por debajo de la fila, que normalmente recorta su contenido. */
+.tree-row:has(.tree-input-wrap) {
+  overflow: visible;
+  z-index: 2;
+}
+
 .tree-input-wrap {
   position: relative;
   flex: 1;
