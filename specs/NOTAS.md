@@ -242,9 +242,9 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 | Suite de integración común en PostgreSQL | ✅ `common-suite.test.ts` (clúster temporal local) |
 | Suite de integración común en SQLite | ✅ archivo temporal |
 | Suite de integración común en SQL Server | ✅ SQL Server 2019 de pruebas del usuario; solo escribe en la base `dbx_test`, creada para las pruebas |
-| Suite de integración común en MariaDB/MySQL | ⚠️ **sin verificar**: el servidor indicado (RDS de desarrollo, solo lectura) no responde en el puerto 3306 desde este equipo (DNS resuelve, TCP no conecta: probablemente grupo de seguridad o VPN). Las pruebas se saltan con el motivo |
-| Mismo flujo de M3 en cada motor | ✅ e2e `engines.spec.ts` en SQLite y SQL Server (conectar, script con varios resultados, error con su línea, cancelar); MariaDB se salta por lo mismo |
-| Pruebas | ✅ 129 unitarias, 53 de integración (+13 saltadas de MariaDB), 48 e2e (+3 saltadas); lint y tipos limpios |
+| Suite de integración común en MariaDB/MySQL | ✅ MariaDB 13.0 local del usuario (base `dbx_test`, creada por las pruebas). El RDS de desarrollo (solo lectura) no responde desde este equipo; la suite admite servidores de solo lectura con `MARIADB_READONLY=1` |
+| Mismo flujo de M3 en cada motor | ✅ e2e `engines.spec.ts` en SQLite, SQL Server y MariaDB (conectar, script con varios resultados, error con su línea, cancelar) |
+| Pruebas | ✅ 129 unitarias, 63 de integración (+3 que no aplican: mensajes en SQLite, varios resultados en PostgreSQL y SQLite), 51 e2e; lint y tipos limpios |
 
 ### Decisiones
 - **SQLite con `node:sqlite`** (incluido en Electron 44 / Node 24) en lugar de `better-sqlite3` (**desvío de D14, pendiente de confirmar**): no hay módulo nativo que recompilar para Electron y para Node (pruebas), y `stmt.columns()` da la tabla de origen de cada columna. La API es la misma en lo que se usa (`prepare`, `iterate`, enteros grandes). Si se prefiere `better-sqlite3`, el cambio queda acotado a `drivers/sqlite`.
@@ -254,6 +254,7 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 - **Varios resultados por sentencia** (bloques y `EXEC` en SQL Server, `CALL` en MariaDB): cada conjunto es una pestaña de resultado; "Cargar más" aplica al último. Si un conjunto intermedio llega al límite, los siguientes solo se leen al pedir "Cargar más".
 - **Separador de sentencias**: `GO` (SQL Server, `GO n` se acepta sin repetir el lote), `DELIMITER` (MariaDB, también pegado a una palabra: `END$$`), bloques `BEGIN … END` (con `IF`/`CASE`/`LOOP`/`WHILE`/`REPEAT` en MariaDB, `TRY`/`CATCH` en SQL Server, cuerpos de `CREATE TRIGGER` en SQLite) y cuerpos de `CREATE PROCEDURE/FUNCTION/TRIGGER/VIEW` de SQL Server hasta el `GO`.
 - **Esquema por sesión solo en PostgreSQL**: en SQL Server el esquema por defecto es del usuario (no se puede cambiar por sesión) y en MariaDB base = esquema; el chip de esquema y la parte de esquemas de Ctrl+0 solo aparecen en PostgreSQL.
+- **MariaDB, detalles**: el envoltorio que `mysql2` pasa a `typeCast` no dice si la columna es binaria; se toma de las definiciones del evento `fields`. Al llegar al límite se pausa el socket y las filas del bloque ya recibido esperan en memoria hasta "Cargar más". `KILL QUERY` sobre `SLEEP()` no da error (devuelve 1): si el usuario canceló, la sentencia se informa como cancelada igual. En las pruebas, `seq_1_to_N` en lugar de un CTE recursivo: MariaDB corta en silencio la recursión en 1000 iteraciones (`max_recursive_iterations`).
 - **Binarios** de MariaDB, SQLite y SQL Server como `0x…` (formato de literal de esos motores); la grilla formatea `\x…` y `0x…`.
 - **Pruebas contra servidores compartidos**: credenciales solo en `test/integration/.env` (ignorado por git). `MARIADB_READONLY=1` marca el servidor como de solo lectura y la suite salta las pruebas que escriben; en SQL Server solo se escribe en la base de pruebas.
 
@@ -264,5 +265,5 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 
 ### Pendientes / avisos
 - **Confirmar D14** (`node:sqlite` o `better-sqlite3`).
-- **Verificar MariaDB/MySQL** con un servidor alcanzable (habilitar el acceso al RDS desde este equipo, o un MariaDB local de pruebas); hasta entonces el driver está escrito y probado solo en unidades.
+- MySQL (no MariaDB) no se ha probado: el driver distingue ambos (secuencias, tiempo límite), pero solo hay un servidor MariaDB disponible.
 - Ancho de columnas de la grilla: es fijo por tipo (M3) y un decimal largo con separadores queda recortado a la izquierda sin `…`; conviene calcularlo por el contenido de las primeras filas.
