@@ -3,9 +3,7 @@
  * Módulo puro compartido: lo usa el renderer para la sentencia activa y la
  * ejecución, sin ir al proceso de BD.
  *
- * En M3 se cubre PostgreSQL por completo. Las comillas y comentarios de los
- * demás dialectos ya están contemplados; `DELIMITER` (MariaDB) y `GO`
- * (SQL Server) llegan en M4.
+ * Cubre PostgreSQL, MariaDB (`DELIMITER`), SQLite y SQL Server (`GO`).
  */
 
 export type SqlDialect = 'postgres' | 'mariadb' | 'sqlite' | 'sqlserver' | 'generic';
@@ -257,11 +255,41 @@ function hasBlankLine(gap: string, dialect: SqlDialect): boolean {
   return /\n[ \t\r\f\v]*\n/.test(code);
 }
 
+/** Rango [inicio, fin) de la línea que contiene `offset`, sin el salto de línea. */
+function lineAround(sql: string, offset: number): { start: number; end: number } {
+  const start = sql.lastIndexOf('\n', offset - 1) + 1;
+  const eol = sql.indexOf('\n', offset);
+  return { start, end: eol < 0 ? sql.length : eol };
+}
+
+/**
+ * `GO` de SQL Server: sola en su línea, opcionalmente con un número
+ * (`GO 5`, que se acepta pero no repite el lote) y un comentario `--`.
+ */
+function isGoLine(sql: string, token: Token): boolean {
+  if (token.kind !== 'word' || token.value !== 'go') return false;
+  const line = lineAround(sql, token.start);
+  if (sql.slice(line.start, token.start).trim() !== '') return false;
+  const rest = sql.slice(token.end, line.end).replace(/--.*$/, '');
+  return /^\s*(\d+)?\s*$/.test(rest);
+}
+
+/** Palabras tras `BEGIN` que indican una transacción y no un bloque (SQL Server). */
+const SQLSERVER_TRANSACTION = new Set(['tran', 'transaction', 'distributed', 'dialog', 'conversation']);
+
+/** Objetos de SQL Server cuyo cuerpo ocupa todo el lote: dentro no separan `;` ni líneas en blanco. */
+const SQLSERVER_BATCH_OBJECTS = new Set(['procedure', 'proc', 'function', 'trigger', 'view']);
+
 /**
  * Separa un script en sentencias por `;` (y, si se pide, por líneas en
  * blanco), respetando cadenas, identificadores entre comillas, comentarios,
- * *dollar quoting* y cuerpos `BEGIN ATOMIC … END` de PostgreSQL. Las
- * sentencias que solo tienen comentarios se omiten.
+ * *dollar quoting* y cuerpos `BEGIN ATOMIC … END` de PostgreSQL. Además:
+ * - SQL Server: `GO` termina el lote; `BEGIN … END`, `BEGIN TRY/CATCH` y los
+ *   cuerpos de `CREATE PROCEDURE/FUNCTION/TRIGGER/VIEW` no se cortan.
+ * - MariaDB: `DELIMITER xx` cambia el separador; bloques `BEGIN … END` (con
+ *   `IF`, `CASE`, `LOOP`, `WHILE`, `REPEAT`) no se cortan.
+ * - SQLite: cuerpos `BEGIN … END` de `CREATE TRIGGER`.
+ * Las sentencias que solo tienen comentarios se omiten.
  */
 export function splitStatements(
   sql: string,
@@ -274,9 +302,17 @@ export function splitStatements(
 
   let first: Token | null = null;
   let last: Token | null = null;
-  // Profundidad de bloques `BEGIN ATOMIC … END` (y `CASE … END` dentro de ellos).
-  let atomicDepth = 0;
+  // Profundidad de bloques (`BEGIN … END`, `CASE … END`…): dentro no se separa.
+  let blockDepth = 0;
+  // Cuerpo de procedimiento o función de SQL Server: llega hasta `GO`.
+  let wholeBatch = false;
   let prevWord = '';
+  let wordIndex = 0;
+  let firstWord = '';
+  // Separador de MariaDB (`DELIMITER`); `;` por defecto.
+  let delimiter = ';';
+  // Tokens a saltar (resto de la línea de `GO` o `DELIMITER`, o un separador de varios caracteres).
+  let skipUntil = -1;
 
   const flush = (endOffset: number, textEnd: number): void => {
     if (first) {
@@ -294,36 +330,105 @@ export function splitStatements(
     }
     first = null;
     last = null;
-    atomicDepth = 0;
+    blockDepth = 0;
+    wholeBatch = false;
     prevWord = '';
+    wordIndex = 0;
+    firstWord = '';
   };
+  const lastEnd = (): number => (last as Token | null)?.end ?? 0;
 
-  for (const token of tokens) {
-    if (token.kind === 'semicolon' && atomicDepth === 0) {
-      if (first && last) flush(token.end, (last as Token).end);
-      else flush(token.end, token.start);
-      continue;
+  tokens.forEach((token, i) => {
+    if (token.start < skipUntil) return;
+
+    if (dialect === 'sqlserver' && isGoLine(sql, token)) {
+      if (first) flush(lastEnd(), lastEnd());
+      skipUntil = lineAround(sql, token.start).end;
+      return;
+    }
+    if (dialect === 'mariadb' && !first && token.kind === 'word' && token.value === 'delimiter') {
+      const line = lineAround(sql, token.start);
+      if (sql.slice(line.start, token.start).trim() === '') {
+        const value = sql.slice(token.end, line.end).trim().split(/\s+/)[0] ?? '';
+        if (value) delimiter = value;
+        skipUntil = line.end;
+        return;
+      }
+    }
+    if (delimiter !== ';' && !`'"\``.includes(sql[token.start]!)) {
+      // El separador puede ir pegado a una palabra (`END$$`: `$` es válido en identificadores).
+      const found = sql.slice(token.start, token.end + delimiter.length - 1).indexOf(delimiter);
+      const at = token.start + found;
+      if (found >= 0 && at < token.end) {
+        if (at > token.start) {
+          first ??= token;
+          last = { ...token, end: at };
+        }
+        const end = at + delimiter.length;
+        if (first) flush(end, lastEnd());
+        skipUntil = end;
+        return;
+      }
+    }
+    const separates = blockDepth === 0 && !wholeBatch;
+    if (token.kind === 'semicolon' && delimiter === ';' && separates) {
+      if (first) flush(token.end, lastEnd());
+      return;
     }
     // Línea en blanco entre dos tokens de la misma sentencia: termina la sentencia anterior.
     if (
       options.blankLineSeparator &&
+      separates &&
       first &&
-      last &&
-      atomicDepth === 0 &&
-      hasBlankLine(sql.slice((last as Token).end, token.start), dialect)
+      hasBlankLine(sql.slice(lastEnd(), token.start), dialect)
     ) {
-      flush((last as Token).end, (last as Token).end);
+      flush(lastEnd(), lastEnd());
     }
     if (!first) first = token;
     last = token;
-    if (token.kind === 'word' && RULES[dialect].postgres) {
-      if (token.value === 'atomic' && prevWord === 'begin') atomicDepth++;
-      else if (atomicDepth > 0 && token.value === 'case') atomicDepth++;
-      else if (atomicDepth > 0 && token.value === 'end') atomicDepth--;
-      prevWord = token.value;
+    if (token.kind !== 'word') return;
+
+    const next = tokens[i + 1]?.value ?? '';
+    const word = token.value;
+    if (wordIndex === 0) firstWord = word;
+    if (dialect === 'postgres') {
+      if (word === 'atomic' && prevWord === 'begin') blockDepth++;
+      else if (blockDepth > 0 && word === 'case') blockDepth++;
+      else if (blockDepth > 0 && word === 'end') blockDepth--;
+    } else if (dialect === 'sqlserver' || dialect === 'mariadb' || dialect === 'sqlite') {
+      if (
+        dialect === 'sqlserver' &&
+        wordIndex > 0 &&
+        wordIndex <= 3 &&
+        (firstWord === 'create' || firstWord === 'alter') &&
+        SQLSERVER_BATCH_OBJECTS.has(word)
+      ) {
+        wholeBatch = true;
+      }
+      if (word === 'begin') {
+        const isBlock =
+          dialect === 'sqlserver'
+            ? !SQLSERVER_TRANSACTION.has(next)
+            : wordIndex > 0 || (dialect === 'mariadb' && next === 'not');
+        if (isBlock) blockDepth++;
+      } else if (blockDepth > 0 && word === 'end') {
+        blockDepth--;
+      } else if (blockDepth > 0 && prevWord !== 'end') {
+        // `END IF`, `END CASE`, `END LOOP`…: la palabra tras END no abre otro bloque.
+        if (word === 'case') blockDepth++;
+        else if (
+          dialect === 'mariadb' &&
+          ['if', 'loop', 'while', 'repeat'].includes(word) &&
+          !['(', 'not', 'exists'].includes(next)
+        ) {
+          blockDepth++;
+        }
+      }
     }
-  }
-  if (first && last) flush((last as Token).end, (last as Token).end);
+    prevWord = word;
+    wordIndex++;
+  });
+  if (first) flush(lastEnd(), lastEnd());
   return result;
 }
 
@@ -375,6 +480,8 @@ const READ_KEYWORDS = new Set([
   'desc',
   'use',
   'pragma',
+  'declare',
+  'print',
 ]);
 
 /** Palabras que, en cualquier parte de un `WITH` o `EXPLAIN ANALYZE`, indican escritura. */
@@ -423,8 +530,14 @@ export function analyzeStatement(text: string, dialect: SqlDialect = 'postgres')
     const analyzing = keyword === 'with' || words.includes('analyze');
     isWrite = analyzing && words.some((w) => WRITE_KEYWORDS.has(w));
   } else if (keyword === 'select') {
-    // `SELECT … INTO tabla` crea una tabla en PostgreSQL.
+    // `SELECT … INTO tabla` crea una tabla (PostgreSQL, SQL Server).
     isWrite = words.includes('into');
+  } else if (keyword === 'begin' || keyword === 'if' || keyword === 'while') {
+    // Bloques (`BEGIN … END`, `IF … `): escriben si contienen alguna escritura; `BEGIN` solo es lectura.
+    isWrite = words.slice(1).some((w) => WRITE_KEYWORDS.has(w));
+  } else if (keyword === 'pragma') {
+    // `PRAGMA x = valor` cambia la base (SQLite); `PRAGMA table_info(t)` solo lee.
+    isWrite = tokens.some((t) => t.value === '=');
   } else {
     isWrite = keyword !== '' && !READ_KEYWORDS.has(keyword);
   }

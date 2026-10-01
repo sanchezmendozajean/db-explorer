@@ -175,3 +175,121 @@ describe('separador por línea en blanco', () => {
     expect(statementAt(sql, stmts, 9)?.text).toBe('select 1');
   });
 });
+
+describe('SQL Server', () => {
+  const ms = (sql: string, opts = {}): string[] => splitStatements(sql, 'sqlserver', opts).map((s) => s.text);
+
+  it('GO termina el lote, con número y comentario opcionales, sin distinguir mayúsculas', () => {
+    expect(ms('select 1\nGO\nselect 2\n  go 3 -- repetir\nselect 3')).toEqual(['select 1', 'select 2', 'select 3']);
+  });
+
+  it('GO dentro de una línea, una cadena o un comentario no separa', () => {
+    expect(ms("select 'go'\n/*\ngo\n*/ select 1 as go")).toEqual(["select 'go'\n/*\ngo\n*/ select 1 as go"]);
+  });
+
+  it('el cuerpo de CREATE PROCEDURE llega hasta GO aunque tenga punto y coma y líneas en blanco', () => {
+    const sql = 'create or alter procedure dbo.p as\nset nocount on;\n\nselect 1;\nselect 2;\ngo\nexec dbo.p;';
+    expect(ms(sql, { blankLineSeparator: true })).toEqual([
+      'create or alter procedure dbo.p as\nset nocount on;\n\nselect 1;\nselect 2;',
+      'exec dbo.p',
+    ]);
+  });
+
+  it('BEGIN … END, BEGIN TRY/CATCH y CASE no se cortan; BEGIN TRAN sí es una sentencia', () => {
+    const sql = `begin tran;
+if @x = 1
+begin
+  update t set a = case when b = 1 then 2 else 3 end;
+  begin try
+    delete from t;
+  end try
+  begin catch
+    print 'error';
+  end catch
+end;
+commit;`;
+    const out = ms(sql);
+    expect(out).toHaveLength(3);
+    expect(out[0]).toBe('begin tran');
+    expect(out[1]).toMatch(/^if @x = 1[\s\S]*end catch\nend$/);
+    expect(out[2]).toBe('commit');
+  });
+});
+
+describe('MariaDB', () => {
+  const my = (sql: string): string[] => splitStatements(sql, 'mariadb').map((s) => s.text);
+
+  it('DELIMITER cambia el separador y la línea no es una sentencia', () => {
+    const sql = `DELIMITER $$
+create procedure p()
+begin
+  select 1;
+  select 2;
+end$$
+DELIMITER ;
+call p();`;
+    expect(my(sql)).toEqual(['create procedure p()\nbegin\n  select 1;\n  select 2;\nend', 'call p()']);
+  });
+
+  it('DELIMITER de dos barras y posiciones del rango', () => {
+    const [s] = splitStatements('delimiter //\nselect 1; select 2//\n', 'mariadb');
+    expect(s).toMatchObject({ text: 'select 1; select 2', startLine: 2, endLine: 2, endColumn: 21 });
+  });
+
+  it('bloques BEGIN … END con IF, LOOP y CASE sin DELIMITER', () => {
+    const sql = `create procedure p(n int)
+begin
+  if n > 0 then
+    select if(n > 1, 'a', 'b');
+  end if;
+  l: loop
+    leave l;
+  end loop;
+  case n when 1 then select 1; else select 2; end case;
+  create table if not exists t (a int);
+end;
+select 3;`;
+    const out = my(sql);
+    expect(out).toHaveLength(2);
+    expect(out[1]).toBe('select 3');
+  });
+
+  it('BEGIN al inicio es una transacción; BEGIN NOT ATOMIC es un bloque', () => {
+    expect(my('begin; insert into t values (1); commit;')).toEqual(['begin', 'insert into t values (1)', 'commit']);
+    expect(my('begin not atomic select 1; select 2; end; select 3')).toEqual([
+      'begin not atomic select 1; select 2; end',
+      'select 3',
+    ]);
+  });
+});
+
+describe('SQLite', () => {
+  const lite = (sql: string): string[] => splitStatements(sql, 'sqlite').map((s) => s.text);
+
+  it('el cuerpo de CREATE TRIGGER no se corta; BEGIN TRANSACTION sí es una sentencia', () => {
+    const sql = `begin transaction;
+create trigger tr after insert on t
+begin
+  update u set n = n + 1;
+  insert into log values (case when new.a > 0 then 'x' else 'y' end);
+end;
+commit;`;
+    const out = lite(sql);
+    expect(out).toHaveLength(3);
+    expect(out[0]).toBe('begin transaction');
+    expect(out[1]).toMatch(/^create trigger[\s\S]*end$/);
+  });
+});
+
+describe('analyzeStatement (otros dialectos)', () => {
+  it('bloques y PRAGMA', () => {
+    expect(analyzeStatement('begin tran', 'sqlserver').isWrite).toBe(false);
+    expect(analyzeStatement("if exists (select 1 from t) print 'x'", 'sqlserver').isWrite).toBe(false);
+    expect(analyzeStatement('if @a = 1 begin delete from t where id = 1 end', 'sqlserver').isWrite).toBe(true);
+    expect(analyzeStatement('declare @x int = 1', 'sqlserver').isWrite).toBe(false);
+    expect(analyzeStatement('select * into nueva from t', 'sqlserver').isWrite).toBe(true);
+    expect(analyzeStatement('pragma table_info(t)', 'sqlite').isWrite).toBe(false);
+    expect(analyzeStatement('pragma journal_mode = wal', 'sqlite').isWrite).toBe(true);
+    expect(analyzeStatement('show tables', 'mariadb').isWrite).toBe(false);
+  });
+});
