@@ -215,7 +215,7 @@ Derecha: `codicon-chevron-up` maximizar panel, `codicon-close` ocultar.
 - Columna de número de fila fija a la izquierda (40 px, `fg.muted`, alineada derecha).
 - Números alineados a la derecha, texto a la izquierda, booleanos centrados como `☑/☐` o `true/false` según config.
 - `NULL` en `fg.null` itálica.
-- Texto largo truncado con `…`; JSON en una línea con resaltado mínimo.
+- Ancho inicial de cada columna según su contenido (cabecera y primeras 100 filas, entre 60 y 400 px). Texto largo truncado con `…`; JSON en una línea con resaltado mínimo.
 - Selección tipo hoja de cálculo. Celda con foco con borde 1 px `border.focus`; celdas seleccionadas con fondo `bg.selection`, y el número de fila / cabecera de columna seleccionados resaltados.
   - **Celdas**: clic, arrastre, Shift+clic (rango), Shift+flechas, Ctrl+clic (agrega o quita celdas o rangos no contiguos).
   - **Filas**: clic en el número de fila; arrastre o Shift+clic para un rango; Ctrl+clic para agregar filas sueltas. Teclado: Shift+Espacio selecciona la fila actual.

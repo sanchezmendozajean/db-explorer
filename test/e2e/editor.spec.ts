@@ -99,6 +99,14 @@ async function clickGrid(x: number, y: number, modifiers: ('Control' | 'Shift')[
     .toBe(true);
 }
 
+/** Centro horizontal de una columna de la grilla, según los anchos que publica (`data-column-widths`). */
+async function columnCenter(index: number): Promise<number> {
+  const widths = ((await page.getByTestId('results-grid').getAttribute('data-column-widths')) ?? '')
+    .split(',')
+    .map(Number);
+  return 48 + widths.slice(0, index).reduce((a, b) => a + b, 0) + widths[index]! / 2;
+}
+
 async function run(sql: string, shortcut = 'Control+Enter'): Promise<void> {
   await typeInEditor(sql);
   await page.keyboard.press(shortcut);
@@ -109,8 +117,8 @@ test('numeric y timestamp se muestran y copian sin pérdida ni cambio de zona', 
     "select 12345678901234.123456::numeric as importe, '2026-09-30 08:42:52.658'::timestamp as creado, null::text as nada;",
   );
   await expect(page.getByTestId('results-grid')).toHaveAttribute('data-columns', 'importe,creado,nada');
-  // Fila 1, columna "importe" (marcador de fila de 48 px; importe ocupa 160 px).
-  await clickGrid(48 + 80, 26 + 12);
+  // Fila 1, columna "importe" (después del marcador de fila de 48 px).
+  await clickGrid(await columnCenter(0), 26 + 12);
   await page.keyboard.press('Control+A');
   await page.keyboard.press('Control+C');
   await expect.poll(clipboard).toBe('12345678901234.123456\t2026-09-30 08:42:52.658\t\r\n');
@@ -120,15 +128,15 @@ test('Ctrl+Shift+C con dos columnas no contiguas copia solo esas columnas con ca
   await run("select g as a, 'x' || g as b, g * 10 as c, 'y' as d from generate_series(1, 3) g;");
   await expect(page.getByTestId('results-grid')).toHaveAttribute('data-columns', 'a,b,c,d');
   await expect(page.getByTestId('results-footer')).toContainText('3 filas');
-  // Anchos por defecto: a y c enteros (90 px), b y d texto (160 px).
-  await clickGrid(48 + 30, 13);
-  await clickGrid(48 + 90 + 160 + 30, 13, ['Control']);
+  // Cabeceras de "a" y "c" (los anchos dependen del contenido).
+  await clickGrid(await columnCenter(0), 13);
+  await clickGrid(await columnCenter(2), 13, ['Control']);
   await page.keyboard.press('Control+Shift+C');
   await expect.poll(clipboard).toBe('a\tc\r\n1\t10\r\n2\t20\r\n3\t30\r\n');
 });
 
 test('"Copiar tabla (con cabeceras)" copia todas las filas aunque haya una sola celda seleccionada', async () => {
-  await clickGrid(48 + 30, 26 + 12);
+  await clickGrid(await columnCenter(0), 26 + 12);
   await page.getByTestId('export-menu').click();
   await page.getByRole('menuitem', { name: 'Copiar tabla (con cabeceras)' }).click();
   await expect.poll(clipboard).toBe('a\tb\tc\td\r\n1\tx1\t10\ty\r\n2\tx2\t20\ty\r\n3\tx3\t30\ty\r\n');

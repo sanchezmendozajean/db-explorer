@@ -265,7 +265,6 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 
 ### Pendientes / avisos
 - MySQL (no MariaDB) no se ha probado: el driver distingue ambos (secuencias, tiempo límite), pero solo hay un servidor MariaDB disponible.
-- Ancho de columnas de la grilla: es fijo por tipo (M3) y un decimal largo con separadores queda recortado a la izquierda sin `…`; conviene calcularlo por el contenido de las primeras filas.
 
 ## Ajuste solicitado (2026-10-01): selectores de la barra del editor
 
@@ -276,3 +275,7 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 ## Ajuste visual (2026-10-01): estado de conexión en el punto de color
 
 - El cambio de opacidad del ícono del motor al conectar pasaba desapercibido. Ahora el punto de color de la conexión está **hueco** (solo el borde, con el color de la conexión) mientras está desconectada y **relleno** al conectarse, en el árbol, en el selector de conexión de la barra del editor y en su lista. Actualizado en `04` §5 y §8.
+
+## Ajuste (2026-10-01): ancho de columnas según el contenido
+
+- El ancho inicial de cada columna de la grilla era fijo por tipo y un decimal largo con separadores quedaba recortado. Ahora se mide (canvas, misma fuente que la grilla) la cabecera y el texto ya formateado de las primeras 100 filas, entre 60 y 400 px. Se calcula al llegar el primer lote y no cambia con los siguientes, para que la columna no salte mientras se cargan filas; un ancho ajustado a mano sigue teniendo prioridad.

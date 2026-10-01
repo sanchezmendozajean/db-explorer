@@ -14,6 +14,7 @@ import type { CopySelection, CopySource } from './copy';
 import type { ResultSet } from './results-store';
 import { useResultsStore } from './results-store';
 import { formatCell, isNumericType } from './format';
+import { canvasMeasure, contentWidth, MIN_COLUMN_WIDTH } from './column-width';
 import { visibleColumns, visibleRows } from './view';
 
 const HEADER_ICON: Partial<Record<LogicalType, string>> = {
@@ -79,7 +80,7 @@ function gridTheme(fontSize: number): Partial<Theme> {
     headerBottomBorderColor: cssVar(st, '--border'),
     drilldownBorder: cssVar(st, '--border'),
     linkColor: cssVar(st, '--link'),
-    fontFamily: "'Cascadia Code', Consolas, 'Courier New', monospace",
+    fontFamily: GRID_FONT,
     baseFontStyle: `${fontSize}px`,
     headerFontStyle: `600 ${fontSize}px`,
     markerFontStyle: `${fontSize - 1}px`,
@@ -91,20 +92,9 @@ function gridTheme(fontSize: number): Partial<Theme> {
   };
 }
 
-const EMPTY_SELECTION: GridSelection = { rows: CompactSelection.empty(), columns: CompactSelection.empty() };
+const GRID_FONT = "'Cascadia Code', Consolas, 'Courier New', monospace";
 
-function defaultWidth(column: ResultColumn): number {
-  const byType: Partial<Record<LogicalType, number>> = {
-    integer: 90,
-    boolean: 80,
-    date: 110,
-    time: 110,
-    datetime: 190,
-    datetimetz: 210,
-    uuid: 290,
-  };
-  return Math.max(byType[column.logicalType] ?? 160, Math.min(260, column.name.length * 9 + 48));
-}
+const EMPTY_SELECTION: GridSelection = { rows: CompactSelection.empty(), columns: CompactSelection.empty() };
 
 /** Acciones que el panel invoca sobre la grilla (copiar, visor de valor). */
 export interface ResultGridHandle {
@@ -158,6 +148,27 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
     [theme],
   );
 
+  // Ancho inicial según el contenido de las primeras filas: se calcula al llegar el primer lote
+  // y no cambia con los siguientes (la columna no "salta" mientras se cargan filas).
+  const fontSize = settings['results.fontSize'];
+  const measure = useMemo(() => canvasMeasure(GRID_FONT, fontSize), [fontSize]);
+  const hasRows = rows.length > 0;
+  const autoWidths = useMemo(
+    () =>
+      columns.map((column, i) =>
+        contentWidth(
+          column,
+          i,
+          rows,
+          (value, col) =>
+            value === null ? settings['format.null'] : formatCell(value, col.logicalType, settings),
+          measure,
+        ),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [columns, hasRows, measure],
+  );
+
   const gridColumns = useMemo<GridColumn[]>(
     () =>
       cols.map((c) => {
@@ -166,14 +177,14 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
         return {
           id: String(c),
           title: column.name,
-          width: view.widths[c] ?? defaultWidth(column),
+          width: view.widths[c] ?? autoWidths[c] ?? MIN_COLUMN_WIDTH,
           icon: column.isPk ? 'pk' : (HEADER_ICON[column.logicalType] ?? GridColumnIcon.HeaderString),
           hasMenu: true,
           menuIcon: sorted === 'asc' ? 'sortAsc' : sorted === 'desc' ? 'sortDesc' : 'sortNone',
           indicatorIcon: sorted === 'asc' ? 'sortAsc' : sorted === 'desc' ? 'sortDesc' : undefined,
         };
       }),
-    [cols, columns, view],
+    [cols, columns, view, autoWidths],
   );
 
   const source = useMemo<CopySource>(
@@ -322,6 +333,7 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
       className="result-grid"
       data-testid="results-grid"
       data-columns={cols.map((c) => columns[c]!.name).join(',')}
+      data-column-widths={gridColumns.map((c) => Math.round('width' in c ? c.width : 0)).join(',')}
       onKeyDownCapture={(e) => {
         const key = e.key.toLowerCase();
         if (e.ctrlKey && !e.altKey && key === 'c') {
