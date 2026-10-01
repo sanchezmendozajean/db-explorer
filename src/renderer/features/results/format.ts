@@ -222,9 +222,9 @@ function formatTime(raw: string, s: FormatSettings): string {
   return `${text}${t.offset ?? ''}`;
 }
 
-/** Bytes de un valor binario en texto (`\x89504e47` de PostgreSQL). */
+/** Bytes de un valor binario en texto: `\x89504e47` (PostgreSQL) o `0x89504E47` (los demás motores). */
 export function binaryHex(raw: string): string | null {
-  return /^\\x[0-9a-fA-F]*$/.test(raw) ? raw.slice(2) : null;
+  return /^(\\x|0x)[0-9a-fA-F]*$/.test(raw) ? raw.slice(2) : null;
 }
 
 function formatBinary(raw: string, s: FormatSettings): string {

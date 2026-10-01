@@ -7,6 +7,7 @@ import type { LogicalType, ResultColumn } from '@shared/query';
 import { qualifiedName } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
+import { formatRowEstimate } from '../common';
 import { toDriverError } from './errors';
 import { PostgresSession } from './postgres-session';
 
@@ -65,14 +66,6 @@ function rawTypes(): NonNullable<ClientConfig['types']> {
       return pg.types.getTypeParser(oid, format ?? 'text');
     }) as NonNullable<ClientConfig['types']>['getTypeParser'],
   };
-}
-
-function formatRows(estimate: number): string | undefined {
-  if (!(estimate >= 0)) return undefined;
-  if (estimate < 1000) return String(Math.round(estimate));
-  if (estimate < 1_000_000)
-    return `${(estimate / 1000).toLocaleString('es', { maximumFractionDigits: 1 })} k`;
-  return `${(estimate / 1_000_000).toLocaleString('es', { maximumFractionDigits: 1 })} M`;
 }
 
 export class PostgresDriver implements DbDriver {
@@ -205,7 +198,7 @@ export class PostgresDriver implements DbDriver {
       );
       return rows.map((r) => ({
         name: r.relname,
-        detail: kind === 'table' || kind === 'materializedView' ? formatRows(r.reltuples) : undefined,
+        detail: kind === 'table' || kind === 'materializedView' ? formatRowEstimate(r.reltuples) : undefined,
       }));
     }
     const prokind = PROKIND[kind];
