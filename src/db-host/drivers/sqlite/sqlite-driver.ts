@@ -11,7 +11,11 @@ import { SqliteSession } from './sqlite-session';
 const METADATA_BUSY_TIMEOUT_MS = 2000;
 const SESSION_BUSY_TIMEOUT_MS = 5000;
 
-const TYPE_BY_KIND: Partial<Record<ObjectKind, string>> = { table: 'table', view: 'view', trigger: 'trigger' };
+const TYPE_BY_KIND: Partial<Record<ObjectKind, string>> = {
+  table: 'table',
+  view: 'view',
+  trigger: 'trigger',
+};
 
 function toDriverError(err: unknown): DriverError {
   if (err instanceof DriverError) return err;
@@ -115,10 +119,13 @@ export class SqliteDriver implements DbDriver {
   }
 
   async getColumns(ref: ObjectRef): Promise<ColumnInfo[]> {
-    const rows = this.all<{ name: string; type: string; notnull: number; dflt_value: string | null; pk: number }>(
-      'SELECT name, type, "notnull", dflt_value, pk FROM pragma_table_info(?) ORDER BY cid',
-      ref.name,
-    );
+    const rows = this.all<{
+      name: string;
+      type: string;
+      notnull: number;
+      dflt_value: string | null;
+      pk: number;
+    }>('SELECT name, type, "notnull", dflt_value, pk FROM pragma_table_info(?) ORDER BY cid', ref.name);
     return rows.map((r) => ({
       name: r.name,
       nativeType: r.type || '',
@@ -152,7 +159,9 @@ export class SqliteDriver implements DbDriver {
   }
 
   async countRows(ref: ObjectRef): Promise<number> {
-    return Number(this.get<{ n: number }>(`SELECT count(*) AS n FROM ${quoteIdent('sqlite', ref.name)}`)?.n ?? 0);
+    return Number(
+      this.get<{ n: number }>(`SELECT count(*) AS n FROM ${quoteIdent('sqlite', ref.name)}`)?.n ?? 0,
+    );
   }
 
   async openSession(): Promise<DbSession> {

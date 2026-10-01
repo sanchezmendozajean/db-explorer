@@ -53,16 +53,24 @@ export class SqliteSession implements DbSession {
           reject(new DriverError(message.type === 'error' ? message.message : 'No se pudo abrir el archivo'));
           void worker.terminate();
         }
-        worker.on('message', (m: SqliteWorkerMessage) => this.onMessage(m));
+        worker.on('message', (m: SqliteWorkerMessage) => {
+          if (this.worker === worker) this.onMessage(m);
+        });
       });
       worker.once('error', (err) => reject(new DriverError(err.message)));
     });
-    worker.on('error', (err) => this.fail(new DriverError(err.message)));
+    // Un hilo cancelado termina más tarde: sus eventos no deben afectar al hilo nuevo de la sesión.
+    worker.on('error', (err) => {
+      if (this.worker === worker) this.fail(new DriverError(err.message));
+    });
     worker.on('exit', () => {
-      if (this.worker === worker) this.reset();
+      if (this.worker !== worker) return;
+      this.reset();
       this.fail(new DriverError('La sesión de SQLite terminó', 'cancelled'));
     });
-    this.ready.catch(() => this.reset());
+    this.ready.catch(() => {
+      if (this.worker === worker) this.reset();
+    });
     return this.ready;
   }
 
@@ -110,7 +118,9 @@ export class SqliteSession implements DbSession {
       if (this.queryTimeoutSec > 0) {
         this.timer = setTimeout(() => {
           const seconds = this.queryTimeoutSec;
-          void this.abort(new DriverError(`Se superó el tiempo límite de la consulta (${seconds} s)`, 'timeout'));
+          void this.abort(
+            new DriverError(`Se superó el tiempo límite de la consulta (${seconds} s)`, 'timeout'),
+          );
         }, this.queryTimeoutSec * 1000);
       }
       worker.postMessage(message);
