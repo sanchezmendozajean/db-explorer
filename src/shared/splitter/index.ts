@@ -242,12 +242,32 @@ export function positionAt(starts: number[], offset: number): { line: number; co
   return { line: lo + 1, column: offset - starts[lo]! + 1 };
 }
 
+export interface SplitOptions {
+  /**
+   * Una línea en blanco también separa sentencias (además del `;`). Las
+   * líneas en blanco dentro de cadenas, comentarios o bloques no cuentan.
+   */
+  blankLineSeparator?: boolean;
+}
+
+/** ¿Hay una línea en blanco en el espacio entre dos tokens? Una línea con solo un comentario no está en blanco. */
+function hasBlankLine(gap: string, dialect: SqlDialect): boolean {
+  let code = gap.replace(/\/\*[\s\S]*?\*\//g, 'c').replace(/--[^\n]*/g, 'c');
+  if (RULES[dialect].hashComments) code = code.replace(/#[^\n]*/g, 'c');
+  return /\n[ \t\r\f\v]*\n/.test(code);
+}
+
 /**
- * Separa un script en sentencias por `;`, respetando cadenas, identificadores
- * entre comillas, comentarios, *dollar quoting* y cuerpos `BEGIN ATOMIC … END`
- * de PostgreSQL. Las sentencias que solo tienen comentarios se omiten.
+ * Separa un script en sentencias por `;` (y, si se pide, por líneas en
+ * blanco), respetando cadenas, identificadores entre comillas, comentarios,
+ * *dollar quoting* y cuerpos `BEGIN ATOMIC … END` de PostgreSQL. Las
+ * sentencias que solo tienen comentarios se omiten.
  */
-export function splitStatements(sql: string, dialect: SqlDialect = 'postgres'): Statement[] {
+export function splitStatements(
+  sql: string,
+  dialect: SqlDialect = 'postgres',
+  options: SplitOptions = {},
+): Statement[] {
   const tokens = tokenize(sql, dialect);
   const starts = lineStarts(sql);
   const result: Statement[] = [];
@@ -283,6 +303,16 @@ export function splitStatements(sql: string, dialect: SqlDialect = 'postgres'): 
       if (first && last) flush(token.end, (last as Token).end);
       else flush(token.end, token.start);
       continue;
+    }
+    // Línea en blanco entre dos tokens de la misma sentencia: termina la sentencia anterior.
+    if (
+      options.blankLineSeparator &&
+      first &&
+      last &&
+      atomicDepth === 0 &&
+      hasBlankLine(sql.slice((last as Token).end, token.start), dialect)
+    ) {
+      flush((last as Token).end, (last as Token).end);
     }
     if (!first) first = token;
     last = token;

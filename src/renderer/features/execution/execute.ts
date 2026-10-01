@@ -1,5 +1,5 @@
 import type { Engine } from '@shared/connection';
-import type { SqlDialect, Statement } from '@shared/splitter';
+import type { SplitOptions, SqlDialect, Statement } from '@shared/splitter';
 import { analyzeStatement, splitStatements, statementAt } from '@shared/splitter';
 import { es } from '../../i18n/es';
 import { connectionById } from '../../stores/connections-store';
@@ -31,6 +31,11 @@ export function dialectOf(engine: Engine | undefined): SqlDialect {
   return engine ?? 'generic';
 }
 
+/** Opciones del separador según la preferencia `sql.statementSeparator`. */
+export function splitOptions(): SplitOptions {
+  return { blankLineSeparator: setting('sql.statementSeparator') === 'blankLine' };
+}
+
 /** Pestañas en las que el usuario marcó "No volver a preguntar" (confirmación de Producción). */
 const skipProductionConfirm = new Set<string>();
 
@@ -57,10 +62,12 @@ function collectStatements(mode: ExecuteMode, dialect: SqlDialect): StatementMet
   };
   if (selection && !selection.isEmpty()) {
     const base = model.getOffsetAt(selection.getStartPosition());
-    return splitStatements(model.getValueInRange(selection), dialect).map((s) => toMeta(s, base));
+    return splitStatements(model.getValueInRange(selection), dialect, splitOptions()).map((s) =>
+      toMeta(s, base),
+    );
   }
   const text = model.getValue();
-  const all = splitStatements(text, dialect);
+  const all = splitStatements(text, dialect, splitOptions());
   if (mode === 'script') return all.map((s) => toMeta(s, 0));
   const position = editor.getPosition();
   const current = position ? statementAt(text, all, model.getOffsetAt(position)) : undefined;

@@ -311,3 +311,26 @@ test('el cursor queda justo después del último carácter escrito (fuente medid
   });
   expect(gap).toBeLessThan(2);
 });
+
+test('separador de sentencias por línea en blanco desde el menú contextual del editor', async () => {
+  await typeInEditor('select 1 as uno\n\nselect 2 as dos\nfrom generate_series(1, 2)');
+  // Menú propio de la app (con borde y sombra), no el de Monaco.
+  await editor().locator('.view-lines').click({ button: 'right' });
+  const menu = page.locator('.menu');
+  await expect(menu.getByText('Ejecutar sentencia')).toBeVisible();
+  await menu.getByText('Separador de sentencias').hover();
+  await page.getByRole('menuitem', { name: 'Línea en blanco' }).click();
+  await expect.poll(() => readFileSync(join(userData, 'settings.json'), 'utf8')).toContain('"blankLine"');
+
+  // Cursor en la segunda sentencia (sin punto y coma): se ejecuta solo esa.
+  await page.keyboard.press('Control+End');
+  await page.keyboard.press('Control+Enter');
+  await expect(page.getByTestId('results-grid')).toHaveAttribute('data-columns', 'dos');
+  await expect(page.getByTestId('results-footer')).toContainText('2 filas');
+
+  // Desde el menú Consulta se vuelve al punto y coma.
+  await page.getByRole('menuitem', { name: 'Consulta' }).click();
+  await page.getByRole('menuitem', { name: 'Separador de sentencias' }).hover();
+  await page.getByRole('menuitem', { name: 'Punto y coma' }).click();
+  await expect.poll(() => readFileSync(join(userData, 'settings.json'), 'utf8')).toContain('"semicolon"');
+});

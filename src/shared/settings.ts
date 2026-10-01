@@ -17,6 +17,8 @@ export const SETTINGS_SCHEMA = {
   'files.autoSave': Bool,
   'files.autoSaveDelay': z.number().int().min(1000).max(60_000),
   'scripts.deleteEmptyOnClose': Bool,
+  /** Qué separa las sentencias de un script: solo el punto y coma, o también una línea en blanco. */
+  'sql.statementSeparator': z.enum(['semicolon', 'blankLine']),
 
   'results.maxRows': z.number().int().positive().max(10_000_000),
   'results.alternateRows': Bool,
@@ -54,6 +56,7 @@ export const DEFAULT_SETTINGS: Settings = {
   'files.autoSave': true,
   'files.autoSaveDelay': 5000,
   'scripts.deleteEmptyOnClose': true,
+  'sql.statementSeparator': 'semicolon',
 
   'results.maxRows': 500,
   'results.alternateRows': true,

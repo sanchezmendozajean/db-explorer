@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type * as MonacoApi from 'monaco-editor/editor/editor.api';
 import { splitStatements, statementAt } from '@shared/splitter';
-import { commands } from '../../commands/service';
-import { commandTitle, es } from '../../i18n/es';
+import { es } from '../../i18n/es';
+import { showContextMenu } from '../../components/ContextMenuHost';
 import { connectionById } from '../../stores/connections-store';
 import { useSettingsStore } from '../../stores/settings-store';
 import { useUiStore } from '../../stores/ui-store';
@@ -13,7 +13,8 @@ import { clearMarkers, dialectOf } from '../execution/execute';
 import type { ScriptDocument } from './documents';
 import { ensureDocument, getDocument, onDocumentChange } from './documents';
 import type { CodeEditor } from './editor-instance';
-import { appKeybinding, attachEditor } from './editor-instance';
+import { attachEditor } from './editor-instance';
+import { editorContextMenu } from './editor-menu';
 import { loadMonaco } from './monaco/loader';
 import type { Monaco } from './monaco/loader';
 import { scheduleWorkspaceSave } from './scripts';
@@ -83,23 +84,13 @@ export function SqlEditor({ tab }: { tab: EditorTab }): React.JSX.Element {
         fixedOverflowWidgets: true,
         theme: document.documentElement.dataset['theme'] === 'light' ? 'db-light' : 'db-dark',
         ariaLabel: es.editor.ariaLabel,
+        contextmenu: false,
       });
       const detach = attachEditor(monaco, editor);
-      const actions = (
-        [
-          ['db.executeStatement', '1_run', 1],
-          ['db.executeScript', '1_run', 2],
-          ['db.newScript', '2_file', 1],
-        ] as const
-      ).map(([id, group, order]) =>
-        editor.addAction({
-          id: `app.${id}`,
-          label: commandTitle(id),
-          contextMenuGroupId: group,
-          contextMenuOrder: order,
-          // Solo para mostrar el atajo en el menú: la tecla la resuelve el manejador global de la app.
-          keybindings: [appKeybinding(monaco, id)].filter((k): k is number => k !== undefined),
-          run: () => void commands.execute(id),
+      // Menú contextual propio (ver editor-menu.ts); el de Monaco queda desactivado.
+      const menu = editor.onContextMenu((e) =>
+        showContextMenu(e.event.browserEvent, editorContextMenu(editor), {
+          restoreFocus: () => editor.focus(),
         }),
       );
       setInstance({ monaco, editor });
@@ -107,7 +98,7 @@ export function SqlEditor({ tab }: { tab: EditorTab }): React.JSX.Element {
         // Se conserva la posición del documento visible al desmontar.
         const current = docRef.current;
         if (current && editor.getModel() === current.model) current.viewState = editor.saveViewState();
-        actions.forEach((a) => a.dispose());
+        menu.dispose();
         detach();
         editor.dispose();
       };
@@ -123,7 +114,11 @@ export function SqlEditor({ tab }: { tab: EditorTab }): React.JSX.Element {
     instance?.monaco.editor.setTheme(theme === 'light' ? 'db-light' : 'db-dark');
   }, [instance, theme]);
   useEffect(() => {
-    instance?.editor.updateOptions({ ...DEFAULT_OPTIONS, ...nestedOptions(editorSettings) });
+    instance?.editor.updateOptions({
+      ...DEFAULT_OPTIONS,
+      ...nestedOptions(editorSettings),
+      contextmenu: false,
+    });
   }, [instance, editorSettings]);
 
   // Modelo de la pestaña activa: guarda el viewState de la anterior y restaura el de la nueva.
@@ -180,6 +175,7 @@ export function SqlEditor({ tab }: { tab: EditorTab }): React.JSX.Element {
 
   // Sentencia activa: fondo sutil y barra en el margen (specs/04 §8), con 150 ms de retardo.
   const engine = connectionById(tab.connectionId)?.engine;
+  const separator = useSettingsStore((s) => s.settings['sql.statementSeparator']);
   useEffect(() => {
     if (!instance || !doc) return;
     const { monaco, editor } = instance;
@@ -192,7 +188,7 @@ export function SqlEditor({ tab }: { tab: EditorTab }): React.JSX.Element {
       const text = model.getValue();
       const statement = statementAt(
         text,
-        splitStatements(text, dialectOf(engine)),
+        splitStatements(text, dialectOf(engine), { blankLineSeparator: separator === 'blankLine' }),
         model.getOffsetAt(position),
       );
       if (!statement) return decorations.clear();
@@ -222,7 +218,7 @@ export function SqlEditor({ tab }: { tab: EditorTab }): React.JSX.Element {
       b.dispose();
       decorations.clear();
     };
-  }, [instance, doc, engine]);
+  }, [instance, doc, engine, separator]);
 
   // Íconos de resultado por sentencia en el gutter; se limpian al editar (specs/04 §8).
   useEffect(() => {

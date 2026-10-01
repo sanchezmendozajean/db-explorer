@@ -122,6 +122,7 @@ Otros providers:
 - **Markers**: errores devueltos por el motor en la posición indicada.
 
 ## Sentencia activa y ejecución
+- **Separador de sentencias** (menú Consulta y menú contextual del editor; preferencia `sql.statementSeparator`): **Punto y coma** (por defecto) o **Línea en blanco**. Con "Línea en blanco", una línea vacía también separa sentencias (el `;` sigue separando); las líneas vacías dentro de cadenas, comentarios de bloque, *dollar quoting* o `BEGIN ATOMIC … END` no cuentan, y una línea con solo un comentario no es una línea en blanco.
 - Al mover el cursor (debounce 150 ms) se calcula con `splitter/` la sentencia que contiene el cursor; si el cursor está en una línea vacía entre dos sentencias, se toma la anterior. Se decora como se describe en `04` §8.
 - El splitter corre en el renderer (misma implementación compartida en `src/shared/splitter`) para que sea instantáneo.
 - Parámetros: si la sentencia contiene `:nombre` o `?` fuera de strings/comentarios (según config), pedir valores en un diálogo pequeño antes de ejecutar (opcional v1; por defecto desactivado, `sql.parameters.enabled`).

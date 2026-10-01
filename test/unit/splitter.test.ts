@@ -136,3 +136,42 @@ describe('analyzeStatement', () => {
     expect(analyzeStatement('insert into t select * from u').unboundedWrite).toBe(false);
   });
 });
+
+describe('separador por línea en blanco', () => {
+  const blank = (sql: string): string[] =>
+    splitStatements(sql, 'postgres', { blankLineSeparator: true }).map((s) => s.text);
+
+  it('una línea en blanco separa sentencias sin punto y coma', () => {
+    expect(blank('select *\nfrom a\n\nselect 2')).toEqual(['select *\nfrom a', 'select 2']);
+    expect(blank('select 1\r\n   \r\nselect 2')).toEqual(['select 1', 'select 2']);
+  });
+
+  it('el punto y coma sigue separando', () => {
+    expect(blank('select 1; select 2\n\nselect 3;')).toEqual(['select 1', 'select 2', 'select 3']);
+  });
+
+  it('sin la opción, la línea en blanco no separa', () => {
+    expect(texts('select *\n\nfrom a')).toEqual(['select *\n\nfrom a']);
+  });
+
+  it('no corta dentro de cadenas, comentarios de bloque, dollar quoting ni BEGIN ATOMIC', () => {
+    expect(blank("select 'a\n\nb'")).toHaveLength(1);
+    expect(blank('select 1 /* x\n\ny */ + 2')).toHaveLength(1);
+    expect(blank('do $$\nbegin\n\n  null;\nend $$')).toHaveLength(1);
+    expect(
+      blank('create function f() returns int language sql\nbegin atomic\n\n  select 1;\nend'),
+    ).toHaveLength(1);
+  });
+
+  it('una línea con solo un comentario no es una línea en blanco', () => {
+    expect(blank('select 1\n-- comentario\nfrom a')).toHaveLength(1);
+    expect(blank('select 1\n-- comentario\n\nselect 2')).toEqual(['select 1', 'select 2']);
+  });
+
+  it('statementAt elige la sentencia del bloque', () => {
+    const sql = 'select 1\n\nselect 2\nfrom b';
+    const stmts = splitStatements(sql, 'postgres', { blankLineSeparator: true });
+    expect(statementAt(sql, stmts, sql.indexOf('from'))?.text).toBe('select 2\nfrom b');
+    expect(statementAt(sql, stmts, 9)?.text).toBe('select 1');
+  });
+});

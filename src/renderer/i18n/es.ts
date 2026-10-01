@@ -26,6 +26,9 @@ export const es = {
     noRecent: 'No hay espacios recientes',
     theme: 'Tema',
     zoom: 'Zoom',
+    statementSeparator: 'Separador de sentencias',
+    separatorBlankLine: 'Línea en blanco',
+    separatorSemicolon: 'Punto y coma',
   },
 
   /** Títulos de comandos: se usan en menús, paleta y tooltips. */
@@ -75,6 +78,8 @@ export const es = {
     'db.explainPlan': 'Explicar plan',
     'db.changeConnection': 'Cambiar conexión activa…',
     'db.changeSchema': 'Cambiar base/esquema…',
+    'db.statementSeparator.semicolon': 'Separador de sentencias: punto y coma',
+    'db.statementSeparator.blankLine': 'Separador de sentencias: línea en blanco',
     'db.help.keybindings': 'Atajos de teclado',
     'db.help.about': 'Acerca de',
     'db.closeTab': 'Cerrar pestaña',
@@ -313,6 +318,9 @@ export const es = {
       defaultSchema: '(predeterminado)',
     },
     ariaLabel: 'Editor SQL',
+    contextMenu: {
+      changeAll: 'Cambiar todas las ocurrencias',
+    },
     object: {
       data: 'Datos',
       structure: 'Estructura',

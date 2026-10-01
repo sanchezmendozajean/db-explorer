@@ -220,3 +220,9 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 | Ctrl+C / Ctrl+Shift+C en la grilla | Copiar selección / con cabeceras | ✅ e2e |
 | Ctrl+Shift+Enter en la grilla | Visor de valor | a mano |
 | Ctrl+B, Ctrl+J, Ctrl+Shift+J, Ctrl+1, Ctrl+2 | Distribución y foco | ✅ e2e (Ctrl+B, Ctrl+J) · resto a mano |
+
+## Ajustes solicitados (2026-10-01): separador de sentencias y menú contextual del editor
+
+- **Separador de sentencias** en el menú Consulta y en el menú contextual del editor: *Línea en blanco* o *Punto y coma* (por defecto). Se guarda en  como  (global, no por pestaña: es lo más simple). Con *Línea en blanco* el  **también** separa, para que  en una sola línea siga funcionando. Afecta a la sentencia activa, a Ctrl+Enter y a la ejecución de scripts. Actualizado en  §4 y .
+- **Menú contextual del editor propio** en lugar del de Monaco: el de Monaco no admite submenús ni marcas ✓ y en tema claro se confundía con el fondo. El nuevo usa el componente de menú de la app (borde  y sombra) con las mismas opciones que tenía, más el submenú del separador. Al cerrar un menú contextual, el foco vuelve a donde estaba (en el editor, al área de texto).
+- **Cursor desplazado al escribir** (corregido): Monaco medía los caracteres antes de que cargara Cascadia Code; ahora se espera la fuente y se vuelve a medir si carga tarde.

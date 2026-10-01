@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type * as MonacoApi from 'monaco-editor/editor/editor.api';
 import type { KeyChord } from '../../commands/keybindings';
-import { commands, keybindings, registerContextProvider } from '../../commands/service';
+import { commands, registerContextProvider } from '../../commands/service';
 import { DEFAULT_KEYBINDINGS } from '../../commands/default-keybindings';
 import { parseKeybinding } from '../../commands/keybindings';
 import type { Monaco } from './monaco/loader';
@@ -166,11 +166,4 @@ function registerEditorActions(editor: CodeEditor): () => void {
     },
   }));
   return commands.registerMany(list);
-}
-
-/** Atajo de la app para un comando, en formato de Monaco (menú contextual del editor). */
-export function appKeybinding(monaco: Monaco, command: string): number | undefined {
-  const sequence = keybindings.lookup(command);
-  if (!sequence || sequence.length !== 1) return undefined;
-  return monacoChord(monaco, sequence[0]!);
 }

@@ -125,6 +125,14 @@ export function registerAppCommands(): () => void {
       },
     },
 
+    // Separador de sentencias (preferencia `sql.statementSeparator`).
+    ...(['semicolon', 'blankLine'] as const).map((value): Command => ({
+      id: `db.statementSeparator.${value}`,
+      category: cat.query,
+      checked: () => settings().settings['sql.statementSeparator'] === value,
+      run: async () => void (await settings().update('sql.statementSeparator', value)),
+    })),
+
     // Ejecución (specs/05)
     {
       id: 'db.executeStatement',

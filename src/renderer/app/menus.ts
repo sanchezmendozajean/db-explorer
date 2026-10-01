@@ -106,6 +106,7 @@ export const TITLE_BAR_MENUS: TopMenu[] = [
       commandEntry('db.executeScript'),
       commandEntry('db.executeSelection'),
       commandEntry('db.cancel'),
+      statementSeparatorMenu(),
       SEPARATOR,
       commandEntry('db.commit'),
       commandEntry('db.rollback'),
@@ -122,6 +123,19 @@ export const TITLE_BAR_MENUS: TopMenu[] = [
     entries: () => [commandEntry('db.help.keybindings'), SEPARATOR, commandEntry('db.help.about')],
   },
 ];
+
+/** Submenú "Separador de sentencias" (menú Consulta y menú contextual del editor). */
+export function statementSeparatorMenu(): MenuEntry {
+  return {
+    type: 'submenu',
+    id: 'separator',
+    label: es.menu.statementSeparator,
+    entries: [
+      commandEntry('db.statementSeparator.blankLine', es.menu.separatorBlankLine),
+      commandEntry('db.statementSeparator.semicolon', es.menu.separatorSemicolon),
+    ],
+  };
+}
 
 export function themeEntries(): MenuEntry[] {
   return [commandEntry('db.theme.dark'), commandEntry('db.theme.light'), commandEntry('db.theme.system')];

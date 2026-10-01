@@ -12,8 +12,6 @@ test.beforeAll(async () => {
   app = await launchApp(userData);
   page = await app.firstWindow();
   page.on('pageerror', (e) => console.log('Error en el renderer:', e.message));
-  page.on('crash', () => console.log('RENDERER CRASH'));
-  app.on('close', () => console.log('APP CLOSED'));
   await page.getByTestId('statusbar').waitFor();
 });
 
