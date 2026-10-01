@@ -1,9 +1,10 @@
 import { execFile, spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 import pg from 'pg';
+import { testEnv } from './test-env';
 
 const run = promisify(execFile);
 
@@ -29,18 +30,10 @@ export interface PgTestConfig {
   database: string;
 }
 
-/** Lee `test/integration/.env` (si existe) con los valores de `.env.example` como respaldo. */
+/** Configuración del PostgreSQL de pruebas (`.env` con los valores de `.env.example` como respaldo). */
 export function pgTestConfig(): PgTestConfig {
-  const values: Record<string, string> = {};
-  for (const name of ['.env.example', '.env']) {
-    const file = resolve(__dirname, name);
-    if (!existsSync(file)) continue;
-    for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
-      const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/.exec(line);
-      if (m) values[m[1]!] = m[2]!;
-    }
-  }
-  const get = (key: string, fallback: string): string => process.env[key] ?? values[key] ?? fallback;
+  const env = testEnv();
+  const get = (key: string, fallback: string): string => env(key, fallback)!;
   return {
     host: get('PG_HOST', '127.0.0.1'),
     port: Number(get('PG_PORT', '55432')),
