@@ -11,6 +11,7 @@ import { useOverlayStore } from '../../stores/overlay-store';
 import { ConnectionDialog } from '../connections/ConnectionDialog';
 import { ConfirmDialog, PasswordDialog, PromptDialog } from './SimpleDialogs';
 import { ChoiceDialog, WriteConfirmDialog } from './ChoiceDialogs';
+import { CompareDialog } from '../editor/CompareDialog';
 
 type PingState =
   { status: 'pending' } | { status: 'ok'; result: PingResult } | { status: 'error'; error: IpcError };
@@ -149,5 +150,7 @@ export function Dialogs(): React.JSX.Element | null {
       return <ChoiceDialog {...dialog} onClose={close} />;
     case 'writeConfirm':
       return <WriteConfirmDialog {...dialog} onClose={close} />;
+    case 'compare':
+      return <CompareDialog tabId={dialog.tabId} name={dialog.name} disk={dialog.disk} onClose={close} />;
   }
 }

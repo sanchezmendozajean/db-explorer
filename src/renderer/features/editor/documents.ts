@@ -5,6 +5,7 @@ import { connectionById } from '../../stores/connections-store';
 import { setting } from '../../stores/settings-store';
 import { isToastVisible, showToast } from '../../stores/toast-store';
 import { useWorkbenchStore } from '../../stores/workbench-store';
+import { useOverlayStore } from '../../stores/overlay-store';
 import type { EditorTab } from '../../stores/workbench-store';
 import { loadMonaco } from './monaco/loader';
 import { useSaveIndicator } from './save-indicator';
@@ -227,11 +228,24 @@ function showConflict(doc: ScriptDocument): void {
     'warning',
     es.scripts.changedOnDisk(fileName(doc.path)),
     [
+      { label: es.scripts.compare, run: () => void compareWithDisk(tabId) },
       { label: es.scripts.overwrite, run: () => void saveDocument(tabId, { force: true }) },
       { label: es.scripts.reload, run: () => void reloadDocument(tabId) },
     ],
     { sticky: true },
   );
+}
+
+/** Abre la comparación disco ↔ editor (lee el archivo en este momento). */
+async function compareWithDisk(tabId: string): Promise<void> {
+  const doc = documents.get(tabId);
+  if (!doc) return;
+  const r = await window.api.fs.readScript({ path: doc.path });
+  if (!r.ok) {
+    showToast('error', es.scripts.readFailed(fileName(doc.path), r.error.message));
+    return;
+  }
+  useOverlayStore.getState().openDialog({ id: 'compare', tabId, name: fileName(doc.path), disk: r.data.content });
 }
 
 /** Descarta los cambios del editor y vuelve a leer el archivo de disco. */

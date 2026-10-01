@@ -899,3 +899,17 @@ button.chip > span:not(.env-dot) {
   border: 1px solid var(--border-input);
   border-radius: var(--radius-control);
 }
+
+/* Comparar disco ↔ editor (aviso de cambio externo). */
+.compare-labels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 4px;
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
+.compare-editor {
+  height: min(60vh, 520px);
+  border: 1px solid var(--border);
+}

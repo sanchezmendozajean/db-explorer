@@ -473,6 +473,10 @@ export const es = {
     workspaceFailed: (message: string) => `No se pudo abrir el espacio de trabajo: ${message}`,
     changedOnDisk: (name: string) => `${name} cambió en disco. No se guardó para no perder esos cambios.`,
     overwrite: 'Sobrescribir',
+    compare: 'Comparar',
+    compareTitle: (name: string) => `${name}: disco ↔ editor`,
+    compareDisk: 'En disco',
+    compareEditor: 'En el editor (sin guardar)',
     reload: 'Recargar',
     missingFiles: (n: number) =>
       `No se ${n === 1 ? 'encontró 1 archivo' : `encontraron ${n} archivos`} del espacio de trabajo`,

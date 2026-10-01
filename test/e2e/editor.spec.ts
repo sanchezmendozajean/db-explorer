@@ -220,7 +220,11 @@ test('un cambio externo se recarga si no hay cambios y no se pisa con el guardad
   utimesSync(file, new Date(), new Date(Date.now() + 60_000));
   await expect(page.getByText('Script-1.sql cambió en disco')).toBeVisible({ timeout: 8000 });
   expect(readFileSync(file, 'utf8')).toBe('cambio externo');
-  await page.getByRole('button', { name: 'Sobrescribir' }).click();
+  // Comparar muestra disco ↔ editor y desde ahí se decide.
+  await page.getByRole('button', { name: 'Comparar' }).click();
+  await expect(page.getByTestId('compare-editor').locator('.monaco-diff-editor')).toBeVisible();
+  await shot('m5-comparar');
+  await page.getByRole('dialog').getByRole('button', { name: 'Sobrescribir' }).click();
   await expect.poll(() => readFileSync(file, 'utf8'), { timeout: 8000 }).toBe('select 44;');
 });
 

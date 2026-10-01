@@ -87,7 +87,9 @@ export type DialogState =
       unbounded: boolean;
       language: string;
       onResult: (result: { confirmed: boolean; dontAskAgain: boolean }) => void;
-    };
+    }
+  /** Comparar el archivo en disco con el editor (aviso de cambio externo, specs/11 §4). */
+  | { id: 'compare'; tabId: string; name: string; disk: string };
 
 export type DialogId = DialogState['id'];
 
