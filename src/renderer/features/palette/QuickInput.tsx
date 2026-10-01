@@ -146,11 +146,19 @@ function QuickInputBox({
       ? es.palette.placeholderCommands
       : es.palette.placeholderQuickOpen;
 
+  // El foco se devuelve al cerrar (Esc o clic fuera), no al desmontar: en desarrollo StrictMode
+  // desmonta y vuelve a montar, y devolver el foco ahí cerraría la lista recién abierta (onBlur).
   useEffect(() => {
     inputRef.current?.focus();
-    const restore = previousFocus.current;
-    return () => restore?.focus();
   }, []);
+
+  /** Cierra y devuelve el foco a donde estaba al abrir. */
+  const dismiss = (): void => {
+    const restore = previousFocus.current;
+    previousFocus.current = null;
+    onClose();
+    restore?.focus();
+  };
 
   useEffect(() => {
     listRef.current?.querySelector('.is-active')?.scrollIntoView({ block: 'nearest' });
@@ -181,7 +189,7 @@ function QuickInputBox({
         accept(items[active]);
         break;
       case 'Escape':
-        onClose();
+        dismiss();
         break;
       default:
         return;
@@ -191,7 +199,15 @@ function QuickInputBox({
   };
 
   return createPortal(
-    <div className="quick-input-layer" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div
+      className="quick-input-layer"
+      onMouseDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        // Clic fuera: se cierra sin quitar el foco al elemento que se clicó.
+        e.preventDefault();
+        dismiss();
+      }}
+    >
       <div
         className={pick?.anchor ? 'quick-input is-anchored' : 'quick-input'}
         style={pick?.anchor ? anchoredStyle(pick.anchor) : undefined}
