@@ -253,28 +253,6 @@ function ResultsToolbar({
         <Codicon name="export" size={14} />
         <span>{r.export}</span>
       </Dropdown>
-      {/* Vistas Texto y Registro: pendientes (specs/04 §10). */}
-      <div className="segmented" role="radiogroup">
-        {(
-          [
-            ['grid', 'list-flat', r.viewGrid],
-            ['text', 'json', r.viewText],
-            ['record', 'list-unordered', r.viewRecord],
-          ] as const
-        ).map(([id, icon, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="radio"
-            aria-checked={id === 'grid'}
-            className={id === 'grid' ? 'is-active' : ''}
-            onClick={() => id !== 'grid' && notAvailable(label)}
-          >
-            <Codicon name={icon} size={14} />
-            {label}
-          </button>
-        ))}
-      </div>
       <div className="toolbar-spacer" />
       <label className="results-limit">
         <span>{r.limit}</span>

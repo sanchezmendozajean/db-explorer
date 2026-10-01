@@ -241,37 +241,6 @@
   background: var(--bg-hover);
 }
 
-.segmented {
-  display: inline-flex;
-  margin-left: 8px;
-  border: 1px solid var(--border-input);
-  border-radius: var(--radius-control);
-  overflow: hidden;
-}
-
-.segmented button {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 22px;
-  padding: 0 8px;
-  border: none;
-  border-right: 1px solid var(--border-input);
-  background: transparent;
-  color: var(--fg-muted);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.segmented button:last-child {
-  border-right: none;
-}
-
-.segmented button.is-active {
-  background: var(--bg-selection-inactive);
-  color: var(--fg);
-}
-
 /* ---------- Menús ---------- */
 .menu {
   position: fixed;

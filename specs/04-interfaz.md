@@ -208,7 +208,6 @@ Derecha: `codicon-chevron-up` maximizar panel, `codicon-close` ocultar.
 - Grupo de edición (solo si hay cambios): `codicon-save` **Guardar (n)** botón primario pequeño, `codicon-discard` Descartar, `codicon-eye` Ver SQL.
 - `codicon-add` Agregar fila, `codicon-trash` Eliminar filas (si editable).
 - `codicon-export` **Exportar ▾** (CSV, JSON, XLSX, SQL INSERT, Copiar como Markdown, —, **Copiar tabla**, **Copiar tabla (con cabeceras)**). Las dos últimas copian al portapapeles la tabla completa sin importar la selección (ver `06` §Copiar y exportar).
-- `codicon-list-flat` / `codicon-json` alternar **Grilla / Texto / Registro** (vista registro = una fila en formato vertical campo:valor).
 - A la derecha: "Límite" select `500 ▾` (100, 500, 1000, 5000, Todo).
 
 ### Grilla

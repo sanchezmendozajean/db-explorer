@@ -89,7 +89,7 @@ function cellEntries(value: Cell): MenuEntry[] {
     pending(c.filterByValue),
     pending(c.excludeValue),
     SEPARATOR,
-    { type: 'submenu', id: 'format', label: c.columnFormat, entries: [pending(es.results.viewText)] },
+    { type: 'submenu', id: 'format', label: c.columnFormat, entries: [pending(c.columnFormat)] },
     pending(c.hideColumn),
     pending(c.autosize),
   ];
@@ -181,7 +181,6 @@ export function ResultsToolbar({
   filter: string;
   onFilter: (value: string) => void;
 }): React.JSX.Element {
-  const [view, setView] = useState<'grid' | 'text' | 'record'>('grid');
   const [limit, setLimit] = useState('500');
   const r = es.results;
   const pending = (label: string): MenuEntry => ({
@@ -218,27 +217,6 @@ export function ResultsToolbar({
         <Codicon name="export" size={14} />
         <span>{r.export}</span>
       </Dropdown>
-      <div className="segmented" role="radiogroup">
-        {(
-          [
-            ['grid', 'list-flat', r.viewGrid],
-            ['text', 'json', r.viewText],
-            ['record', 'list-unordered', r.viewRecord],
-          ] as const
-        ).map(([id, icon, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="radio"
-            aria-checked={view === id}
-            className={view === id ? 'is-active' : ''}
-            onClick={() => (id === 'grid' ? setView(id) : notAvailable(label))}
-          >
-            <Codicon name={icon} size={14} />
-            {label}
-          </button>
-        ))}
-      </div>
       <div className="toolbar-spacer" />
       <label className="results-limit">
         <span>{r.limit}</span>

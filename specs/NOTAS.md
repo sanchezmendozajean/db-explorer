@@ -192,7 +192,6 @@ Completado. Criterios de aceptación verificados:
 
 ### Pendientes / avisos
 - **Explicar plan** (Ctrl+Alt+E) está en `05`, pero no en ningún hito de `09`: el botón muestra "todavía no disponible". Falta decidir en qué hito se agrega.
-- Vistas **Texto** y **Registro** de la barra de resultados (`04` §10): tampoco tienen hito asignado; se muestran como "todavía no disponible".
 - **Comparar** (diff) en el aviso de cambio externo y **renombrar con F2** la pestaña: M5, junto con el watcher y las operaciones de archivos (por ahora Sobrescribir / Recargar).
 - Formateo SQL (Shift+Alt+F), autocompletado, hover y F12: M6. Modo de transacción manual, Copiar como, Exportar a archivo, formato por columna y filtrar por valor: M7.
 - La pestaña de objeto sigue con datos de ejemplo (M7); por eso se conserva la grilla de maqueta `ResultsGrid.tsx`.
@@ -226,3 +225,4 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 - **Separador de sentencias** en el menú Consulta y en el menú contextual del editor: *Línea en blanco* o *Punto y coma* (por defecto). Se guarda en `settings.json` como `sql.statementSeparator` (global, no por pestaña: es lo más simple). Con *Línea en blanco* el `;` **también** separa, para que `select 1; select 2` en una sola línea siga funcionando. Afecta a la sentencia activa, a Ctrl+Enter y a la ejecución de scripts. Actualizado en `04` §4 y §8 y en `05`.
 - **Menú contextual del editor propio** en lugar del de Monaco: el de Monaco no admite submenús ni marcas ✓ y en tema claro se confundía con el fondo. El nuevo usa el componente de menú de la app (borde `border.menu` y sombra) con las mismas opciones que tenía, más el submenú del separador. Al cerrar un menú contextual, el foco vuelve a donde estaba (en el editor, al área de texto).
 - **Cursor desplazado al escribir** (corregido): Monaco medía los caracteres antes de que cargara Cascadia Code; ahora se espera la fuente y se vuelve a medir si carga tarde.
+- **Vistas Texto y Registro eliminadas** a pedido del usuario: los resultados se muestran siempre en la grilla. Se quitó el selector Grilla / Texto / Registro de la barra de resultados y de `04` §10.
