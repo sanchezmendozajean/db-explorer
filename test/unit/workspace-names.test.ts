@@ -6,6 +6,7 @@ describe('nombres de archivo', () => {
     expect(invalidFileName('ventas.sql')).toBeNull();
     expect(invalidFileName('  ')).toMatch(/nombre/);
     expect(invalidFileName('a/b')).toMatch(/no puede contener/);
+    expect(invalidFileName('a\\b')).toMatch(/no puede contener \\ \//);
     expect(invalidFileName('fin.')).toMatch(/terminar/);
     expect(invalidFileName('nul.txt')).toMatch(/reservado/);
   });

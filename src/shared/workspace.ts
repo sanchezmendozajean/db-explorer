@@ -93,7 +93,7 @@ const RESERVED_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
 export function invalidFileName(name: string): string | null {
   if (name.trim() === '') return 'Escribe un nombre.';
   if (name === '.' || name === '..') return 'El nombre no puede ser "." ni "..".';
-  if (/[\/:*?"<>|]/.test(name)) return 'El nombre no puede contener \ / : * ? " < > |';
+  if (/[\\/:*?"<>|]/.test(name)) return 'El nombre no puede contener \\ / : * ? " < > |';
   // Caracteres de control (U+0000 a U+001F): inválidos en Windows.
   for (const ch of name) if (ch.charCodeAt(0) < 32) return 'El nombre contiene caracteres no válidos.';
   if (/[. ]$/.test(name)) return 'El nombre no puede terminar en punto ni en espacio.';
@@ -104,7 +104,7 @@ export function invalidFileName(name: string): string | null {
 
 /** Nombre para un archivo nuevo: se agrega `.sql` si no se escribió extensión (specs/07). */
 export function withDefaultExtension(name: string): string {
-  return /\.[^.\/]+$/.test(name.trim()) ? name.trim() : `${name.trim()}.sql`;
+  return /\.[^.\\/]+$/.test(name.trim()) ? name.trim() : `${name.trim()}.sql`;
 }
 
 /** Nombre libre para una copia: "x copia.sql", "x copia 2.sql"… (specs/07). */
