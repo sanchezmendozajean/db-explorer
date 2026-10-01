@@ -270,3 +270,4 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 ## Ajuste solicitado (2026-10-01): selectores de la barra del editor
 
 - Los chips de conexión, base y esquema abrían su lista arriba al centro (como la paleta), lejos del chip, y parecía que no hacían nada. Ahora la lista se despliega justo debajo del chip, como un combo, y se puede filtrar escribiendo. Con Ctrl+9 / Ctrl+0 sigue saliendo arriba al centro. Actualizado en `04` §8.
+- **Guardado en Windows** (corregido): el reemplazo atómico del archivo (`rename` del temporal) fallaba con `EPERM` si otro proceso tenía el script abierto en ese instante (antivirus, indexador, OneDrive; en las pruebas, la propia lectura del archivo). Ahora se reintenta durante ~1,5 s ante `EPERM`/`EACCES`/`EBUSY`, como hace VS Code. Era la causa de la prueba e2e intermitente del cambio externo.

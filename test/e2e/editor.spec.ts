@@ -24,6 +24,12 @@ const dialog = (): ReturnType<Page['locator']> => page.getByRole('dialog');
 const tree = (): ReturnType<Page['locator']> => page.locator('[data-view="connections"] .tree');
 const editor = (): ReturnType<Page['locator']> => page.getByTestId('sql-editor');
 
+/** Contenido de settings.json (vacío si todavía no existe: se crea al primer cambio). */
+function settingsText(): string {
+  const file = join(userData, 'settings.json');
+  return existsSync(file) ? readFileSync(file, 'utf8') : '';
+}
+
 async function shot(name: string): Promise<void> {
   if (SHOTS) await page.screenshot({ path: join(SHOTS, `${name}.png`) });
 }
@@ -320,7 +326,7 @@ test('separador de sentencias por línea en blanco desde el menú contextual del
   await expect(menu.getByText('Ejecutar sentencia')).toBeVisible();
   await menu.getByText('Separador de sentencias').hover();
   await page.getByRole('menuitem', { name: 'Línea en blanco' }).click();
-  await expect.poll(() => readFileSync(join(userData, 'settings.json'), 'utf8')).toContain('"blankLine"');
+  await expect.poll(() => settingsText()).toContain('"blankLine"');
 
   // Cursor en la segunda sentencia (sin punto y coma): se ejecuta solo esa.
   await page.keyboard.press('Control+End');
@@ -332,7 +338,7 @@ test('separador de sentencias por línea en blanco desde el menú contextual del
   await page.getByRole('menuitem', { name: 'Consulta' }).click();
   await page.getByRole('menuitem', { name: 'Separador de sentencias' }).hover();
   await page.getByRole('menuitem', { name: 'Punto y coma' }).click();
-  await expect.poll(() => readFileSync(join(userData, 'settings.json'), 'utf8')).toContain('"semicolon"');
+  await expect.poll(() => settingsText()).toContain('"semicolon"');
 });
 
 test('los selectores de conexión, base y esquema abren su lista justo debajo', async () => {
