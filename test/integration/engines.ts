@@ -277,7 +277,6 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
       host: myHost,
       port: myPort,
       user: env('MARIADB_USER', 'dbx'),
-      database: env('MARIADB_DATABASE'),
     },
     password: env('MARIADB_PASSWORD'),
     async prepare(run) {
@@ -299,16 +298,20 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
         return { database: String(row[0]), schema: String(row[0]), name: String(row[1]), pk: String(row[2]) };
       }
       const db = env('MARIADB_DATABASE', 'dbx_test')!;
+      // La base de pruebas se crea si no existe (la conexión no la exige).
       await run([
+        `CREATE DATABASE IF NOT EXISTS \`${db}\``,
         `DROP TABLE IF EXISTS \`${db}\`.clientes`,
         `CREATE TABLE \`${db}\`.clientes (id int PRIMARY KEY, nombre varchar(100) NOT NULL, importe decimal(12,2), INDEX idx_clientes_nombre (nombre))`,
         `INSERT INTO \`${db}\`.clientes VALUES ${FIXTURE_ROWS.map(([id, n, i]) => `(${id}, '${n}', ${i ?? 'NULL'})`).join(', ')}`,
+        `DROP PROCEDURE IF EXISTS \`${db}\`.dos_resultados`,
+        `CREATE PROCEDURE \`${db}\`.dos_resultados() BEGIN SELECT 1 AS a; SELECT 2 AS b, 3 AS c; END`,
       ]);
       return { database: db, schema: db, name: 'clientes', pk: 'id' };
     },
     sql: {
-      rows: (n) =>
-        `WITH RECURSIVE s(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM s WHERE n < ${n}) SELECT n FROM s`,
+      // MariaDB corta en silencio la recursión de un CTE en 1000 iteraciones (`max_recursive_iterations`): se usa el motor de secuencias.
+      rows: (n) => `SELECT seq AS n FROM seq_1_to_${n}`,
       sleep: 'SELECT SLEEP(30)',
       literals: `SELECT CAST(12345678901234.123456 AS DECIMAL(20,6)) AS dec_, DATE '2026-02-28' AS dia,
         CAST('2026-09-30 08:42:52.658' AS DATETIME(3)) AS ts, X'89504E47' AS bin, NULL AS nada,
@@ -327,6 +330,8 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
       },
       // mysql2 solo informa la cantidad de avisos en respuestas OK (no en SELECT): se usa DO.
       message: { sql: 'DO 1 / 0', text: /Division by 0/i },
+      // El procedimiento se crea al preparar (solo en servidores donde se puede escribir).
+      multipleResults: env('MARIADB_READONLY', '0') === '1' ? undefined : 'CALL dos_resultados()',
       begin: 'BEGIN',
       rollback: 'ROLLBACK',
     },

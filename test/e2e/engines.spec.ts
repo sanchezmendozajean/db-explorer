@@ -188,7 +188,10 @@ for (const flow of flows) {
       await expect(page.getByTestId('execution-timer')).toBeVisible();
       await page.waitForTimeout(500);
       await page.keyboard.press('Control+Shift+Q');
-      await expect(page.getByTestId('messages')).toContainText('cancelada', { timeout: 10_000 });
+      await expect(page.getByTestId('execution-timer')).toHaveCount(0, { timeout: 10_000 });
+      // Si llegaron filas antes de cancelar, el panel sigue en el resultado: se abre Mensajes.
+      await page.getByRole('tab', { name: 'Mensajes' }).click();
+      await expect(page.getByTestId('messages')).toContainText('cancelada');
       expect(Date.now() - started).toBeLessThan(10_000);
       await typeInEditor('select 7 as siete');
       await page.keyboard.press('Control+Enter');
