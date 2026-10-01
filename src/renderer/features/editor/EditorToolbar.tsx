@@ -6,6 +6,7 @@ import { commands } from '../../commands/service';
 import { es } from '../../i18n/es';
 import { notAvailable } from '../../app/app-commands';
 import { useConnectionsStore } from '../../stores/connections-store';
+import { anchorOf } from '../../stores/overlay-store';
 import type { EditorTab } from '../../stores/workbench-store';
 import { EMPTY_TAB_RESULTS, useResultsStore } from '../results/results-store';
 import {
@@ -78,7 +79,7 @@ export function EditorToolbar({ tab }: { tab: EditorTab }): React.JSX.Element {
           className="chip"
           title={t.connection}
           data-testid="connection-chip"
-          onClick={() => pickConnection(tab.id)}
+          onClick={(e) => pickConnection(tab.id, anchorOf(e.currentTarget))}
         >
           <span
             className="env-dot"
@@ -95,7 +96,7 @@ export function EditorToolbar({ tab }: { tab: EditorTab }): React.JSX.Element {
             className="chip"
             title={t.database}
             data-testid="database-chip"
-            onClick={() => void pickDatabase(tab.id)}
+            onClick={(e) => void pickDatabase(tab.id, anchorOf(e.currentTarget))}
           >
             <Codicon name="database" size={14} />
             <span>{database ?? t.defaultDatabase}</span>
@@ -108,7 +109,7 @@ export function EditorToolbar({ tab }: { tab: EditorTab }): React.JSX.Element {
             className="chip"
             title={t.schema}
             data-testid="schema-chip"
-            onClick={() => void pickSchema(tab.id)}
+            onClick={(e) => void pickSchema(tab.id, anchorOf(e.currentTarget))}
           >
             <Codicon name="symbol-namespace" size={14} />
             <span>{schema ?? t.defaultSchema}</span>

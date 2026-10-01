@@ -7,6 +7,20 @@ export type PaletteMode = 'quickOpen' | 'commands';
 export interface QuickPick {
   placeholder: string;
   items: QuickPickItem[];
+  /** Abrir como lista desplegable bajo un control (p. ej. un chip) en lugar de arriba al centro. */
+  anchor?: PickAnchor;
+}
+
+/** Posición de una lista desplegable: esquina inferior izquierda del control y su ancho. */
+export interface PickAnchor {
+  left: number;
+  top: number;
+  width: number;
+}
+
+export function anchorOf(element: Element): PickAnchor {
+  const r = element.getBoundingClientRect();
+  return { left: r.left, top: r.bottom + 2, width: r.width };
 }
 
 export interface QuickPickItem {

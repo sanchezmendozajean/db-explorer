@@ -266,3 +266,7 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 ### Pendientes / avisos
 - MySQL (no MariaDB) no se ha probado: el driver distingue ambos (secuencias, tiempo límite), pero solo hay un servidor MariaDB disponible.
 - Ancho de columnas de la grilla: es fijo por tipo (M3) y un decimal largo con separadores queda recortado a la izquierda sin `…`; conviene calcularlo por el contenido de las primeras filas.
+
+## Ajuste solicitado (2026-10-01): selectores de la barra del editor
+
+- Los chips de conexión, base y esquema abrían su lista arriba al centro (como la paleta), lejos del chip, y parecía que no hacían nada. Ahora la lista se despliega justo debajo del chip, como un combo, y se puede filtrar escribiendo. Con Ctrl+9 / Ctrl+0 sigue saliendo arriba al centro. Actualizado en `04` §8.

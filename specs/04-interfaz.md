@@ -172,7 +172,7 @@ De izquierda a derecha:
 3. `codicon-debug-stop` **Cancelar** — rojo, solo habilitado durante ejecución.
 4. `codicon-lightbulb` Explicar plan (ver `12`).
 5. Separador vertical.
-6. **Selector de conexión**: chip con punto de color + nombre de conexión + `codicon-chevron-down`. Abre lista filtrable de conexiones.
+6. **Selector de conexión**: chip con punto de color + nombre de conexión + `codicon-chevron-down`. Abre lista filtrable de conexiones **desplegada justo debajo del chip** (igual para base y esquema); con Ctrl+9 / Ctrl+0 la lista sale arriba al centro, como la paleta.
 7. **Selector de base** (si el motor lo soporta) y **selector de esquema** (si aplica): chips iguales.
 8. Separador.
 9. **Modo de transacción**: chip "Auto" / "Manual". En Manual aparecen `codicon-check` **Commit** y `codicon-discard` **Rollback**, y un contador "3 sentencias pendientes" en `warning`.

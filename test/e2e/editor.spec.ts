@@ -334,3 +334,19 @@ test('separador de sentencias por línea en blanco desde el menú contextual del
   await page.getByRole('menuitem', { name: 'Punto y coma' }).click();
   await expect.poll(() => readFileSync(join(userData, 'settings.json'), 'utf8')).toContain('"semicolon"');
 });
+
+test('los selectores de conexión, base y esquema abren su lista justo debajo', async () => {
+  for (const id of ['connection-chip', 'database-chip', 'schema-chip']) {
+    const chip = page.getByTestId(id);
+    await chip.click();
+    const list = page.locator('.quick-input');
+    await expect(list.locator('.quick-input-item').first()).toBeVisible();
+    const chipBox = (await chip.boundingBox())!;
+    const listBox = (await list.boundingBox())!;
+    expect(Math.abs(listBox.y - (chipBox.y + chipBox.height))).toBeLessThan(8);
+    expect(Math.abs(listBox.x - chipBox.x)).toBeLessThan(8);
+    if (id === 'database-chip') await shot('chip-base');
+    await page.keyboard.press('Escape');
+    await expect(list).toHaveCount(0);
+  }
+});

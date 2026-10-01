@@ -4,7 +4,7 @@ import { Codicon } from '../../components/Codicon';
 import { commands, keybindingLabel } from '../../commands/service';
 import { commandTitle, es } from '../../i18n/es';
 import { useOverlayStore } from '../../stores/overlay-store';
-import type { QuickPick } from '../../stores/overlay-store';
+import type { PickAnchor, QuickPick } from '../../stores/overlay-store';
 import type { FileNode } from '@shared/workspace';
 import { useFilesStore } from '../../stores/files-store';
 import { useWorkspaceStore } from '../../stores/workspace-store';
@@ -101,6 +101,16 @@ function pickItems(pick: QuickPick, query: string): PickItem[] {
   return query ? out.sort((a, b) => b.match.score - a.match.score) : out;
 }
 
+/** Ancho mínimo de una lista desplegable bajo un chip. */
+const ANCHORED_MIN_WIDTH = 320;
+
+/** Lista desplegable bajo el control que la abrió, sin salirse de la ventana. */
+function anchoredStyle(anchor: PickAnchor): React.CSSProperties {
+  const width = Math.min(Math.max(anchor.width, ANCHORED_MIN_WIDTH), window.innerWidth - 16);
+  const left = Math.max(8, Math.min(anchor.left, window.innerWidth - width - 8));
+  return { left, top: anchor.top, width };
+}
+
 /** Paleta rápida (specs/04 §13): `>` = comandos; sin prefijo = objetos y archivos; o una lista de selección. */
 export function QuickInput(): React.JSX.Element | null {
   const { open, initialValue, pick } = useOverlayStore((s) => s.palette);
@@ -182,7 +192,12 @@ function QuickInputBox({
 
   return createPortal(
     <div className="quick-input-layer" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="quick-input" role="dialog" aria-label={placeholder}>
+      <div
+        className={pick?.anchor ? 'quick-input is-anchored' : 'quick-input'}
+        style={pick?.anchor ? anchoredStyle(pick.anchor) : undefined}
+        role="dialog"
+        aria-label={placeholder}
+      >
         <div className="input">
           <input
             ref={inputRef}

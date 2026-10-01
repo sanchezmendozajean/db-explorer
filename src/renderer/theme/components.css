@@ -531,6 +531,17 @@
   box-shadow: var(--shadow-dialog);
 }
 
+/* Lista desplegable bajo un chip (selectores de conexión, base y esquema). */
+.quick-input.is-anchored {
+  transform: none;
+  max-width: none;
+  padding: 4px;
+}
+
+.quick-input.is-anchored .quick-input-list {
+  max-height: 320px;
+}
+
 .quick-input .input {
   height: 26px;
   border-color: var(--border-focus);

@@ -5,7 +5,7 @@ import { nodeKey } from '@shared/metadata';
 import { es } from '../../i18n/es';
 import { connectionById, useConnectionsStore } from '../../stores/connections-store';
 import { useOverlayStore } from '../../stores/overlay-store';
-import type { QuickPickItem } from '../../stores/overlay-store';
+import type { PickAnchor, QuickPickItem } from '../../stores/overlay-store';
 import { useWorkbenchStore } from '../../stores/workbench-store';
 import type { EditorTab } from '../../stores/workbench-store';
 import { ensureConnected } from '../connections/actions';
@@ -49,7 +49,7 @@ function readChildren(connectionId: string, ref: TreeNodeRef) {
 }
 
 /** Ctrl+9 / chip de conexión: lista filtrable de conexiones (specs/04 §8). */
-export function pickConnection(tabId: string): void {
+export function pickConnection(tabId: string, anchor?: PickAnchor): void {
   const tab = tabById(tabId);
   const items: QuickPickItem[] = useConnectionsStore.getState().connections.map((c) => ({
     id: c.id,
@@ -60,7 +60,7 @@ export function pickConnection(tabId: string): void {
     current: c.id === tab?.connectionId,
     run: () => setTabTarget(tabId, { connectionId: c.id }),
   }));
-  useOverlayStore.getState().openPick({ placeholder: es.pickers.connection, items });
+  useOverlayStore.getState().openPick({ placeholder: es.pickers.connection, items, anchor });
 }
 
 async function databases(connectionId: string): Promise<string[]> {
@@ -84,7 +84,7 @@ async function schemas(connectionId: string, database: string): Promise<string[]
 }
 
 /** Chip de base de datos. */
-export async function pickDatabase(tabId: string): Promise<void> {
+export async function pickDatabase(tabId: string, anchor?: PickAnchor): Promise<void> {
   const tab = tabById(tabId);
   if (!tab?.connectionId) return;
   const current = effectiveTarget(tab).database;
@@ -95,11 +95,11 @@ export async function pickDatabase(tabId: string): Promise<void> {
     current: db === current,
     run: () => setTabTarget(tabId, { database: db, schema: undefined }),
   }));
-  useOverlayStore.getState().openPick({ placeholder: es.pickers.database, items });
+  useOverlayStore.getState().openPick({ placeholder: es.pickers.database, items, anchor });
 }
 
 /** Chip de esquema. */
-export async function pickSchema(tabId: string): Promise<void> {
+export async function pickSchema(tabId: string, anchor?: PickAnchor): Promise<void> {
   const tab = tabById(tabId);
   if (!tab?.connectionId) return;
   if (!(await ensureConnected(tab.connectionId))) return;
@@ -112,7 +112,7 @@ export async function pickSchema(tabId: string): Promise<void> {
     current: s === schema,
     run: () => setTabTarget(tabId, { database, schema: s }),
   }));
-  useOverlayStore.getState().openPick({ placeholder: es.pickers.schema, items });
+  useOverlayStore.getState().openPick({ placeholder: es.pickers.schema, items, anchor });
 }
 
 /** Ctrl+0: esquemas de la base actual y las demás bases, en una sola lista. */
