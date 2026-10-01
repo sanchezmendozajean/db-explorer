@@ -300,3 +300,14 @@ test('atajos del editor: acordes de Monaco, comentar, insertar línea y selector
   await expect(page.locator('.quick-input-item').first()).toBeVisible();
   await page.keyboard.press('Escape');
 });
+
+test('el cursor queda justo después del último carácter escrito (fuente medida)', async () => {
+  await typeInEditor('select * from Contr');
+  const gap = await editor().evaluate((root) => {
+    const cursor = root.querySelector('.cursors-layer .cursor')!.getBoundingClientRect();
+    const spans = root.querySelectorAll('.view-line span span');
+    const last = spans[spans.length - 1]!.getBoundingClientRect();
+    return Math.abs(cursor.left - last.right);
+  });
+  expect(gap).toBeLessThan(2);
+});
