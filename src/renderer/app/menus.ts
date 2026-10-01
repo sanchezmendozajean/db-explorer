@@ -2,6 +2,8 @@ import type { MenuEntry } from '../components/menu-types';
 import { SEPARATOR } from '../components/menu-types';
 import { commands, keybindingLabel } from '../commands/service';
 import { commandTitle, es } from '../i18n/es';
+import { useWorkspaceStore } from '../stores/workspace-store';
+import { switchWorkspace } from '../features/files/workspace-actions';
 
 /**
  * Entrada de menú a partir de un comando: título, atajo y estado salen del
@@ -20,6 +22,17 @@ export function commandEntry(id: string, label?: string): MenuEntry {
   };
 }
 
+/** Archivo › Abrir espacio reciente (specs/07: hasta 10), sin el actual. */
+function recentWorkspacesMenu(): MenuEntry {
+  const { recent, path } = useWorkspaceStore.getState();
+  const others = recent.filter((p) => p.toLowerCase() !== path.toLowerCase());
+  const entries: MenuEntry[] = others.length
+    ? others.map((p) => ({ type: 'item', id: p, label: p, run: () => void switchWorkspace(p) }))
+    : [{ type: 'item', id: 'no-recent', label: es.menu.noRecent, disabled: true, run: () => undefined }];
+  entries.push(SEPARATOR, commandEntry('db.workspace.reset'));
+  return { type: 'submenu', id: 'recent', label: es.menu.recentWorkspaces, entries };
+}
+
 export interface TopMenu {
   id: string;
   label: string;
@@ -35,14 +48,7 @@ export const TITLE_BAR_MENUS: TopMenu[] = [
       commandEntry('db.newScript'),
       commandEntry('db.openFile'),
       commandEntry('db.workspace.change'),
-      {
-        type: 'submenu',
-        id: 'recent',
-        label: es.menu.recentWorkspaces,
-        entries: [
-          { type: 'item', id: 'no-recent', label: es.menu.noRecent, disabled: true, run: () => undefined },
-        ],
-      },
+      recentWorkspacesMenu(),
       SEPARATOR,
       commandEntry('db.save'),
       commandEntry('db.saveAs'),

@@ -84,11 +84,11 @@ function quickOpenItems(query: string): PickItem[] {
         detail: dir,
         group: es.palette.groupFiles,
         match,
-        run: () => openScript(f.path),
+        run: () => void openScript(f.path),
       });
     }
   };
-  walk(useFilesStore.getState().nodes);
+  walk(useFilesStore.getState().all);
   return files.sort((a, b) => b.match.score - a.match.score);
 }
 
@@ -136,9 +136,15 @@ function QuickInputBox({
 
   const isCommands = !pick && value.startsWith('>');
   const query = isCommands ? value.slice(1) : value;
+  // El árbol completo del espacio se lee al abrir la búsqueda de archivos (Ctrl+P).
+  const allFiles = useFilesStore((s) => s.all);
+  useEffect(() => {
+    if (!pick) void useFilesStore.getState().loadAll();
+  }, [pick]);
   const items = useMemo(
     () => (pick ? pickItems(pick, query) : isCommands ? commandItems(query) : quickOpenItems(query)),
-    [pick, isCommands, query],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pick, isCommands, query, allFiles],
   );
   const placeholder = pick
     ? pick.placeholder

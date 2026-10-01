@@ -209,11 +209,15 @@ test('guardado automático: 5 s sin escribir y al ejecutar', async () => {
   expect(readFileSync(file, 'utf8')).toBe('select 43 as al_ejecutar;');
 });
 
-test('un cambio externo no se pisa con el guardado automático', async () => {
+test('un cambio externo se recarga si no hay cambios y no se pisa con el guardado automático', async () => {
   const file = join(workspace, 'Script-1.sql');
+  // Sin cambios en el editor: el archivo se recarga solo (watcher).
+  writeFileSync(file, 'select 1 as externo;');
+  await expect(editor().locator('.view-lines')).toContainText('externo', { timeout: 5000 });
+  // Con cambios sin guardar: un cambio externo no se pisa; se avisa al guardar.
+  await typeInEditor('select 44;');
   writeFileSync(file, 'cambio externo');
   utimesSync(file, new Date(), new Date(Date.now() + 60_000));
-  await typeInEditor('select 44;');
   await expect(page.getByText('Script-1.sql cambió en disco')).toBeVisible({ timeout: 8000 });
   expect(readFileSync(file, 'utf8')).toBe('cambio externo');
   await page.getByRole('button', { name: 'Sobrescribir' }).click();

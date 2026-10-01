@@ -1176,3 +1176,79 @@ button.statusbar-item:hover {
 .split.is-results-maximized > [data-testid='results'] {
   flex: 1 1 100% !important;
 }
+
+/* Vista Archivos (specs/07) */
+.files-tree {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.files-tree > .tree {
+  flex: 1;
+}
+
+.tree-label.is-cut {
+  opacity: 0.55;
+}
+
+.files-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  margin: 2px 8px 4px;
+  padding: 0 2px 0 6px;
+  border: 1px solid var(--border-focus);
+  border-radius: var(--radius-control);
+  background: var(--bg-input);
+  color: var(--fg);
+  font-size: 12px;
+}
+
+.files-filter span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Campo en línea para crear o renombrar un archivo (como en VS Code). */
+.tree-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  margin-right: 6px;
+}
+
+.tree-input {
+  flex: 1;
+  min-width: 0;
+  height: 20px;
+  padding: 0 4px;
+  border: 1px solid var(--border-focus);
+  background: var(--bg-input);
+  color: var(--fg);
+  font: inherit;
+  outline: none;
+}
+
+.tree-input.is-invalid {
+  border-color: var(--error);
+}
+
+.tree-input-error {
+  position: absolute;
+  top: 21px;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 3px 6px;
+  border: 1px solid var(--error);
+  background: var(--bg-menu);
+  color: var(--fg);
+  font-size: 12px;
+  white-space: normal;
+}

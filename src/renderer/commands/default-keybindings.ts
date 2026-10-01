@@ -25,6 +25,15 @@ export const DEFAULT_KEYBINDINGS: readonly KeybindingRule[] = [
   { key: 'ctrl+n', command: 'db.newScript' },
   { key: 'ctrl+o', command: 'db.openFile' },
 
+  // Vista Archivos (specs/07): solo con el árbol enfocado y fuera del campo de nombre.
+  { key: 'f2', command: 'db.files.rename', when: 'filesFocus && !inputFocus' },
+  { key: 'delete', command: 'db.files.delete', when: 'filesFocus && !inputFocus' },
+  { key: 'ctrl+c', command: 'db.files.copy', when: 'filesFocus && !inputFocus' },
+  { key: 'ctrl+x', command: 'db.files.cut', when: 'filesFocus && !inputFocus' },
+  { key: 'ctrl+v', command: 'db.files.paste', when: 'filesFocus && !inputFocus' },
+  { key: 'shift+alt+c', command: 'db.files.copyPath', when: 'filesFocus && !inputFocus' },
+  { key: 'ctrl+k ctrl+shift+c', command: 'db.files.copyRelativePath', when: 'filesFocus && !inputFocus' },
+
   // Pestañas
   { key: 'ctrl+w', command: 'db.closeTab' },
   { key: 'ctrl+f4', command: 'db.closeTab' },

@@ -9,7 +9,21 @@ import { newConnection } from '../features/connections/actions';
 import { useSettingsStore } from '../stores/settings-store';
 import { activeEditor } from '../features/editor/editor-instance';
 import { autoSaveChanged, saveAll, saveDocument } from '../features/editor/documents';
-import { closeActiveTab, newScript } from '../features/editor/scripts';
+import {
+  changeEol,
+  closeActiveTab,
+  newScript,
+  openFileWithDialog,
+  saveActiveAs,
+} from '../features/editor/scripts';
+import * as fileActions from '../features/files/file-actions';
+import {
+  changeWorkspace,
+  openRecentWorkspace,
+  resetWorkspace,
+  revealWorkspace,
+} from '../features/files/workspace-actions';
+import { useFilesStore } from '../stores/files-store';
 import { pickConnection, pickDatabaseOrSchema } from '../features/editor/target-pickers';
 import { cancelExecution, executeFromEditor, isRunning } from '../features/execution/execute';
 
@@ -36,6 +50,12 @@ export function registerAppCommands(): () => void {
     return hasScript() && !!selection && !selection.isEmpty();
   };
   const settings = useSettingsStore.getState;
+  const hasFileSelection = (): boolean => {
+    const { selected, root } = useFilesStore.getState();
+    return !!selected && selected.toLowerCase() !== root.toLowerCase();
+  };
+  const hasSqlSelection = (): boolean =>
+    hasFileSelection() && /\.sql$/i.test(useFilesStore.getState().selected ?? '');
 
   const list: Command[] = [
     { id: 'db.showCommands', category: cat.view, run: () => overlay().openPalette('commands') },
@@ -114,7 +134,73 @@ export function registerAppCommands(): () => void {
         if (id) await saveDocument(id);
       },
     },
+    { id: 'db.saveAs', category: cat.file, enabled: hasScript, run: () => saveActiveAs() },
     { id: 'db.saveAll', category: cat.file, run: async () => void (await saveAll()) },
+    { id: 'db.openFile', category: cat.file, run: () => openFileWithDialog() },
+    { id: 'db.changeEol', category: cat.file, enabled: hasScript, run: () => changeEol() },
+
+    // Espacio de trabajo (specs/11 §2)
+    { id: 'db.workspace.change', category: cat.file, run: () => changeWorkspace() },
+    { id: 'db.workspace.openRecent', category: cat.file, run: () => openRecentWorkspace() },
+    { id: 'db.workspace.reset', category: cat.file, run: () => resetWorkspace() },
+    { id: 'db.workspace.reveal', category: cat.file, run: () => revealWorkspace() },
+
+    // Vista Archivos (specs/07): actúan sobre el nodo seleccionado del árbol.
+    { id: 'db.files.newFile', category: cat.file, run: () => fileActions.startNew('file') },
+    { id: 'db.files.newFolder', category: cat.file, run: () => fileActions.startNew('folder') },
+    {
+      id: 'db.files.rename',
+      category: cat.file,
+      enabled: hasFileSelection,
+      run: () => fileActions.startRename(),
+    },
+    { id: 'db.files.delete', category: cat.file, enabled: hasFileSelection, run: () => fileActions.trash() },
+    {
+      id: 'db.files.cut',
+      category: cat.file,
+      enabled: hasFileSelection,
+      run: () => fileActions.copyToClipboard(true),
+    },
+    {
+      id: 'db.files.copy',
+      category: cat.file,
+      enabled: hasFileSelection,
+      run: () => fileActions.copyToClipboard(false),
+    },
+    {
+      id: 'db.files.paste',
+      category: cat.file,
+      enabled: () => useFilesStore.getState().clipboard !== null,
+      run: () => fileActions.paste(),
+    },
+    {
+      id: 'db.files.duplicate',
+      category: cat.file,
+      enabled: hasFileSelection,
+      run: () => fileActions.duplicate(),
+    },
+    { id: 'db.files.copyPath', category: cat.file, run: () => fileActions.copyPath(false) },
+    { id: 'db.files.copyRelativePath', category: cat.file, run: () => fileActions.copyPath(true) },
+    { id: 'db.files.reveal', category: cat.file, run: () => fileActions.reveal() },
+    {
+      id: 'db.files.openExternal',
+      category: cat.file,
+      enabled: hasFileSelection,
+      run: () => fileActions.openExternal(),
+    },
+    { id: 'db.files.runIn', category: cat.file, enabled: hasSqlSelection, run: () => fileActions.runIn() },
+    {
+      id: 'db.files.revealActive',
+      category: cat.view,
+      enabled: () => !!wb().tabs.find((t) => t.id === wb().activeId)?.path,
+      run: async () => {
+        const path = wb().tabs.find((t) => t.id === wb().activeId)?.path;
+        if (!path) return;
+        ui().showView('files');
+        await useFilesStore.getState().reveal(path);
+        requestAnimationFrame(() => focusArea('[data-view="files"] .tree'));
+      },
+    },
     {
       id: 'db.toggleAutoSave',
       category: cat.file,

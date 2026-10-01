@@ -25,7 +25,9 @@ function ScriptArea({ tab }: { tab: EditorTab }): React.JSX.Element {
   const panel = useUiStore((s) => s.panel);
   const savedLayout = useUiStore((s) => s.layout.editor);
   const setEditorLayout = useUiStore((s) => s.setEditorLayout);
-  const maximized = panel.visible && panel.maximized;
+  // Los archivos de texto que no son SQL se editan sin barra de ejecución ni resultados.
+  const isSql = /\.sql$/i.test(tab.path ?? '');
+  const maximized = isSql && panel.visible && panel.maximized;
 
   return (
     <Group
@@ -40,11 +42,11 @@ function ScriptArea({ tab }: { tab: EditorTab }): React.JSX.Element {
     >
       <Panel id="editor" minSize={80} defaultSize="60%">
         <div className="editor-pane">
-          <EditorToolbar tab={tab} />
+          {isSql && <EditorToolbar tab={tab} />}
           <SqlEditor tab={tab} />
         </div>
       </Panel>
-      {panel.visible && (
+      {isSql && panel.visible && (
         <>
           <Separator className="sash sash-horizontal" />
           <Panel id="results" minSize={120} defaultSize="40%">

@@ -44,6 +44,8 @@ export interface VirtualTreeProps<T extends TreeRow> {
   dragText?: (row: T) => string | null;
   /** Clic central sobre una fila. */
   onMiddleClick?: (row: T) => void;
+  /** Clic simple sobre una fila (p. ej. vista previa de un archivo). */
+  onRowClick?: (row: T) => void;
 }
 
 const DRAG_TYPE = 'application/x-dbx-tree';
@@ -72,6 +74,7 @@ export function VirtualTree<T extends TreeRow>({
   onDrop,
   dragText,
   onMiddleClick,
+  onRowClick,
 }: VirtualTreeProps<T>): React.JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null);
   const baseId = useId();
@@ -225,6 +228,7 @@ export function VirtualTree<T extends TreeRow>({
                 const onTwistie = (e.target as Element).closest('.tree-twistie') !== null;
                 if (row.expandable && e.detail === 1 && (toggleOnClick || onTwistie))
                   onToggle(row.id, !row.expanded);
+                if (e.detail === 1 && !onTwistie) onRowClick?.(row);
               }}
               onDoubleClick={() => onOpen?.(row)}
               onAuxClick={(e) => {

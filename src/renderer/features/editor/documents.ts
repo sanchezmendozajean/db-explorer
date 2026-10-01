@@ -46,6 +46,27 @@ export function languageFor(engine: Engine | undefined): string {
   return 'sql';
 }
 
+/** Lenguaje de Monaco de un archivo: SQL según el motor; los demás por extensión (specs/07). */
+export function languageForFile(path: string, engine: Engine | undefined): string {
+  const ext = path.slice(path.lastIndexOf('.') + 1).toLowerCase();
+  switch (ext) {
+    case 'sql':
+      return languageFor(engine);
+    case 'json':
+      // Sin el servicio de JSON (pesado) se resalta con la gramática de JavaScript.
+      return 'javascript';
+    case 'md':
+      return 'markdown';
+    case 'xml':
+      return 'xml';
+    case 'yml':
+    case 'yaml':
+      return 'yaml';
+    default:
+      return 'plaintext';
+  }
+}
+
 export function getDocument(tabId: string): ScriptDocument | undefined {
   return documents.get(tabId);
 }
@@ -93,7 +114,7 @@ export function ensureDocument(tab: EditorTab): Promise<ScriptDocument | null> {
     // La pestaña pudo cerrarse mientras se leía.
     if (!useWorkbenchStore.getState().tabs.some((t) => t.id === tab.id)) return null;
     const uri = monaco.Uri.file(path);
-    const language = languageFor(connectionById(tab.connectionId)?.engine);
+    const language = languageForFile(path, connectionById(tab.connectionId)?.engine);
     const model = monaco.editor.getModel(uri) ?? monaco.editor.createModel(file.data.content, language, uri);
     // Los archivos nuevos (sin saltos de línea) usan CRLF, el estándar de Windows (D12).
     if (!file.data.content.includes('\n')) model.setEOL(monaco.editor.EndOfLineSequence.CRLF);
@@ -122,6 +143,8 @@ function onContentChange(doc: ScriptDocument): void {
   const dirty = isDirty(doc);
   const tab = useWorkbenchStore.getState().tabs.find((t) => t.id === doc.tabId);
   if (tab && tab.dirty !== dirty) useWorkbenchStore.getState().update(doc.tabId, { dirty });
+  // Editar una pestaña de vista previa la fija (como en VS Code).
+  if (tab?.preview && dirty) useWorkbenchStore.getState().pin(doc.tabId);
   for (const l of listeners) l(doc);
   clearTimeout(doc.timer);
   doc.timer = undefined;
@@ -240,6 +263,70 @@ export async function saveAll(): Promise<boolean> {
 /** Espera los guardados en curso. */
 export async function pendingSaves(): Promise<void> {
   await Promise.all(allDocuments().map((d) => d.saving));
+}
+
+/**
+ * "Guardar como…" (Ctrl+Shift+S): diálogo nativo (empieza en la carpeta del
+ * archivo) y escritura. El documento pasa a ser el archivo nuevo; el original
+ * queda como estaba en disco. Devuelve la ruta nueva o `null` si se canceló.
+ */
+export async function saveDocumentAs(tabId: string): Promise<string | null> {
+  const doc = documents.get(tabId);
+  if (!doc) return null;
+  const version = doc.model.getAlternativeVersionId();
+  const r = await window.api.fs.saveAs({
+    defaultPath: doc.path,
+    content: doc.model.getValue(),
+    bom: doc.bom,
+  });
+  if (!r.ok) {
+    showToast('error', es.scripts.saveFailed(fileName(doc.path), r.error.message));
+    return null;
+  }
+  if (!r.data.path) return null;
+  doc.path = r.data.path;
+  doc.mtimeMs = r.data.mtimeMs;
+  doc.conflict = false;
+  markSaved(doc, version);
+  return r.data.path;
+}
+
+/** El archivo de la pestaña se renombró o movió (o se guardó con otro nombre). */
+export function setDocumentPath(tabId: string, path: string): void {
+  const doc = documents.get(tabId);
+  if (doc) doc.path = path;
+}
+
+/**
+ * Archivos que cambiaron en disco (watcher). Si un documento abierto no tiene
+ * cambios sin guardar, se recarga conservando el deshacer; si los tiene, se
+ * marca el conflicto y el guardado automático espera la decisión del usuario.
+ */
+export async function handleExternalChanges(paths: readonly string[]): Promise<void> {
+  const keys = new Set(paths.map((p) => p.toLowerCase()));
+  for (const doc of documents.values()) {
+    if (!keys.has(doc.path.toLowerCase()) || doc.saving) continue;
+    const r = await window.api.fs.readScript({ path: doc.path });
+    // Borrado o inaccesible: se deja como está (guardar lo vuelve a crear).
+    if (!r.ok || Math.abs(r.data.mtimeMs - doc.mtimeMs) <= 1) continue;
+    if (doc.saving || isDirty(doc)) {
+      // Hay cambios sin guardar: se avisa ya (el guardado automático espera la decisión).
+      doc.conflict = true;
+      showConflict(doc);
+      continue;
+    }
+    if (r.data.content !== doc.model.getValue()) {
+      doc.model.pushEditOperations(
+        [],
+        [{ range: doc.model.getFullModelRange(), text: r.data.content }],
+        () => null,
+      );
+    }
+    doc.mtimeMs = r.data.mtimeMs;
+    doc.bom = r.data.bom;
+    doc.conflict = false;
+    markSaved(doc, doc.model.getAlternativeVersionId());
+  }
 }
 
 export function disposeDocument(tabId: string): void {

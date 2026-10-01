@@ -17,7 +17,10 @@ import { showToast } from './stores/toast-store';
 import { useSampleStore } from './stores/sample-store';
 import { useConnectionsStore } from './stores/connections-store';
 import { useSettingsStore } from './stores/settings-store';
-import { handleBeforeClose, restoreWorkspace, startWorkspacePersistence } from './features/editor/scripts';
+import { handleBeforeClose, startWorkspacePersistence } from './features/editor/scripts';
+import { restoreWorkspace } from './features/files/workspace-actions';
+import { handleExternalChanges } from './features/editor/documents';
+import { useFilesStore } from './stores/files-store';
 import {
   applyQueryEvent,
   positionInStatement,
@@ -76,6 +79,12 @@ async function bootstrap(): Promise<void> {
   // Conexiones antes que el espacio de trabajo: las pestañas restauradas muestran su conexión.
   const skipped = await useConnectionsStore.getState().load();
   if (skipped > 0) showToast('warning', es.connections.skippedEntries(skipped));
+
+  // Cambios en disco (watcher de main): árbol de archivos y documentos abiertos.
+  window.api.on('fs:changed', ({ paths }) => {
+    void useFilesStore.getState().refresh(paths);
+    void handleExternalChanges(paths);
+  });
 
   await restoreWorkspace();
   startWorkspacePersistence();

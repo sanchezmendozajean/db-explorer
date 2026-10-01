@@ -80,7 +80,8 @@ export async function executeFromEditor(
   options: { newResultTab?: boolean } = {},
 ): Promise<void> {
   const tab = activeTab();
-  if (!tab || tab.kind !== 'script') return;
+  // Solo los scripts SQL se ejecutan (los demás archivos de texto se editan).
+  if (!tab || tab.kind !== 'script' || !/\.sql$/i.test(tab.path ?? '')) return;
   if (isRunning(tab.id)) {
     showToast('info', es.execution.alreadyRunning);
     return;

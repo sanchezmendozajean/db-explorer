@@ -9,6 +9,7 @@ import { SEPARATOR } from '../../components/menu-types';
 import { keybindingLabel } from '../../commands/service';
 import { es } from '../../i18n/es';
 import { notAvailable } from '../../app/app-commands';
+import { commands } from '../../commands/service';
 import { useConnectionsStore } from '../../stores/connections-store';
 import { showToast } from '../../stores/toast-store';
 import { closeTabs } from './scripts';
@@ -67,8 +68,11 @@ function tabMenu(tab: EditorTab): MenuEntry[] {
       type: 'item',
       id: 'reveal',
       label: t.revealInFiles,
-      disabled: tab.kind !== 'script',
-      run: () => notAvailable(t.revealInFiles),
+      disabled: !tab.path,
+      run: () => {
+        useWorkbenchStore.getState().activate(tab.id);
+        void commands.execute('db.files.revealActive');
+      },
     },
   ];
 }

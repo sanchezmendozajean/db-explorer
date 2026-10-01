@@ -105,7 +105,15 @@ export function StatusBar(): React.JSX.Element {
               {es.statusBar.spaces(typeof tabSize === 'number' ? tabSize : 4)}
             </span>
             <span className="statusbar-item">UTF-8</span>
-            <span className="statusbar-item">{eol}</span>
+            <button
+              type="button"
+              className="statusbar-item"
+              title={es.commands['db.changeEol'] as string}
+              data-testid="eol-toggle"
+              onClick={() => void commands.execute('db.changeEol')}
+            >
+              {eol}
+            </button>
             <span className="statusbar-item">{connection ? ENGINE_LANGUAGE[connection.engine] : 'SQL'}</span>
             {connection && <span className="statusbar-item">{es.statusBar.autoCommit}</span>}
           </>

@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, nativeTheme, safeStorage, shell } from 'electron';
-import { join } from 'node:path';
+import { mkdir, rename } from 'node:fs/promises';
+import { basename, join } from 'node:path';
 import type { IpcEventChannel } from '@shared/channels';
 import type { IpcEventPayload } from '@shared/ipc';
 import { applySecurityPolicies } from './security';
@@ -64,8 +65,19 @@ if (!app.requestSingleInstanceLock()) {
 
     const settings = new SettingsStore(join(userData, 'settings.json'));
     await settings.load();
-    const workspace = new WorkspaceService(userData, join(app.getPath('documents'), 'DB Explorer'), (path) =>
-      shell.trashItem(path),
+    // En pruebas (perfil aislado) la papelera es una carpeta del perfil: no se toca la Papelera de Windows.
+    const trashItem =
+      userDataOverride && !app.isPackaged
+        ? async (path: string): Promise<void> => {
+            const bin = join(userDataOverride, 'Papelera');
+            await mkdir(bin, { recursive: true });
+            await rename(path, join(bin, `${Date.now()}-${basename(path)}`));
+          }
+        : (path: string): Promise<void> => shell.trashItem(path);
+    const workspace = new WorkspaceService(
+      userData,
+      join(app.getPath('documents'), 'DB Explorer'),
+      trashItem,
     );
 
     dbHost.start();

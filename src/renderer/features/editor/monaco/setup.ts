@@ -10,6 +10,11 @@ import 'monaco-editor/features/register.all';
 import 'monaco-editor/languages/definitions/sql/register';
 import 'monaco-editor/languages/definitions/pgsql/register';
 import 'monaco-editor/languages/definitions/mysql/register';
+// Otros archivos de texto del espacio de trabajo (specs/07).
+import 'monaco-editor/languages/definitions/markdown/register';
+import 'monaco-editor/languages/definitions/xml/register';
+import 'monaco-editor/languages/definitions/yaml/register';
+import 'monaco-editor/languages/definitions/javascript/register';
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 
 export type Monaco = typeof monaco;
