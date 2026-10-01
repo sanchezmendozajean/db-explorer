@@ -7,7 +7,7 @@ Formato: marca con `[x]` la opción elegida.
 ---
 
 ### D1. Nombre de la aplicación
-- [ ] ✅ Mantener "DB Explorer" como provisional y decidir al empaquetar (M8).
+- [ ] ✅ Mantener "DB Explorer" como provisional y decidir al empaquetar (M9).
 - [ ] Otro: ________
 
 ### D2. Framework de UI en el renderer

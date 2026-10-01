@@ -77,7 +77,7 @@ export class SecretStore {
     await this.write();
   }
 
-  /** "Olvidar contraseñas guardadas" (Preferencias, M8). */
+  /** "Olvidar contraseñas guardadas" (Preferencias, M9). */
   async clear(): Promise<void> {
     this.entries = {};
     await this.write();

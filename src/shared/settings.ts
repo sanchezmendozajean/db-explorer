@@ -7,7 +7,7 @@ import { z } from 'zod';
  * cual a Monaco (specs/05).
  *
  * En M3 se usan las de archivos, resultados y formatos básicos; la UI de
- * Preferencias llega en M8 y la edición con esquema JSON en M6.
+ * Preferencias llega en M9 y la edición con esquema JSON en M6.
  */
 
 const Bool = z.boolean();

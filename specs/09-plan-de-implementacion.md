@@ -75,7 +75,15 @@ Construir por hitos. Cada hito termina con la app **arrancando y usable**, tests
 
 **Aceptación**: editar, insertar y eliminar filas en una tabla con PK en los 4 motores; tabla sin PK queda de solo lectura con explicación; exportar 500 000 filas a CSV sin exceder ~500 MB de memoria.
 
-## M8 — Pulido y empaquetado
+## M8 — Plan de ejecución
+Va después de M7 porque necesita los cuatro motores (M4) y el modo de transacción manual (M7) para revertir con `SAVEPOINT`; y antes del empaquetado, para que la medición de arranque y memoria de M9 lo incluya.
+- Todo `12`: `DbSession.explain` en los cuatro drivers, parsers al modelo común, avisos, reglas de seguridad de *Explicar y ejecutar*.
+- Pestaña **Plan** del panel de resultados: árbol-tabla con barras de costo y tiempo, panel de detalle, Ver original.
+- Comandos *Explicar plan* (Ctrl+Alt+E) y *Explicar y ejecutar* (Ctrl+Alt+Shift+E) en el menú Consulta, el menú contextual del editor, la paleta y la barra del editor.
+
+**Aceptación**: en los cuatro motores, Ctrl+Alt+E sobre un `JOIN` muestra el árbol con costos (salvo SQLite) y el detalle de cada nodo; *Explicar y ejecutar* muestra filas y tiempos reales en Postgres, MariaDB/MySQL y SQL Server; un `DELETE` explicado y ejecutado no borra filas (prueba de integración); un recorrido completo de una tabla de 10 000+ filas aparece con aviso; en Producción, *Explicar y ejecutar* de una escritura pide confirmación.
+
+## M9 — Pulido y empaquetado
 - Preferencias con UI (`04` §15) incluyendo Formatos de datos con vista previa.
 - Fuses de Electron, iconos, nombre final (D1), `electron-builder` NSIS + portable, `better-sqlite3` recompilado.
 - Revisión de accesibilidad básica (foco visible, navegación por teclado en todos los paneles, contraste).

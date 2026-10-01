@@ -95,7 +95,7 @@ Usar exactamente estos valores (tomados de VS Code *Dark Modern* / *Light Modern
 - **Archivo**: Nuevo script SQL (Ctrl+N), Abrir archivo… (Ctrl+O), Cambiar espacio de trabajo…, Abrir espacio reciente ▸, —, Guardar (Ctrl+S), Guardar como… (Ctrl+Shift+S), Guardar todo (Ctrl+K S), Guardado automático ✓, — , Nueva conexión…, — , Preferencias (Ctrl+,), Atajos de teclado (Ctrl+K Ctrl+S), — , Salir.
 - **Editar**: Deshacer, Rehacer, —, Cortar, Copiar, Pegar, —, Buscar (Ctrl+F), Reemplazar (Ctrl+H), —, Formatear SQL (Shift+Alt+F), Alternar comentario (Ctrl+/).
 - **Ver**: Paleta de comandos (Ctrl+Shift+P), —, Conexiones (Ctrl+Shift+D), Archivos (Ctrl+Shift+E), Historial, —, Mostrar/ocultar barra lateral (Ctrl+B), Mostrar/ocultar resultados (Ctrl+J), Maximizar resultados, —, Tema ▸ (Oscuro / Claro / Sistema), Zoom +/−/restablecer.
-- **Consulta**: Ejecutar sentencia (Ctrl+Enter), Ejecutar script (Alt+X / F5), Ejecutar selección, Cancelar (Alt+Pausa / Ctrl+Shift+Q), Separador de sentencias ▸ (Línea en blanco / Punto y coma ✓), —, Commit (Ctrl+Alt+C), Rollback (Ctrl+Alt+R), Modo auto-commit ✓, —, Explicar plan (Ctrl+Alt+E), Cambiar conexión activa… (Ctrl+9), Cambiar base/esquema… (Ctrl+0).
+- **Consulta**: Ejecutar sentencia (Ctrl+Enter), Ejecutar script (Alt+X / F5), Ejecutar selección, Cancelar (Alt+Pausa / Ctrl+Shift+Q), Separador de sentencias ▸ (Línea en blanco / Punto y coma ✓), —, Commit (Ctrl+Alt+C), Rollback (Ctrl+Alt+R), Modo auto-commit ✓, —, Explicar plan (Ctrl+Alt+E), Explicar y ejecutar (Ctrl+Alt+Shift+E), Cambiar conexión activa… (Ctrl+9), Cambiar base/esquema… (Ctrl+0).
 - **Ayuda**: Atajos de teclado, Acerca de.
 
 ## 5. Activity bar (48 px) — D5
@@ -170,7 +170,7 @@ De izquierda a derecha:
 1. `codicon-play` **Ejecutar sentencia** (Ctrl+Enter) — verde `success`.
 2. `codicon-run-all` **Ejecutar script** (Alt+X).
 3. `codicon-debug-stop` **Cancelar** — rojo, solo habilitado durante ejecución.
-4. `codicon-lightbulb` Explicar plan.
+4. `codicon-lightbulb` Explicar plan (ver `12`).
 5. Separador vertical.
 6. **Selector de conexión**: chip con punto de color + nombre de conexión + `codicon-chevron-down`. Abre lista filtrable de conexiones.
 7. **Selector de base** (si el motor lo soporta) y **selector de esquema** (si aplica): chips iguales.
@@ -186,7 +186,7 @@ Durante la ejecución: barra de progreso indeterminada de 2 px en `accent` bajo 
 - Errores de ejecución: subrayado ondulado rojo en la posición que devuelve el motor + marcador en el gutter; hover muestra el mensaje.
 - Tras ejecutar, en el gutter de la línea de inicio de cada sentencia: `codicon-pass` verde (ok) o `codicon-error` rojo, que se limpian al editar.
 - Widget de autocompletado, hover y find/replace con estilos nativos de Monaco del tema correspondiente.
-- **Menú contextual del editor**: el de la app (mismo estilo que los demás menús, con borde y sombra), no el de Monaco: Cambiar todas las ocurrencias (Ctrl+F2), —, Ejecutar sentencia, Ejecutar script, Ejecutar selección, Separador de sentencias ▸, —, Nuevo script SQL, —, Cortar, Copiar, Pegar, —, Paleta de comandos.
+- **Menú contextual del editor**: el de la app (mismo estilo que los demás menús, con borde y sombra), no el de Monaco: Cambiar todas las ocurrencias (Ctrl+F2), —, Ejecutar sentencia, Ejecutar script, Ejecutar selección, Explicar plan, Explicar y ejecutar, Separador de sentencias ▸, —, Nuevo script SQL, —, Cortar, Copiar, Pegar, —, Paleta de comandos.
 
 ## 9. Pestaña de objeto (tabla/vista)
 Barra superior con breadcrumb `PayBox Prod › paybox › public › CRendiciones_Conf_Generales` y subpestañas tipo "pill" pequeñas: **Datos** · **Estructura** · **DDL**.
@@ -198,7 +198,7 @@ Barra superior con breadcrumb `PayBox Prod › paybox › public › CRendicione
 Ocupa por defecto el 40% inferior del grupo de editor. Se asocia a la pestaña SQL activa (cada script conserva sus propios resultados).
 
 ### Pestañas del panel (30 px)
-`Resultado 1`, `Resultado 2`… (una por cada result set; el nombre se reemplaza por el nombre de la tabla principal cuando se detecta, p. ej. `CRendiciones_Conf_Generales`), **Mensajes** (NOTICE/PRINT, filas afectadas, errores con hora y duración), **Historial** (si no está en la activity bar).
+`Resultado 1`, `Resultado 2`… (una por cada result set; el nombre se reemplaza por el nombre de la tabla principal cuando se detecta, p. ej. `CRendiciones_Conf_Generales`), **Plan** (si se pidió un plan de ejecución; ver `12` §5), **Mensajes** (NOTICE/PRINT, filas afectadas, errores con hora y duración), **Historial** (si no está en la activity bar).
 Pestaña de resultado con error: icono `codicon-error` rojo. Botón de fijar resultado (`codicon-pin`) para que no se reemplace en la siguiente ejecución.
 Derecha: `codicon-chevron-up` maximizar panel, `codicon-close` ocultar.
 

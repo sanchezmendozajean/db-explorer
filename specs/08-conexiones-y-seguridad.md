@@ -37,7 +37,7 @@ Validado con zod al leer `connections.json`; entradas inválidas se omiten con a
 ## Protección de entornos (D10)
 - **Clasificación de sentencias** (en `shared/`, usando el splitter + primera palabra clave significativa tras comentarios y CTEs):
   - Lectura: `SELECT`, `WITH … SELECT`, `SHOW`, `DESCRIBE`, `EXPLAIN` (sin `ANALYZE`), `PRAGMA` de lectura.
-  - Escritura de datos: `INSERT`, `UPDATE`, `DELETE`, `MERGE`, `UPSERT`, `REPLACE`, `TRUNCATE`, `COPY … FROM`, `EXPLAIN ANALYZE` de escritura.
+  - Escritura de datos: `INSERT`, `UPDATE`, `DELETE`, `MERGE`, `UPSERT`, `REPLACE`, `TRUNCATE`, `COPY … FROM`, `EXPLAIN ANALYZE` de escritura (el comando *Explicar y ejecutar* de `12` sigue estas mismas reglas y además revierte siempre).
   - Estructura: `CREATE`, `ALTER`, `DROP`, `RENAME`, `GRANT`, `REVOKE`.
   - Desconocido (procedimientos `CALL`/`EXEC`, bloques `DO`): tratar como escritura.
 - `confirmWrites` → modal de `04` §14 antes de ejecutar escrituras/estructura.

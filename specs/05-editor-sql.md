@@ -66,7 +66,8 @@ Todas las opciones de `IEditorOptions` de Monaco se aceptan tal cual (se pasan d
 | Ejecutar script completo | **Alt+X** y **F5** | Si hay selección, ejecuta solo la selección como script. |
 | Ejecutar en nueva pestaña de resultado | **Ctrl+Alt+Shift+Enter** | Mantiene resultados previos. |
 | Cancelar ejecución | **Ctrl+Shift+Q** y Alt+Pausa | |
-| Explicar plan | **Ctrl+Alt+E** | Ctrl+Shift+L se deja a Monaco ("seleccionar coincidencias"). |
+| Explicar plan | **Ctrl+Alt+E** | Ctrl+Shift+L se deja a Monaco ("seleccionar coincidencias"). Ver `12`. |
+| Explicar y ejecutar (plan real) | **Ctrl+Alt+Shift+E** | Ejecuta la sentencia; las escrituras se revierten (`12` §4). |
 | Formatear SQL | **Shift+Alt+F** | `sql-formatter` con el dialecto de la conexión. Formatea selección si la hay. |
 | Commit / Rollback | Ctrl+Alt+C / Ctrl+Alt+R | Solo en modo manual. |
 | Guardar / Guardar como | Ctrl+S / Ctrl+Shift+S | Guardar como → diálogo nativo, inicia en el espacio de trabajo. |

@@ -19,6 +19,7 @@ Cliente de escritorio para explorar y consultar bases de datos **PostgreSQL, Mar
 | Claude Code — conexiones, credenciales y seguridad | `08-conexiones-y-seguridad.md` |
 | Claude Code — orden de construcción | `09-plan-de-implementacion.md` |
 | Claude Code — scripts, espacio de trabajo y guardado automático | `11-scripts-y-espacio-de-trabajo.md` |
+| Claude Code — plan de ejecución | `12-plan-de-ejecucion.md` |
 
 ## Flujo sugerido
 
@@ -26,7 +27,7 @@ Cliente de escritorio para explorar y consultar bases de datos **PostgreSQL, Mar
 2. Generar la maqueta en Claude Design con `10-prompt-claude-design.md` (adjuntando `04-interfaz.md`). Ajustar `04-interfaz.md` si la maqueta cambia algo.
 3. En Claude Code, abrir `C:\Coding\db-explorer` y pedir:
    > Lee todos los archivos de `specs/` y construye el hito M0 de `09-plan-de-implementacion.md`. Al terminar cada hito, verifica sus criterios de aceptación y detente para que revise.
-4. Avanzar hito por hito (M0 → M8). Cada hito deja la app funcionando.
+4. Avanzar hito por hito (M0 → M9). Cada hito deja la app funcionando.
 
 ## Reglas generales para Claude Code
 

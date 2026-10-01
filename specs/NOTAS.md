@@ -36,8 +36,8 @@ Completado. Criterios de aceptación verificados:
 
 ### Pendientes / avisos
 - **Docker no está instalado** en este equipo: `test/integration/docker-compose.yml` (Postgres 16, MariaDB 11, SQL Server 2022) está listo pero no se ha levantado. `npm run test:integration` pasa sin pruebas hasta M2.
-- `npm run package` tiene una configuración mínima de `electron-builder` (NSIS + portable); no se ha ejecutado. Fuses, iconos y nombre final se hacen en M8.
-- El bundle del renderer pesa ~645 kB sin minificar por dividir; se revisará al medir arranque en M8.
+- `npm run package` tiene una configuración mínima de `electron-builder` (NSIS + portable); no se ha ejecutado. Fuses, iconos y nombre final se hacen en M9.
+- El bundle del renderer pesa ~645 kB sin minificar por dividir; se revisará al medir arranque en M9.
 
 ---
 
@@ -79,7 +79,7 @@ Completado con datos falsos (tomados de `specs/maqueta`). Criterios de aceptaci�
 ### Pendientes / avisos
 - Los datos de ejemplo (`renderer/sample/`, `stores/sample-store.ts`) se eliminan a medida que lleguen datos reales (M2 conexiones, M3 editor/resultados, M5 archivos).
 - No se persiste el tamaño/posición de la ventana (no lo pide la spec); se puede añadir a `ui-state.json` si se desea.
-- El bundle del renderer pesa ~1,1 MB sin dividir; se revisará en M8.
+- El bundle del renderer pesa ~1,1 MB sin dividir; se revisará en M9.
 
 ---
 
@@ -180,7 +180,7 @@ Completado. Criterios de aceptación verificados:
 - **"Cargar todo"** trae hasta 100 000 filas y, si el resultado sigue, pregunta antes de traer el resto (actualizado en `06`).
 - **El splitter vive en `src/shared/splitter`** (`05` es más específico que la estructura de `02`, que se actualizó).
 - **Canales del espacio de trabajo con prefijo `fs:`** (`fs:open-workspace`, `fs:new-script`…), porque `02` fija los dominios `conn/meta/query/fs/settings/app`.
-- **`settings.json`** se lee al iniciar y se modifica conservando comentarios (`jsonc-parser`); en M3 solo lo cambia la app (conmutar Autoguardado). La UI de Preferencias es de M8 y la edición con esquema, de M6.
+- **`settings.json`** se lee al iniciar y se modifica conservando comentarios (`jsonc-parser`); en M3 solo lo cambia la app (conmutar Autoguardado). La UI de Preferencias es de M9 y la edición con esquema, de M6.
 - **Espacio configurado inexistente**: se usa el predeterminado sin preguntar; el modal "No se encuentra el espacio de trabajo" es de M5.
 - **Scripts nuevos con CRLF** (Windows primero, D12); los existentes conservan su fin de línea y BOM.
 - **Confirmación de Producción**: usa `confirmWrites` de la conexión (activado por defecto en Producción); "No volver a preguntar en esta pestaña" dura hasta cerrar la pestaña. En conexiones de solo lectura las escrituras se bloquean en el cliente con un aviso.
@@ -191,11 +191,11 @@ Completado. Criterios de aceptación verificados:
 - En Chromium reciente `scrollIntoView` devuelve una promesa: los efectos de React que lo llaman usan llaves (un efecto solo puede devolver su función de limpieza).
 
 ### Pendientes / avisos
-- **Explicar plan** (Ctrl+Alt+E) está en `05`, pero no en ningún hito de `09`: el botón muestra "todavía no disponible". Falta decidir en qué hito se agrega.
+- **Explicar plan** (Ctrl+Alt+E): hito M8 (ver más abajo); hasta entonces el botón muestra "todavía no disponible".
 - **Comparar** (diff) en el aviso de cambio externo y **renombrar con F2** la pestaña: M5, junto con el watcher y las operaciones de archivos (por ahora Sobrescribir / Recargar).
 - Formateo SQL (Shift+Alt+F), autocompletado, hover y F12: M6. Modo de transacción manual, Copiar como, Exportar a archivo, formato por columna y filtrar por valor: M7.
 - La pestaña de objeto sigue con datos de ejemplo (M7); por eso se conserva la grilla de maqueta `ResultsGrid.tsx`.
-- El chunk de Monaco pesa ~7,8 MB sin minificar; se revisará al medir el arranque (M8).
+- El chunk de Monaco pesa ~7,8 MB sin minificar; se revisará al medir el arranque (M9).
 
 ### Checklist manual de atajos (`05`)
 Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarlos a mano con `npm run dev`.
@@ -226,3 +226,9 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 - **Menú contextual del editor propio** en lugar del de Monaco: el de Monaco no admite submenús ni marcas ✓ y en tema claro se confundía con el fondo. El nuevo usa el componente de menú de la app (borde `border.menu` y sombra) con las mismas opciones que tenía, más el submenú del separador. Al cerrar un menú contextual, el foco vuelve a donde estaba (en el editor, al área de texto).
 - **Cursor desplazado al escribir** (corregido): Monaco medía los caracteres antes de que cargara Cascadia Code; ahora se espera la fuente y se vuelve a medir si carga tarde.
 - **Vistas Texto y Registro eliminadas** a pedido del usuario: los resultados se muestran siempre en la grilla. Se quitó el selector Grilla / Texto / Registro de la barra de resultados y de `04` §10.
+
+## Ajustes solicitados (2026-10-01): plan de ejecución
+
+- El usuario pidió la **versión completa** de *Explicar plan*. Se especifica en la nueva `12-plan-de-ejecucion.md` y se agrega al alcance (`01`).
+- Nuevo hito **M8 — Plan de ejecución**, después de M7 (usa los cuatro motores y el `SAVEPOINT` del modo manual) y antes del empaquetado, que pasa a ser **M9**. Se actualizaron las referencias a M8 en specs, NOTAS y comentarios del código.
+- Decisiones de la spec: comando nuevo *Explicar y ejecutar* (Ctrl+Alt+Shift+E) que revierte siempre las escrituras; en SQLite solo hay plan estimado; MySQL usa el formato `TREE` (su `EXPLAIN ANALYZE` no da JSON) y MariaDB el JSON; umbrales de avisos fijos, sin configuración; el diagrama gráfico queda fuera de v1.
