@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, nativeTheme, safeStorage } from 'electron';
+import { app, BrowserWindow, Menu, nativeTheme, safeStorage, shell } from 'electron';
 import { join } from 'node:path';
 import type { IpcEventChannel } from '@shared/channels';
 import type { IpcEventPayload } from '@shared/ipc';
@@ -64,7 +64,9 @@ if (!app.requestSingleInstanceLock()) {
 
     const settings = new SettingsStore(join(userData, 'settings.json'));
     await settings.load();
-    const workspace = new WorkspaceService(userData, join(app.getPath('documents'), 'DB Explorer'));
+    const workspace = new WorkspaceService(userData, join(app.getPath('documents'), 'DB Explorer'), (path) =>
+      shell.trashItem(path),
+    );
 
     dbHost.start();
     registerIpcHandlers({ dbHost, uiState });

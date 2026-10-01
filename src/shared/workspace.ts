@@ -62,6 +62,8 @@ export interface WorkspaceInfo {
   state: WorkspaceState | null;
   /** Archivos del estado que ya no existen (se omiten de las pestañas). */
   missing: string[];
+  /** La carpeta configurada no existe (unidad desconectada, borrada): no se abrió (specs/11 §2). */
+  unavailable?: boolean;
 }
 
 export interface ScriptFile {
@@ -79,4 +81,49 @@ export interface FileNode {
   path: string;
   dir: boolean;
   children?: FileNode[];
+}
+
+/** Nombres reservados de Windows (con o sin extensión). */
+const RESERVED_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
+
+/**
+ * Valida un nombre de archivo o carpeta (una sola parte de ruta). Devuelve el
+ * motivo si no es válido, en español, o `null` si lo es (reglas de Windows).
+ */
+export function invalidFileName(name: string): string | null {
+  if (name.trim() === '') return 'Escribe un nombre.';
+  if (name === '.' || name === '..') return 'El nombre no puede ser "." ni "..".';
+  if (/[\/:*?"<>|]/.test(name)) return 'El nombre no puede contener \ / : * ? " < > |';
+  // Caracteres de control (U+0000 a U+001F): inválidos en Windows.
+  for (const ch of name) if (ch.charCodeAt(0) < 32) return 'El nombre contiene caracteres no válidos.';
+  if (/[. ]$/.test(name)) return 'El nombre no puede terminar en punto ni en espacio.';
+  if (RESERVED_NAMES.test(name)) return `"${name}" es un nombre reservado de Windows.`;
+  if (name.length > 255) return 'El nombre es demasiado largo.';
+  return null;
+}
+
+/** Nombre para un archivo nuevo: se agrega `.sql` si no se escribió extensión (specs/07). */
+export function withDefaultExtension(name: string): string {
+  return /\.[^.\/]+$/.test(name.trim()) ? name.trim() : `${name.trim()}.sql`;
+}
+
+/** Nombre libre para una copia: "x copia.sql", "x copia 2.sql"… (specs/07). */
+export function copyName(name: string, exists: (candidate: string) => boolean): string {
+  if (!exists(name)) return name;
+  const dot = name.lastIndexOf('.');
+  const hasExt = dot > 0;
+  const base = hasExt ? name.slice(0, dot) : name;
+  const ext = hasExt ? name.slice(dot) : '';
+  for (let n = 1; ; n++) {
+    const candidate = `${base} copia${n > 1 ? ` ${n}` : ''}${ext}`;
+    if (!exists(candidate)) return candidate;
+  }
+}
+
+/** Extensiones que se abren en el editor (specs/07); las demás, con la aplicación del sistema. */
+export const TEXT_EXTENSIONS = ['sql', 'txt', 'json', 'md', 'csv', 'log', 'xml', 'yml', 'yaml'] as const;
+
+export function isTextFile(name: string): boolean {
+  const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
+  return name.includes('.') && (TEXT_EXTENSIONS as readonly string[]).includes(ext);
 }

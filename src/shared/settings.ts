@@ -17,6 +17,12 @@ export const SETTINGS_SCHEMA = {
   'files.autoSave': Bool,
   'files.autoSaveDelay': z.number().int().min(1000).max(60_000),
   'scripts.deleteEmptyOnClose': Bool,
+  /** Nombres que no se muestran en la vista Archivos (specs/07). */
+  'files.exclude': z.array(z.string().min(1).max(255)).max(200),
+  /** Pedir confirmación al mover archivos arrastrando en el árbol. */
+  'files.confirmDragAndDrop': Bool,
+  /** Seleccionar en el árbol el archivo de la pestaña activa. */
+  'files.autoReveal': Bool,
   /** Qué separa las sentencias de un script: solo el punto y coma, o también una línea en blanco. */
   'sql.statementSeparator': z.enum(['semicolon', 'blankLine']),
 
@@ -56,6 +62,9 @@ export const DEFAULT_SETTINGS: Settings = {
   'files.autoSave': true,
   'files.autoSaveDelay': 5000,
   'scripts.deleteEmptyOnClose': true,
+  'files.exclude': ['.git', 'node_modules', '.DS_Store', 'Thumbs.db'],
+  'files.confirmDragAndDrop': true,
+  'files.autoReveal': true,
   'sql.statementSeparator': 'semicolon',
 
   'results.maxRows': 500,

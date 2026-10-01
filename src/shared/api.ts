@@ -26,11 +26,24 @@ export interface DbExplorerApi {
     saveState: Invoke<'fs:save-workspace-state'>;
     newScript: Invoke<'fs:new-script'>;
     listFiles: Invoke<'fs:list-files'>;
+    switch: Invoke<'fs:switch-workspace'>;
+    recent: Invoke<'fs:recent-workspaces'>;
+    pickFolder: Invoke<'fs:pick-folder'>;
   };
   fs: {
     readScript: Invoke<'fs:read-script'>;
     writeScript: Invoke<'fs:write-script'>;
     deleteEmptyScript: Invoke<'fs:delete-empty-script'>;
+    listDir: Invoke<'fs:list-dir'>;
+    create: Invoke<'fs:create'>;
+    rename: Invoke<'fs:rename'>;
+    move: Invoke<'fs:move'>;
+    copy: Invoke<'fs:copy'>;
+    trash: Invoke<'fs:trash'>;
+    reveal: Invoke<'fs:reveal'>;
+    openExternal: Invoke<'fs:open-external'>;
+    openFileDialog: Invoke<'fs:open-file-dialog'>;
+    saveAs: Invoke<'fs:save-as'>;
   };
   conn: {
     list: Invoke<'conn:list'>;

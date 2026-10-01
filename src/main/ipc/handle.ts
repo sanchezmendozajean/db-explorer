@@ -4,7 +4,12 @@ import type { IpcInvokeChannel } from '@shared/channels';
 import type { IpcError, IpcErrorCode, IpcRequest, IpcResponse, IpcResult } from '@shared/ipc';
 import { ipcInvokeContract } from '@shared/ipc';
 import { DbHostRequestError, DbHostTimeoutError, DbHostUnavailableError } from '../services/db-host-client';
-import { FileAccessError, FileConflictError } from '../services/workspace-service';
+import {
+  FileAccessError,
+  FileConflictError,
+  FileExistsError,
+  InvalidNameError,
+} from '../services/workspace-service';
 import { isTrustedRendererUrl } from '../security';
 
 export type Handler<C extends IpcInvokeChannel> = (
@@ -34,6 +39,8 @@ export function toIpcError(err: unknown): IpcError {
   }
   if (err instanceof FileConflictError) return { code: 'conflict', message: err.message };
   if (err instanceof FileAccessError) return { code: 'forbidden', message: err.message };
+  if (err instanceof FileExistsError) return { code: 'exists', message: err.message };
+  if (err instanceof InvalidNameError) return { code: 'invalid-name', message: err.message };
   const errno = (err as NodeJS.ErrnoException | null)?.code;
   if (errno === 'ENOENT') return { code: 'not-found', message: 'El archivo no existe' };
   return { code: 'internal', message: err instanceof Error ? err.message : 'Error interno' };

@@ -8,6 +8,8 @@ import { SettingsStore } from '../../src/main/services/settings-store';
 import {
   FileAccessError,
   FileConflictError,
+  FileExistsError,
+  InvalidNameError,
   WorkspaceService,
 } from '../../src/main/services/workspace-service';
 
@@ -63,12 +65,23 @@ describe('WorkspaceService', () => {
     return { ws, root, userData, info };
   }
 
-  it('crea el espacio predeterminado y lo usa si el configurado no existe', async () => {
+  it('crea el espacio predeterminado; si el configurado no existe lo informa sin abrirlo', async () => {
     const { root, info, ws } = await setup();
     expect(existsSync(root)).toBe(true);
     expect(info).toMatchObject({ path: root, name: 'DB Explorer', state: null, missing: [] });
-    const other = await ws.open(join(root, 'no-existe'));
-    expect(other.path).toBe(root);
+    const missing = join(root, 'no-existe');
+    expect(await ws.open(missing)).toMatchObject({ path: missing, unavailable: true });
+    expect(ws.root).toBe(root);
+    // "Usar el predeterminado" abre el de siempre sin cambiar la configuración.
+    expect((await ws.open(missing, { useDefault: true })).path).toBe(root);
+  });
+
+  it('recuerda los espacios recientes (el último primero, sin duplicados)', async () => {
+    const { ws, root } = await setup();
+    const other = tempDir();
+    await ws.open(other);
+    await ws.open(root);
+    expect(await ws.recent()).toEqual([root, other]);
   });
 
   it('crea Script-N.sql con el menor número libre', async () => {
@@ -160,5 +173,72 @@ describe('WorkspaceService', () => {
       }),
     ).toMatchObject({ tabs: [{ file: 'a.sql' }], activeTab: 0 });
     expect(parseWorkspaceState(null)).toBeNull();
+  });
+});
+
+describe('operaciones de la vista Archivos', () => {
+  async function setup() {
+    const root = join(tempDir(), 'DB Explorer');
+    const trashed: string[] = [];
+    const ws = new WorkspaceService(tempDir(), root, async (p) => {
+      trashed.push(p);
+      rmSync(p, { recursive: true, force: true });
+    });
+    await ws.open(null);
+    return { ws, root, trashed };
+  }
+
+  it('lista carpetas primero, sin los excluidos ni los temporales', async () => {
+    const { ws, root } = await setup();
+    mkdirSync(join(root, 'zeta'));
+    mkdirSync(join(root, '.git'));
+    writeFileSync(join(root, 'a.sql'), '');
+    writeFileSync(join(root, 'b.sql.1a2b.tmp'), '');
+    writeFileSync(join(root, '.env'), '');
+    expect((await ws.listDir(root)).map((n) => n.name)).toEqual(['zeta', '.env', 'a.sql']);
+  });
+
+  it('crea, renombra (también solo mayúsculas) y valida nombres', async () => {
+    const { ws, root } = await setup();
+    const dir = await ws.create(root, 'consultas', 'folder');
+    const file = await ws.create(dir, 'ventas.sql', 'file');
+    expect(existsSync(file)).toBe(true);
+    await expect(ws.create(dir, 'ventas.sql', 'file')).rejects.toBeInstanceOf(FileExistsError);
+    await expect(ws.create(dir, 'a:b.sql', 'file')).rejects.toBeInstanceOf(InvalidNameError);
+    await expect(ws.create(dir, 'CON', 'file')).rejects.toBeInstanceOf(InvalidNameError);
+    const renamed = await ws.rename(file, 'Ventas.sql');
+    expect(renamed).toBe(join(dir, 'Ventas.sql'));
+    await ws.create(dir, 'otro.sql', 'file');
+    await expect(ws.rename(renamed, 'otro.sql')).rejects.toBeInstanceOf(FileExistsError);
+  });
+
+  it('mueve, copia con sufijo " copia" y no mete una carpeta dentro de sí misma', async () => {
+    const { ws, root } = await setup();
+    const dir = await ws.create(root, 'carpeta', 'folder');
+    const file = await ws.create(root, 'x.sql', 'file');
+    expect(await ws.move([file], dir)).toEqual([{ from: file, to: join(dir, 'x.sql') }]);
+    const copies = await ws.copy([join(dir, 'x.sql'), join(dir, 'x.sql')], dir);
+    expect(copies).toEqual([join(dir, 'x copia.sql'), join(dir, 'x copia 2.sql')]);
+    await expect(ws.move([dir], dir)).rejects.toBeInstanceOf(FileAccessError);
+    await expect(ws.copy([dir], join(dir))).rejects.toBeInstanceOf(FileAccessError);
+  });
+
+  it('elimina enviando a la papelera y nunca fuera del espacio', async () => {
+    const { ws, root, trashed } = await setup();
+    const file = await ws.create(root, 'borrar.sql', 'file');
+    await ws.trash([file]);
+    expect(trashed).toEqual([file]);
+    await expect(ws.trash([root])).rejects.toBeInstanceOf(FileAccessError);
+    await expect(ws.trash([join(root, '..', 'fuera.sql')])).rejects.toBeInstanceOf(FileAccessError);
+    await expect(ws.listDir(join(root, '..'))).rejects.toBeInstanceOf(FileAccessError);
+  });
+
+  it('lee y guarda archivos de fuera del espacio solo si se eligieron con el diálogo', async () => {
+    const { ws } = await setup();
+    const outside = join(tempDir(), 'externo.sql');
+    writeFileSync(outside, 'select 1;');
+    await expect(ws.readScript(outside)).rejects.toBeInstanceOf(FileAccessError);
+    ws.allow(outside);
+    expect((await ws.readScript(outside)).content).toBe('select 1;');
   });
 });

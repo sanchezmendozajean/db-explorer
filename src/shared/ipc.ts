@@ -140,6 +140,15 @@ export const WriteScriptSchema = z.object({
   force: z.boolean().optional(),
 });
 
+const FilePaths = z.array(FilePath).min(1).max(1000);
+
+export const SaveAsSchema = z.object({
+  /** Nombre sugerido en el diálogo (se abre en la carpeta del espacio o la del archivo). */
+  defaultPath: FilePath,
+  content: z.string().max(100_000_000),
+  bom: z.boolean(),
+});
+
 export const ipcInvokeContract = {
   'app:ping': { request: PingRequestSchema, response: PingResultSchema },
   'app:get-ui-state': { request: Empty, response: UiStateSchema },
@@ -160,7 +169,11 @@ export const ipcInvokeContract = {
   },
   'settings:get': { request: Empty, response: z.custom<Settings>() },
   'settings:update': { request: SettingsUpdateSchema, response: z.custom<Settings>() },
-  'fs:open-workspace': { request: Empty, response: z.custom<WorkspaceInfo>() },
+  'fs:open-workspace': {
+    /** `useDefault`: abrir el predeterminado sin cambiar la configuración (espacio no disponible). */
+    request: z.object({ useDefault: z.boolean().optional() }),
+    response: z.custom<WorkspaceInfo>(),
+  },
   'fs:save-workspace-state': { request: WorkspaceStateSchema, response: Empty },
   'fs:new-script': { request: Empty, response: z.object({ path: z.string() }) },
   'fs:list-files': { request: Empty, response: z.custom<FileNode[]>() },
@@ -169,6 +182,44 @@ export const ipcInvokeContract = {
   'fs:delete-empty-script': {
     request: z.object({ path: FilePath }),
     response: z.object({ deleted: z.boolean() }),
+  },
+  'fs:list-dir': { request: z.object({ path: FilePath }), response: z.custom<FileNode[]>() },
+  'fs:create': {
+    request: z.object({ dir: FilePath, name: z.string().min(1).max(255), kind: z.enum(['file', 'folder']) }),
+    response: z.object({ path: z.string() }),
+  },
+  'fs:rename': {
+    request: z.object({ path: FilePath, name: z.string().min(1).max(255) }),
+    response: z.object({ path: z.string() }),
+  },
+  'fs:move': {
+    request: z.object({ paths: FilePaths, targetDir: FilePath }),
+    response: z.object({ moved: z.array(z.object({ from: z.string(), to: z.string() })) }),
+  },
+  'fs:copy': {
+    request: z.object({ paths: FilePaths, targetDir: FilePath }),
+    response: z.object({ created: z.array(z.string()) }),
+  },
+  'fs:trash': { request: z.object({ paths: FilePaths }), response: Empty },
+  'fs:reveal': { request: z.object({ path: FilePath }), response: Empty },
+  'fs:open-external': { request: z.object({ path: FilePath }), response: Empty },
+  'fs:pick-folder': {
+    request: z.object({ title: z.string().max(200) }),
+    response: z.object({ path: z.string().nullable() }),
+  },
+  'fs:switch-workspace': {
+    /** `null` = volver al predeterminado (quita `workspace.path`). */
+    request: z.object({ path: FilePath.nullable() }),
+    response: z.custom<WorkspaceInfo>(),
+  },
+  'fs:recent-workspaces': { request: Empty, response: z.object({ paths: z.array(z.string()) }) },
+  'fs:open-file-dialog': {
+    request: z.object({ title: z.string().max(200) }),
+    response: z.object({ path: z.string().nullable() }),
+  },
+  'fs:save-as': {
+    request: SaveAsSchema,
+    response: z.object({ path: z.string().nullable(), mtimeMs: z.number() }),
   },
   'conn:list': { request: Empty, response: ConnectionListSchema },
   'conn:save': { request: SaveConnectionSchema, response: z.object({ config: ConnectionConfigSchema }) },
@@ -195,6 +246,8 @@ export const ipcEventContract = {
   /** La ventana se va a cerrar: el renderer guarda y responde con `app:close-ready`. */
   'app:before-close': Empty,
   'settings:changed': z.custom<Settings>(),
+  /** Rutas del espacio que cambiaron en disco (watcher, agrupadas cada 200 ms). */
+  'fs:changed': z.object({ paths: z.array(z.string()) }),
   'query:event': z.custom<QueryEvent>(),
 } as const satisfies Record<IpcEventChannel, z.ZodType>;
 
@@ -219,7 +272,11 @@ export type IpcErrorCode =
   /** La sesión ya está ejecutando otra consulta. */
   | 'busy'
   /** El archivo cambió en disco desde la última lectura. */
-  | 'conflict';
+  | 'conflict'
+  /** Ya existe un archivo o carpeta con ese nombre. */
+  | 'exists'
+  /** Nombre de archivo no válido. */
+  | 'invalid-name';
 
 export interface IpcError {
   code: IpcErrorCode;
