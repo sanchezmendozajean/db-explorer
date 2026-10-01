@@ -6,7 +6,7 @@ import type { DbSession, StatementOutcome, StatementSink } from '../types';
 import { DriverError } from '../types';
 import { commandOf, isDml } from '../common';
 import { toMariaDbError } from './errors';
-import { describeFields, toCell, typeCast } from './mariadb-types';
+import { createTypeCast, describeFields, toCell } from './mariadb-types';
 
 interface Waiter {
   resolve: (truncated: boolean) => void;
@@ -18,15 +18,23 @@ interface Running {
   sql: string;
   sink: StatementSink;
   buffer: CellValue[][];
+  /** Filas que faltan para el límite del resultado actual (`null` = sin límite). */
   remaining: number | null;
+  /** Se llegó al límite: la próxima fila indica que el resultado quedó truncado. */
   peeking: boolean;
   lookahead: CellValue[] | null;
+  /** Socket en pausa por el límite; las filas del bloque ya recibido esperan en `overflow`. */
+  holding: boolean;
+  overflow: CellValue[][];
+  /** Filas entregadas en la llamada actual (ejecutar o "Cargar más"). */
   loaded: number;
   limit: number | null;
   results: number;
   affected: number | undefined;
   warnings: number;
-  completed: boolean;
+  /** La consulta terminó en el servidor (fin o error). */
+  ended: boolean;
+  error: Error | null;
   discarding: boolean;
   waiter: Waiter | null;
   finished: Promise<void>;
@@ -36,6 +44,10 @@ interface Running {
  * Sesión de editor de MariaDB/MySQL sobre una conexión `mysql2` dedicada. Las
  * filas se leen en flujo; al llegar al límite se pausa el socket y la consulta
  * queda como cursor. Cancelar usa `KILL QUERY` desde la conexión de metadatos.
+ *
+ * Al pausar el socket, las filas que ya venían en el bloque recibido se
+ * siguen procesando: se guardan en `overflow` y se entregan primero en el
+ * siguiente "Cargar más".
  */
 export class MariaDbSession implements DbSession {
   private running: Running | null = null;
@@ -75,26 +87,31 @@ export class MariaDbSession implements DbSession {
       remaining: maxRows,
       peeking: false,
       lookahead: null,
+      holding: false,
+      overflow: [],
       loaded: 0,
       limit: maxRows,
       results: 0,
       affected: undefined,
       warnings: 0,
-      completed: false,
+      ended: false,
+      error: null,
       discarding: false,
       waiter: null,
       finished: new Promise<void>((resolve) => (complete = resolve)),
     };
     this.running = state;
     this.cancelling = false;
+    const cast = createTypeCast();
     let truncated: boolean;
     try {
       truncated = await new Promise<boolean>((resolve, reject) => {
         state.waiter = { resolve, reject };
-        const query = this.connection.query({ sql, rowsAsArray: true, typeCast });
+        const query = this.connection.query({ sql, rowsAsArray: true, typeCast: cast.typeCast });
         query.on('fields', (fields: FieldPacket[] | undefined) => {
           this.flush(state);
           if (!fields) return;
+          cast.setFields(fields);
           state.results++;
           state.peeking = false;
           state.remaining = state.limit;
@@ -109,16 +126,22 @@ export class MariaDbSession implements DbSession {
           }
           this.onRow(state, row.map(toCell));
         });
-        query.on('error', (err: Error) => this.finish(state, err));
+        query.on('error', (err: Error) => {
+          this.finish(state, err);
+          complete();
+        });
         query.on('end', () => {
           this.finish(state);
           complete();
         });
       });
-    } finally {
-      if (state.completed) this.running = null;
+    } catch (err) {
+      this.running = null;
+      throw err;
     }
-    if (state.warnings > 0) await this.showWarnings(sink);
+    if (!state.holding) this.running = null;
+    // Con el cursor abierto la conexión está ocupada: los avisos solo vienen de respuestas OK (sin filas).
+    if (state.warnings > 0 && !state.holding) await this.showWarnings(sink);
     const dml = state.results === 0 && isDml(command);
     return {
       command,
@@ -130,43 +153,67 @@ export class MariaDbSession implements DbSession {
 
   async fetchMore(count: number | null, sink: StatementSink): Promise<{ loaded: number; hasMore: boolean }> {
     const state = this.running;
-    if (!state || state.completed) return { loaded: 0, hasMore: false };
+    if (!state?.holding) return { loaded: 0, hasMore: false };
     state.sink = sink;
     state.loaded = 0;
     state.limit = count;
-    if (state.lookahead) {
-      sink.rows([state.lookahead]);
-      state.lookahead = null;
-      state.loaded = 1;
+    state.remaining = count;
+    state.peeking = count === 0;
+    state.holding = false;
+    // Primero la fila de más y las que ya habían llegado; si alcanzan para el límite, el socket sigue en pausa.
+    const pending = [state.lookahead!, ...state.overflow];
+    state.lookahead = null;
+    state.overflow = [];
+    while (pending.length > 0) {
+      const row = pending.shift()!;
+      if (state.holding) state.overflow.push(row);
+      else this.deliver(state, row);
     }
-    state.remaining = count === null ? null : count - state.loaded;
-    state.peeking = state.remaining === 0;
     let hasMore: boolean;
-    try {
-      hasMore = await new Promise<boolean>((resolve, reject) => {
-        state.waiter = { resolve, reject };
-        this.connection.resume();
-      });
-    } finally {
-      if (state.completed) this.running = null;
+    if (state.holding) {
+      this.flush(state);
+      hasMore = true;
+    } else if (state.ended) {
+      this.flush(state);
+      this.running = null;
+      this.socket().resume();
+      if (state.error) throw this.toError(state, state.error);
+      hasMore = false;
+    } else {
+      try {
+        hasMore = await new Promise<boolean>((resolve, reject) => {
+          state.waiter = { resolve, reject };
+          this.socket().resume();
+        });
+      } catch (err) {
+        this.running = null;
+        throw err;
+      }
     }
+    if (!state.holding) this.running = null;
     return { loaded: state.loaded, hasMore };
   }
 
   async closeCursor(): Promise<void> {
     const state = this.running;
     this.running = null;
-    if (!state || state.completed) return;
+    if (!state) return;
+    if (state.ended) {
+      // Todo llegó en el bloque recibido: solo falta reanudar el socket para la siguiente consulta.
+      if (state.holding) this.socket().resume();
+      return;
+    }
     // Se descarta el resto: KILL QUERY corta el envío en el servidor y se drena lo que ya llegó.
     state.discarding = true;
     state.waiter = null;
+    state.overflow = [];
     await this.killQuery(this.connection.threadId).catch(() => undefined);
-    this.connection.resume();
+    this.socket().resume();
     await state.finished;
   }
 
   async cancel(): Promise<void> {
-    if (!this.running || this.running.completed) return;
+    if (!this.running || this.running.ended) return;
     this.cancelling = true;
     await this.killQuery(this.connection.threadId);
   }
@@ -183,12 +230,23 @@ export class MariaDbSession implements DbSession {
     });
   }
 
+  private socket(): NodeJS.ReadableStream {
+    return (this.connection as unknown as { stream: NodeJS.ReadableStream }).stream;
+  }
+
   private onRow(state: Running, cells: CellValue[]): void {
     if (state.discarding) return;
+    if (state.holding) state.overflow.push(cells);
+    else this.deliver(state, cells);
+  }
+
+  private deliver(state: Running, cells: CellValue[]): void {
     if (state.peeking) {
       state.peeking = false;
       state.lookahead = cells;
-      this.connection.pause();
+      state.holding = true;
+      this.flush(state);
+      this.socket().pause();
       const waiter = state.waiter;
       state.waiter = null;
       waiter?.resolve(true);
@@ -211,19 +269,23 @@ export class MariaDbSession implements DbSession {
   }
 
   private finish(state: Running, err?: Error): void {
-    if (state.completed) return;
-    state.completed = true;
-    this.flush(state);
+    if (state.ended) return;
+    state.ended = true;
+    state.error = err ?? null;
+    if (!state.holding) this.flush(state);
     const waiter = state.waiter;
     state.waiter = null;
     if (!waiter) return;
-    if (err) {
-      waiter.reject(
-        this.cancelling ? new DriverError('Consulta cancelada', 'cancelled') : toMariaDbError(err, state.sql),
-      );
-    } else {
-      waiter.resolve(false);
-    }
+    if (err) waiter.reject(this.toError(state, err));
+    // `KILL QUERY` sobre `SLEEP()` no da error (devuelve 1): si se pidió cancelar, se informa como cancelada.
+    else if (this.cancelling) waiter.reject(new DriverError('Consulta cancelada', 'cancelled'));
+    else waiter.resolve(false);
+  }
+
+  private toError(state: Running, err: Error): DriverError {
+    return this.cancelling
+      ? new DriverError('Consulta cancelada', 'cancelled')
+      : toMariaDbError(err, state.sql);
   }
 
   /** Avisos del servidor (división por cero, truncamientos…) como mensajes. */

@@ -50,11 +50,10 @@ const STRING_TYPES = new Set([
   'GEOMETRY',
 ]);
 
-/** Campo tal como lo recibe `typeCast` (el objeto real es la definición de columna completa). */
+/** Campo tal como lo recibe `typeCast`: un envoltorio por columna, sin juego de caracteres. */
 interface CastField {
   type: string;
   length: number;
-  characterSet?: number;
   string(): string | null;
   buffer(): Buffer | null;
 }
@@ -64,33 +63,55 @@ interface CastField {
  * bits como número, BIT(1) como booleano, binarios como `0x…` y todo lo
  * demás (decimales, BIGINT, fechas, JSON, flotantes) como texto crudo del
  * servidor, sin pérdida de precisión ni cambio de zona.
+ *
+ * El envoltorio no dice si una columna es binaria: se toma de las
+ * definiciones de columna del evento `fields` (`setFields`). `mysql2` crea
+ * un envoltorio por columna y lo reutiliza en cada fila, así que el orden en
+ * que aparecen la primera vez da el índice de la columna.
  */
-export function typeCast(field: CastField, next: () => unknown): unknown {
-  void next;
-  switch (field.type) {
-    case 'TINY':
-    case 'SHORT':
-    case 'LONG':
-    case 'INT24':
-    case 'YEAR': {
-      const text = field.string();
-      return text === null ? null : Number(text);
-    }
-    case 'BIT': {
-      const bytes = field.buffer();
-      if (!bytes) return null;
-      if (field.length === 1) return bytes[0] === 1;
-      let value = 0n;
-      for (const b of bytes) value = (value << 8n) | BigInt(b);
-      return value.toString();
-    }
-    default:
-      if (STRING_TYPES.has(field.type) && field.characterSet === BINARY_CHARSET) {
-        const bytes = field.buffer();
-        return bytes ? hexText(bytes) : null;
+export function createTypeCast(): {
+  typeCast: (field: CastField, next: () => unknown) => unknown;
+  setFields: (fields: FieldPacket[]) => void;
+} {
+  let binary: boolean[] = [];
+  let indexes = new Map<CastField, number>();
+  return {
+    setFields(fields) {
+      binary = fields.map(isBinary);
+      indexes = new Map();
+    },
+    typeCast(field) {
+      let index = indexes.get(field);
+      if (index === undefined) {
+        index = indexes.size;
+        indexes.set(field, index);
       }
-      return field.string();
-  }
+      switch (field.type) {
+        case 'TINY':
+        case 'SHORT':
+        case 'LONG':
+        case 'INT24':
+        case 'YEAR': {
+          const text = field.string();
+          return text === null ? null : Number(text);
+        }
+        case 'BIT': {
+          const bytes = field.buffer();
+          if (!bytes) return null;
+          if (field.length === 1) return bytes[0] === 1;
+          let value = 0n;
+          for (const b of bytes) value = (value << 8n) | BigInt(b);
+          return value.toString();
+        }
+        default:
+          if (STRING_TYPES.has(field.type) && binary[index]) {
+            const bytes = field.buffer();
+            return bytes ? hexText(bytes) : null;
+          }
+          return field.string();
+      }
+    },
+  };
 }
 
 export function toCell(value: unknown): CellValue {
