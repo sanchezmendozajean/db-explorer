@@ -6,6 +6,7 @@ import type { EditorTab } from '../../stores/workbench-store';
 import { ResultsPanel } from '../results/ResultsPanel';
 import { EditorTabs } from './EditorTabs';
 import { EditorToolbar } from './EditorToolbar';
+import { PreferencesView } from '../preferences/PreferencesView';
 import { ObjectView } from './ObjectView';
 import { SqlEditor } from './SqlEditor';
 import { Watermark } from './Watermark';
@@ -64,7 +65,15 @@ export function EditorGroup(): React.JSX.Element {
     <div className="editor-group">
       <EditorTabs />
       <div className="editor-content">
-        {!tab ? <Watermark /> : tab.kind === 'object' ? <ObjectView tab={tab} /> : <ScriptArea tab={tab} />}
+        {!tab ? (
+          <Watermark />
+        ) : tab.kind === 'object' ? (
+          <ObjectView tab={tab} />
+        ) : tab.kind === 'preferences' ? (
+          <PreferencesView />
+        ) : (
+          <ScriptArea tab={tab} />
+        )}
       </div>
     </div>
   );

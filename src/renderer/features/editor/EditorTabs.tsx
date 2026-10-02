@@ -10,6 +10,9 @@ import { keybindingLabel } from '../../commands/service';
 import { es } from '../../i18n/es';
 import { notAvailable } from '../../app/app-commands';
 import { commands } from '../../commands/service';
+import { isInside } from '../../stores/files-store';
+import { useWorkspaceStore } from '../../stores/workspace-store';
+import { startRename } from '../files/file-actions';
 import { useConnectionsStore } from '../../stores/connections-store';
 import { showToast } from '../../stores/toast-store';
 import { closeTabs } from './scripts';
@@ -19,6 +22,7 @@ import { useWorkbenchStore } from '../../stores/workbench-store';
 const TAB_ICON: Record<EditorTab['kind'], { icon: string; color: string }> = {
   script: { icon: 'file-code', color: 'var(--fg-muted)' },
   object: { icon: 'table', color: 'var(--icon-table)' },
+  preferences: { icon: 'settings-gear', color: 'var(--fg-muted)' },
 };
 
 function tabMenu(tab: EditorTab): MenuEntry[] {
@@ -74,7 +78,23 @@ function tabMenu(tab: EditorTab): MenuEntry[] {
         void commands.execute('db.files.revealActive');
       },
     },
+    {
+      type: 'item',
+      id: 'rename',
+      label: t.rename,
+      disabled: !tab.path || !isInsideWorkspace(tab.path),
+      // Se muestra el archivo en la vista Archivos con el campo de nombre (como F2 en el árbol).
+      run: async () => {
+        useWorkbenchStore.getState().activate(tab.id);
+        await commands.execute('db.files.revealActive');
+        startRename(tab.path);
+      },
+    },
   ];
+}
+
+function isInsideWorkspace(path: string): boolean {
+  return isInside(useWorkspaceStore.getState().path, path);
 }
 
 export function EditorTabs(): React.JSX.Element {

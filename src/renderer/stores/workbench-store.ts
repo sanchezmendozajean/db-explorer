@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type EditorTabKind = 'script' | 'object';
+export type EditorTabKind = 'script' | 'object' | 'preferences';
 
 export interface EditorTab {
   id: string;

@@ -285,6 +285,19 @@ export function registerAppCommands(): () => void {
     })),
 
     { id: 'db.newConnection', category: cat.file, run: () => newConnection() },
+    {
+      id: 'db.preferences',
+      category: cat.file,
+      run: () =>
+        wb().open({
+          id: 'preferences',
+          kind: 'preferences',
+          title: es.preferences.title,
+          tooltip: es.preferences.title,
+          dirty: false,
+          preview: false,
+        }),
+    },
     { id: 'db.help.keybindings', category: cat.help, run: () => overlay().openDialog({ id: 'keybindings' }) },
     { id: 'db.help.about', category: cat.help, run: () => overlay().openDialog({ id: 'about' }) },
     {

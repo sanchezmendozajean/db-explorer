@@ -204,3 +204,18 @@ test('si el espacio no está al iniciar, "Usar el predeterminado" no olvida la r
   await expect(row('Script-1.sql')).toBeVisible();
   expect(settingsJson()).toContain('Otro espacio');
 });
+
+test('Preferencias › Archivos cambia el guardado automático y su retraso', async () => {
+  await page.keyboard.press('Control+,');
+  const prefs = page.getByTestId('preferences');
+  await expect(prefs).toContainText('Espacio de trabajo');
+  await expect(prefs.getByRole('textbox', { name: 'Espacio de trabajo' })).toHaveValue(workspace);
+  await prefs.getByLabel('Retraso (segundos)').fill('10');
+  await prefs.getByLabel('Retraso (segundos)').press('Enter');
+  await expect.poll(settingsJson).toContain('"files.autoSaveDelay": 10000');
+  if (SHOTS) await page.screenshot({ path: join(SHOTS, 'm5-preferencias.png') });
+  await prefs.getByLabel('Guardar automáticamente los scripts').uncheck();
+  await expect.poll(settingsJson).toContain('"files.autoSave": false');
+  await expect(prefs.getByLabel('Retraso (segundos)')).toBeDisabled();
+  await expect(page.getByTestId('autosave-toggle')).toContainText('Autoguardado: no');
+});

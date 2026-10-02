@@ -1258,3 +1258,65 @@ button.statusbar-item:hover {
   font-size: 12px;
   white-space: normal;
 }
+
+/* Preferencias (specs/04 §15) */
+.preferences {
+  height: 100%;
+  overflow: auto;
+  padding: 16px 32px 32px;
+  background: var(--bg-editor);
+}
+
+.pref-heading {
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.pref-group-title {
+  margin: 8px 0 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pref-setting {
+  max-width: 760px;
+  padding: 10px 0;
+}
+
+.pref-title {
+  font-weight: 600;
+}
+
+.pref-description {
+  margin-top: 2px;
+  color: var(--fg-muted);
+}
+
+.pref-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.pref-path {
+  flex: 1;
+  min-width: 260px;
+}
+
+.pref-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.pref-number {
+  width: 90px;
+}
+
+.pref-value {
+  color: var(--fg);
+}

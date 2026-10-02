@@ -245,7 +245,9 @@ async function compareWithDisk(tabId: string): Promise<void> {
     showToast('error', es.scripts.readFailed(fileName(doc.path), r.error.message));
     return;
   }
-  useOverlayStore.getState().openDialog({ id: 'compare', tabId, name: fileName(doc.path), disk: r.data.content });
+  useOverlayStore
+    .getState()
+    .openDialog({ id: 'compare', tabId, name: fileName(doc.path), disk: r.data.content });
 }
 
 /** Descarta los cambios del editor y vuelve a leer el archivo de disco. */
