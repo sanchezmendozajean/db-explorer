@@ -10,7 +10,7 @@ describe('contrato IPC', () => {
 
   it('los canales siguen el prefijo por dominio', () => {
     for (const channel of [...IPC_INVOKE_CHANNELS, ...IPC_EVENT_CHANNELS]) {
-      expect(channel).toMatch(/^(conn|meta|query|fs|settings|app):[a-z-]+$/);
+      expect(channel).toMatch(/^(conn|meta|query|data|fs|settings|app):[a-z-]+$/);
     }
   });
 

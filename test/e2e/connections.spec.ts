@@ -73,7 +73,9 @@ test('conecta y navega bases → esquemas → tablas → columnas', async () => 
   await node(/^dbx$/).dblclick();
   await node(/^Tablas/).dblclick();
   await expect(node(/^Tablas/)).toContainText('(2)');
-  await node(/CRendiciones_Conf_Generales/).dblclick();
+  // Doble clic en una tabla abre su pestaña de objeto: se expande con la flecha.
+  await node(/CRendiciones_Conf_Generales/).click();
+  await page.keyboard.press('ArrowRight');
   await expect(node(/^id/)).toContainText('integer · NOT NULL');
   await expect(node(/^Nombre/)).toBeVisible();
   await expect(node(/^Índices/)).toContainText('(2)');

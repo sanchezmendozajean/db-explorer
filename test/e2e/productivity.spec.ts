@@ -96,14 +96,15 @@ test('hover sobre una tabla muestra sus columnas con tipos', async () => {
   await expect(hover).toContainText('nombre');
 });
 
-test('F12 muestra la tabla bajo el cursor en el árbol de conexiones', async () => {
+test('F12 abre la pestaña de objeto de la tabla bajo el cursor', async () => {
   const sql = 'select * from clientes';
   await typeInEditor(sql);
   await cursorAfter(sql, 'client');
   await page.keyboard.press('F12');
-  const row = page.locator('[data-view="connections"] .tree').getByRole('treeitem', { name: /^clientes/ });
-  await expect(row).toHaveAttribute('aria-selected', 'true');
-  await page.keyboard.press('Control+1');
+  await expect(page.getByTestId('object-view')).toBeVisible();
+  await expect(page.getByRole('tab', { name: /^clientes/ })).toBeVisible();
+  await page.keyboard.press('Control+W');
+  await expect(page.getByTestId('object-view')).toHaveCount(0);
 });
 
 test('Shift+Alt+F formatea el script con el dialecto de la conexión', async () => {
