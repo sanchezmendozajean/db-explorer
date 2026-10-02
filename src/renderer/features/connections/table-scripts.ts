@@ -7,6 +7,8 @@ import type { TreeTarget } from '../../stores/connections-store';
 import { connectionById, useConnectionsStore } from '../../stores/connections-store';
 import { showToast } from '../../stores/toast-store';
 import { newScript } from '../editor/scripts';
+import type { ObjectRefData } from '../objects/object-details';
+import { fetchDdl } from '../objects/object-tabs';
 
 type ObjectNodeRef = Extract<TreeNodeRef, { kind: 'object' }>;
 
@@ -81,4 +83,19 @@ export async function countRows(connectionId: string, ref: ObjectNodeRef): Promi
   });
   if (r.ok) showToast('info', es.tree.countResult(ref.name, r.data.count));
   else showToast('error', r.error.message);
+}
+
+/** Objeto del árbol como lo identifica la pestaña de objeto. */
+export function objectRef(ref: ObjectNodeRef): ObjectRefData {
+  return { database: ref.database, schema: ref.schema, name: ref.name, kind: ref.objectKind };
+}
+
+/** "Nuevo script ▸ DDL": un script con la sentencia de creación del objeto. */
+export async function newDdlScript(connectionId: string, ref: ObjectNodeRef): Promise<void> {
+  try {
+    const ddl = await fetchDdl(connectionId, objectRef(ref));
+    await newScript(targetOfRef(connectionId, ref), `${ddl}\r\n`);
+  } catch (err) {
+    showToast('error', err instanceof Error ? err.message : String(err));
+  }
 }

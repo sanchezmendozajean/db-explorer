@@ -9,7 +9,8 @@ import type { FileNode } from '@shared/workspace';
 import { useFilesStore } from '../../stores/files-store';
 import { useWorkspaceStore } from '../../stores/workspace-store';
 import { openScript } from '../editor/scripts';
-import { cachedObjects, revealObject } from '../editor/catalog';
+import { cachedObjects } from '../editor/catalog';
+import { openCatalogObject } from '../objects/object-tabs';
 import { useConnectionsStore } from '../../stores/connections-store';
 
 /** Íconos de los objetos de BD (mismos que el árbol de conexiones). */
@@ -121,7 +122,7 @@ function quickOpenItems(query: string): PickItem[] {
           .join(' · '),
         group: es.palette.groupObjects,
         match,
-        run: () => revealObject(connectionId, object),
+        run: () => openCatalogObject(connectionId, object),
       });
     }
   }

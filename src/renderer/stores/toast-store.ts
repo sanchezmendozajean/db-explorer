@@ -20,6 +20,8 @@ interface ToastStore {
   toasts: Toast[];
   show: (toast: Omit<Toast, 'id'>) => number;
   dismiss: (id: number) => void;
+  /** Cambia el texto de una notificación visible (p. ej. avance de una exportación). */
+  update: (id: number, message: string) => void;
 }
 
 /** Duración antes de ocultarse sola (specs/04 §14). Los errores no se ocultan solos. */
@@ -36,6 +38,8 @@ export const useToastStore = create<ToastStore>((set, get) => ({
     return id;
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  update: (id, message) =>
+    set((s) => ({ toasts: s.toasts.map((t) => (t.id === id ? { ...t, message } : t)) })),
 }));
 
 export function showToast(

@@ -20,7 +20,6 @@ import {
 import { registerConfigSchema } from '../features/editor/json-schemas';
 import * as fileActions from '../features/files/file-actions';
 import { symbolAt } from '../features/editor/sql-intellisense';
-import { revealObject } from '../features/editor/catalog';
 import {
   changeWorkspace,
   openRecentWorkspace,
@@ -30,6 +29,29 @@ import {
 import { useFilesStore } from '../stores/files-store';
 import { pickConnection, pickDatabaseOrSchema } from '../features/editor/target-pickers';
 import { cancelExecution, executeFromEditor, isRunning } from '../features/execution/execute';
+import { endTransaction, isManual, setTransactionMode } from '../features/execution/transactions';
+import {
+  addRow,
+  canEditActiveGrid,
+  clearSelectedCells,
+  deleteSelectedRows,
+  hasUndo,
+  pasteIntoGrid,
+  saveActiveGrid,
+  setSelectedNull,
+  undoGrid,
+} from '../features/results/grid-commands';
+import { getActiveGrid } from '../features/results/grid-edit';
+import { pendingCount } from '../features/results/edit-state';
+import { tabResults } from '../features/results/results-store';
+import { openCatalogObject } from '../features/objects/object-tabs';
+
+/** Cambios pendientes de la grilla con foco. */
+function activeGridChanges(): number {
+  const grid = getActiveGrid();
+  const result = grid ? tabResults(grid.tabId).results.find((r) => r.id === grid.resultId) : undefined;
+  return result ? pendingCount(result.pending) : 0;
+}
 
 const cat = es.commandCategories;
 
@@ -49,6 +71,7 @@ export function registerAppCommands(): () => void {
     return tab?.kind === 'script' ? tab.id : undefined;
   };
   const hasScript = (): boolean => activeScript() !== undefined;
+  const activeTabId = (): string | undefined => wb().activeId ?? undefined;
   const hasSelection = (): boolean => {
     const selection = activeEditor()?.getSelection();
     return hasScript() && !!selection && !selection.isEmpty();
@@ -223,7 +246,7 @@ export function registerAppCommands(): () => void {
       run: async () => void (await settings().update('sql.statementSeparator', value)),
     })),
 
-    // F12 (specs/05): la tabla o vista bajo el cursor (pestaña de objeto en M7; hoy se muestra en el árbol).
+    // F12 (specs/05): abre la pestaña de objeto de la tabla o vista bajo el cursor.
     {
       id: 'db.goToDefinition',
       category: cat.query,
@@ -238,7 +261,7 @@ export function registerAppCommands(): () => void {
           showToast('info', es.editor.definitionNotFound);
           return;
         }
-        revealObject(symbol.scope.connectionId, symbol.table);
+        openCatalogObject(symbol.scope.connectionId, symbol.table);
       },
     },
 
@@ -304,6 +327,64 @@ export function registerAppCommands(): () => void {
         if (id) await pickDatabaseOrSchema(id);
       },
     },
+    // Modo de transacción (specs/04 §8)
+    {
+      id: 'db.commit',
+      category: cat.query,
+      enabled: () => isManual(activeTabId()),
+      run: () => void endTransaction(activeTabId()!, true),
+    },
+    {
+      id: 'db.rollback',
+      category: cat.query,
+      enabled: () => isManual(activeTabId()),
+      run: () => void endTransaction(activeTabId()!, false),
+    },
+    {
+      id: 'db.toggleAutoCommit',
+      category: cat.query,
+      enabled: hasScript,
+      checked: () => !isManual(activeTabId()),
+      run: () => {
+        const id = activeScript();
+        if (id) void setTransactionMode(id, !isManual(id));
+      },
+    },
+
+    // Edición en la grilla con foco (specs/06 §Edición de datos)
+    {
+      id: 'db.results.save',
+      category: cat.results,
+      enabled: () => canEditActiveGrid() && activeGridChanges() > 0,
+      run: () => saveActiveGrid(),
+    },
+    { id: 'db.results.undo', category: cat.results, enabled: hasUndo, run: () => undoGrid() },
+    {
+      id: 'db.results.clearCells',
+      category: cat.results,
+      enabled: canEditActiveGrid,
+      run: () => clearSelectedCells(),
+    },
+    {
+      id: 'db.results.setNull',
+      category: cat.results,
+      enabled: canEditActiveGrid,
+      run: () => setSelectedNull(),
+    },
+    { id: 'db.results.addRow', category: cat.results, enabled: canEditActiveGrid, run: () => addRow() },
+    {
+      id: 'db.results.deleteRows',
+      category: cat.results,
+      enabled: canEditActiveGrid,
+      run: () => deleteSelectedRows(),
+    },
+    {
+      id: 'db.results.paste',
+      category: cat.results,
+      enabled: canEditActiveGrid,
+      run: () => pasteIntoGrid(),
+    },
+
     {
       id: 'db.reopenClosedTab',
       category: cat.tabs,

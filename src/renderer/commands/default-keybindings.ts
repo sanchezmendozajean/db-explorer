@@ -35,6 +35,15 @@ export const DEFAULT_KEYBINDINGS: readonly KeybindingRule[] = [
   { key: 'shift+alt+c', command: 'db.files.copyPath', when: 'filesFocus && !inputFocus' },
   { key: 'ctrl+k ctrl+shift+c', command: 'db.files.copyRelativePath', when: 'filesFocus && !inputFocus' },
 
+  // Edición en la grilla de resultados (specs/06): solo con la grilla enfocada y sin el editor de celda abierto.
+  { key: 'ctrl+s', command: 'db.results.save', when: 'gridFocus' },
+  { key: 'ctrl+z', command: 'db.results.undo', when: 'gridFocus && !inputFocus' },
+  { key: 'delete', command: 'db.results.clearCells', when: 'gridFocus && !inputFocus' },
+  { key: 'shift+delete', command: 'db.results.setNull', when: 'gridFocus && !inputFocus' },
+  { key: 'alt+insert', command: 'db.results.addRow', when: 'gridFocus' },
+  { key: 'ctrl+delete', command: 'db.results.deleteRows', when: 'gridFocus && !inputFocus' },
+  { key: 'ctrl+v', command: 'db.results.paste', when: 'gridFocus && !inputFocus' },
+
   // Pestañas
   { key: 'ctrl+w', command: 'db.closeTab' },
   { key: 'ctrl+f4', command: 'db.closeTab' },

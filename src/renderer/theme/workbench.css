@@ -761,14 +761,14 @@ kbd {
   border-color: var(--border-focus);
 }
 
-.clause-input span {
+.clause-input > span {
   padding: 0 8px;
   font-size: 11px;
   color: var(--fg-muted);
   border-right: 1px solid var(--border-input);
 }
 
-.clause-input input {
+.clause-input > input {
   flex: 1;
   min-width: 0;
   border: none;
@@ -1371,4 +1371,248 @@ button.statusbar-item:hover {
   align-items: center;
   justify-content: space-between;
   max-width: 760px;
+}
+
+/* ---------- M7: pestaña de objeto, edición, formato y exportación ---------- */
+.object-view {
+  height: 100%;
+}
+
+.clause-editor {
+  flex: 1;
+  min-width: 0;
+  height: 20px;
+  padding-left: 4px;
+}
+
+.clause-editor .monaco-editor,
+.clause-editor .monaco-editor-background,
+.clause-editor .monaco-editor .margin {
+  background: transparent !important;
+}
+
+.object-error {
+  max-width: 80%;
+  color: var(--fg);
+  white-space: pre-wrap;
+}
+
+.structure {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 16px 16px;
+}
+
+.structure-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.structure h3 {
+  margin: 12px 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.structure-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.structure-table th,
+.structure-table td {
+  height: 24px;
+  padding: 0 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.structure-table th {
+  background: var(--bg-grid-header);
+  font-weight: 600;
+}
+
+.structure-table tr:hover td {
+  background: var(--bg-hover);
+}
+
+.structure-table .mono {
+  font-family: var(--font-code);
+  white-space: normal;
+}
+
+.structure-table .num {
+  width: 32px;
+  text-align: right;
+  color: var(--fg-muted);
+}
+
+.structure-table .center {
+  text-align: center;
+}
+
+.structure-empty {
+  color: var(--fg-muted);
+}
+
+.ddl-view {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.ddl-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ddl-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+.readonly-badge,
+.filter-chip,
+.tx-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--fg-muted);
+  border-radius: 10px;
+}
+
+.readonly-badge {
+  cursor: help;
+}
+
+.filter-chip {
+  padding-right: 0;
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  color: var(--fg);
+}
+
+.tx-pending,
+.pending-changes {
+  color: var(--warning);
+}
+
+.sort-notice {
+  font-size: 12px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.grid-tooltip {
+  position: fixed;
+  z-index: 50;
+  max-width: 480px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--bg-menu);
+  border: 1px solid var(--error);
+  border-radius: var(--radius-menu, 4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  white-space: pre-wrap;
+}
+
+.format-popover {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 280px;
+  padding: 10px 12px;
+  background: var(--bg-menu);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.36);
+}
+
+.format-title {
+  font-weight: 600;
+}
+
+.format-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+.format-preview {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: var(--fg-muted);
+  background: var(--bg-input);
+  border-radius: var(--radius-control);
+}
+
+.format-preview code {
+  font-family: var(--font-code);
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.format-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.sql-preview-scroll .sql-preview {
+  max-height: 50vh;
+}
+
+.export-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.export-rows legend {
+  padding: 0 4px;
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.radio.is-disabled {
+  color: var(--fg-disabled);
+}
+
+.export-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }

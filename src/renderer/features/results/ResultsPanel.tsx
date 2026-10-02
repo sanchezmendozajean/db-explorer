@@ -2,14 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import type { ResultColumn } from '@shared/query';
 import { Codicon } from '../../components/Codicon';
-import { IconButton } from '../../components/Button';
+import { Button, IconButton } from '../../components/Button';
 import { Dropdown } from '../../components/Dropdown';
 import { Select, TextInput } from '../../components/Inputs';
 import { Tabs } from '../../components/Tabs';
-import type { MenuEntry } from '../../components/menu-types';
 import { SEPARATOR } from '../../components/menu-types';
 import { es } from '../../i18n/es';
-import { notAvailable } from '../../app/app-commands';
+import { connectionById } from '../../stores/connections-store';
 import { setting, useSettingsStore } from '../../stores/settings-store';
 import { showToast } from '../../stores/toast-store';
 import { useUiStore } from '../../stores/ui-store';
@@ -18,7 +17,11 @@ import { askChoice } from '../dialogs/ask';
 import { loadMore, rerun, revealPosition } from '../execution/execute';
 import type { CopySelection, CopySource } from './copy';
 import { selectedCellCount, selectionToTsv, tableToTsv } from './copy';
-import { separators } from './format';
+import { pendingCount } from './edit-state';
+import { exportResult } from './export-actions';
+import { formatCell, separators } from './format';
+import { addRow, deleteSelectedRows } from './grid-commands';
+import { discardChanges, getActiveGrid, saveChanges, setActiveGrid } from './grid-edit';
 import type { ResultGridHandle, SelectionStats } from './ResultGrid';
 import { ResultGrid } from './ResultGrid';
 import type { MessageEntry, ResultSet } from './results-store';
@@ -51,6 +54,104 @@ async function copySelection(sel: CopySelection, source: CopySource, headers: bo
   await writeClipboard(selectionToTsv(sel, source, { headers, nullAs: setting('results.copy.nullAs') }));
 }
 
+/** "Copiar tabla": todas las filas cargadas y columnas visibles, con orden y filtro (specs/06). */
+async function copyTable(tabId: string, resultId: string, headers: boolean): Promise<void> {
+  const current = tabResults(tabId).results.find((r) => r.id === resultId);
+  if (!current) return;
+  const cols = visibleColumns(current.columns, current.view);
+  const order = visibleRows(current.rows, current.columns, current.view);
+  const source: CopySource = {
+    rowCount: order ? order.length : current.rows.length,
+    columnCount: cols.length,
+    header: (c) => current.columns[cols[c]!]!.name,
+    value: (r, c) => current.rows[order ? order[r]! : r]?.[cols[c]!] ?? null,
+  };
+  await writeClipboard(tableToTsv(source, { headers, nullAs: setting('results.copy.nullAs') }));
+  if (current.truncated) {
+    showToast('info', es.results.copiedTruncated(source.rowCount), [
+      {
+        label: es.results.loadAllAndCopy,
+        run: () => void loadMore(tabId, resultId, true).then(() => copyTable(tabId, resultId, headers)),
+      },
+    ]);
+  }
+}
+
+/**
+ * Un resultado con su barra (filtro, edición, exportar, límite), la grilla
+ * con el visor de valor y el pie. Lo usan el panel de resultados y la
+ * pestaña de objeto (Datos).
+ */
+export function ResultSetView({
+  tab,
+  result,
+  onRerun,
+  onServerSort,
+  onSaved,
+}: {
+  tab: EditorTab;
+  result: ResultSet;
+  onRerun: () => void;
+  /** Pestaña de objeto: "Ordenar en servidor" cuando el resultado está truncado (specs/06). */
+  onServerSort?: (column: string, dir: 'asc' | 'desc') => void;
+  onSaved?: () => void;
+}): React.JSX.Element {
+  const [viewer, setViewer] = useState<{ column: ResultColumn; value: unknown } | null>(null);
+  const [stats, setStats] = useState<SelectionStats | null>(null);
+  const gridRef = useRef<ResultGridHandle>(null);
+  const engine = connectionById(tab.connectionId)?.engine;
+
+  // La grilla que se deja de mostrar ya no recibe los atajos de edición.
+  useEffect(
+    () => () => {
+      const grid = getActiveGrid();
+      if (grid?.resultId === result.id) setActiveGrid(null);
+    },
+    [result.id],
+  );
+
+  const grid = (
+    <ResultGrid
+      key={result.id}
+      ref={gridRef}
+      tabId={tab.id}
+      result={result}
+      engine={engine}
+      onCopy={(sel, source, headers) => void copySelection(sel, source, headers)}
+      onCopyText={(text) => void writeClipboard(text)}
+      onViewValue={setViewer}
+      onSelectionStats={setStats}
+    />
+  );
+  return (
+    <>
+      <ResultsToolbar
+        tab={tab}
+        result={result}
+        onRerun={onRerun}
+        onServerSort={onServerSort}
+        onSaved={onSaved}
+      />
+      <div className="panel-body results-body">
+        {viewer ? (
+          <Group id="results-viewer-split" orientation="horizontal" className="split">
+            <Panel id="grid" minSize={200}>
+              {grid}
+            </Panel>
+            <Separator className="sash sash-vertical" />
+            <Panel id="viewer" minSize={180} defaultSize={300}>
+              <ValueViewer column={viewer.column} value={viewer.value} onClose={() => setViewer(null)} />
+            </Panel>
+          </Group>
+        ) : (
+          grid
+        )}
+      </div>
+      <ResultsFooter tab={tab} result={result} stats={stats} />
+    </>
+  );
+}
+
 /** Panel de resultados (specs/04 §10), asociado a la pestaña SQL activa. */
 export function ResultsPanel({ tab }: { tab: EditorTab }): React.JSX.Element {
   const maximized = useUiStore((s) => s.panel.maximized);
@@ -58,9 +159,6 @@ export function ResultsPanel({ tab }: { tab: EditorTab }): React.JSX.Element {
   const togglePanel = useUiStore((s) => s.togglePanel);
   const state = useResultsStore((s) => s.byTab[tab.id] ?? EMPTY_TAB_RESULTS);
   const { setActiveView, togglePin } = useResultsStore.getState();
-  const [viewer, setViewer] = useState<{ column: ResultColumn; value: unknown } | null>(null);
-  const [stats, setStats] = useState<SelectionStats | null>(null);
-  const gridRef = useRef<ResultGridHandle>(null);
 
   const result = state.results.find((r) => r.id === state.activeView);
   const items = [
@@ -94,42 +192,6 @@ export function ResultsPanel({ tab }: { tab: EditorTab }): React.JSX.Element {
   ];
   const activeId = items.some((i) => i.id === state.activeView) ? state.activeView : 'messages';
 
-  const tabId = tab.id;
-  /** "Copiar tabla": todas las filas cargadas y columnas visibles, con orden y filtro (specs/06). */
-  const copyTable = async (resultId: string, headers: boolean): Promise<void> => {
-    const current = tabResults(tabId).results.find((r) => r.id === resultId);
-    if (!current) return;
-    const cols = visibleColumns(current.columns, current.view);
-    const order = visibleRows(current.rows, current.columns, current.view);
-    const source: CopySource = {
-      rowCount: order ? order.length : current.rows.length,
-      columnCount: cols.length,
-      header: (c) => current.columns[cols[c]!]!.name,
-      value: (r, c) => current.rows[order ? order[r]! : r]?.[cols[c]!] ?? null,
-    };
-    await writeClipboard(tableToTsv(source, { headers, nullAs: setting('results.copy.nullAs') }));
-    if (current.truncated) {
-      showToast('info', es.results.copiedTruncated(source.rowCount), [
-        {
-          label: es.results.loadAllAndCopy,
-          run: () => void loadMore(tabId, resultId, true).then(() => copyTable(resultId, headers)),
-        },
-      ]);
-    }
-  };
-
-  const grid = result && (
-    <ResultGrid
-      key={result.id}
-      ref={gridRef}
-      tabId={tab.id}
-      result={result}
-      onCopy={(sel, source, headers) => void copySelection(sel, source, headers)}
-      onViewValue={setViewer}
-      onSelectionStats={setStats}
-    />
-  );
-
   return (
     <section
       className="panel"
@@ -154,25 +216,7 @@ export function ResultsPanel({ tab }: { tab: EditorTab }): React.JSX.Element {
         </div>
       </div>
       {result ? (
-        <>
-          <ResultsToolbar tab={tab} result={result} onCopyTable={(h) => void copyTable(result.id, h)} />
-          <div className="panel-body results-body">
-            {viewer ? (
-              <Group id="results-viewer-split" orientation="horizontal" className="split">
-                <Panel id="grid" minSize={200}>
-                  {grid}
-                </Panel>
-                <Separator className="sash sash-vertical" />
-                <Panel id="viewer" minSize={180} defaultSize={300}>
-                  <ValueViewer column={viewer.column} value={viewer.value} onClose={() => setViewer(null)} />
-                </Panel>
-              </Group>
-            ) : (
-              grid
-            )}
-          </div>
-          <ResultsFooter tab={tab} result={result} stats={stats} />
-        </>
+        <ResultSetView tab={tab} result={result} onRerun={() => void rerun(tab.id)} />
       ) : activeId === 'messages' && state.messages.length > 0 ? (
         <MessagesView tabId={tab.id} messages={state.messages} />
       ) : (
@@ -187,17 +231,24 @@ export function ResultsPanel({ tab }: { tab: EditorTab }): React.JSX.Element {
 function ResultsToolbar({
   tab,
   result,
-  onCopyTable,
+  onRerun,
+  onServerSort,
+  onSaved,
 }: {
   tab: EditorTab;
   result: ResultSet;
-  onCopyTable: (headers: boolean) => void;
+  onRerun: () => void;
+  onServerSort?: (column: string, dir: 'asc' | 'desc') => void;
+  onSaved?: () => void;
 }): React.JSX.Element {
   const r = es.results;
   const limit = useResultsStore((s) => (s.byTab[tab.id] ?? EMPTY_TAB_RESULTS).limit);
   const defaultLimit = useSettingsStore((s) => s.settings['results.maxRows']);
+  const nullText = useSettingsStore((s) => s.settings['format.null']);
   const { updateView, setLimit } = useResultsStore.getState();
   const [filter, setFilter] = useState(result.view.filter);
+  const changes = pendingCount(result.pending);
+  const { editable } = result;
 
   // Filtro rápido con un pequeño retardo para no reordenar en cada tecla con muchas filas.
   useEffect(() => {
@@ -205,15 +256,16 @@ function ResultsToolbar({
     return () => clearTimeout(timer);
   }, [filter, tab.id, result.id, updateView]);
 
-  const pending = (label: string): MenuEntry => ({
-    type: 'item',
-    id: label,
-    label,
-    run: () => notAvailable(label),
-  });
   const current = limit ?? defaultLimit;
   const limitOptions = [100, 500, 1000, 5000];
   if (typeof current === 'number' && !limitOptions.includes(current)) limitOptions.push(current);
+  const sort = result.view.sort;
+  const exportItem = (id: string, label: string, format: Parameters<typeof exportResult>[2]) => ({
+    type: 'item' as const,
+    id,
+    label,
+    run: () => void exportResult(tab.id, result.id, format),
+  });
 
   return (
     <div className="results-toolbar">
@@ -226,26 +278,121 @@ function ResultsToolbar({
         onChange={(e) => setFilter(e.target.value)}
         onKeyDown={(e) => e.key === 'Escape' && setFilter('')}
       />
-      <IconButton icon="refresh" label={r.rerun} onClick={() => void rerun(tab.id)} />
+      <IconButton icon="refresh" label={r.rerun} onClick={onRerun} />
+      <span className="toolbar-separator" />
+      {changes > 0 && (
+        <>
+          <Button
+            small
+            icon="save"
+            data-testid="save-changes"
+            onClick={() => void saveChanges(tab.id, result.id, { onSaved })}
+          >
+            {r.edit.save(changes)}
+          </Button>
+          <IconButton
+            icon="discard"
+            label={r.edit.discard}
+            onClick={() => discardChanges(tab.id, result.id)}
+          />
+          <IconButton
+            icon="eye"
+            label={r.edit.viewSql}
+            onClick={() => void saveChanges(tab.id, result.id, { preview: true, onSaved })}
+          />
+          <span className="toolbar-separator" />
+        </>
+      )}
+      {editable ? (
+        <>
+          <IconButton
+            icon="add"
+            label={`${r.addRow} (Alt+Insert)`}
+            onClick={() => {
+              activateGridOf(tab.id, result.id);
+              addRow();
+            }}
+          />
+          <IconButton
+            icon="trash"
+            label={`${r.deleteRows} (Ctrl+Supr)`}
+            onClick={() => {
+              activateGridOf(tab.id, result.id);
+              deleteSelectedRows();
+            }}
+          />
+        </>
+      ) : (
+        result.readOnlyReason && (
+          <span className="readonly-badge" title={result.readOnlyReason} data-testid="read-only">
+            <Codicon name="lock" size={14} />
+            {r.edit.readOnlyBadge}
+          </span>
+        )
+      )}
       <span className="toolbar-separator" />
       <Dropdown
         className="toolbar-btn"
         testId="export-menu"
         entries={[
-          // Exportar a archivo: hito M7.
-          pending(r.exportCsv),
-          pending(r.exportJson),
-          pending(r.exportXlsx),
-          pending(r.exportInsert),
-          pending(r.exportMarkdown),
+          exportItem('csv', r.exportCsv, 'csv'),
+          exportItem('json', r.exportJson, 'json'),
+          exportItem('xlsx', r.exportXlsx, 'xlsx'),
+          exportItem('sql', r.exportInsert, 'sql'),
+          exportItem('md', r.exportMarkdown, 'markdown'),
           SEPARATOR,
-          { type: 'item', id: 'copy-table', label: r.copyTable, run: () => onCopyTable(false) },
-          { type: 'item', id: 'copy-table-h', label: r.copyTableWithHeaders, run: () => onCopyTable(true) },
+          {
+            type: 'item',
+            id: 'copy-table',
+            label: r.copyTable,
+            run: () => void copyTable(tab.id, result.id, false),
+          },
+          {
+            type: 'item',
+            id: 'copy-table-h',
+            label: r.copyTableWithHeaders,
+            run: () => void copyTable(tab.id, result.id, true),
+          },
         ]}
       >
         <Codicon name="export" size={14} />
         <span>{r.export}</span>
       </Dropdown>
+      {result.view.valueFilters.map((f, i) => {
+        const column = result.columns[f.column];
+        const text =
+          f.value === null
+            ? nullText
+            : formatCell(f.value, column?.logicalType ?? 'text', useSettingsStore.getState().settings);
+        return (
+          <span key={i} className="filter-chip" data-testid="value-filter">
+            {column?.name} {f.exclude ? '≠' : '='} {text}
+            <IconButton
+              icon="close"
+              size={12}
+              label={r.removeFilter}
+              onClick={() =>
+                updateView(tab.id, result.id, {
+                  valueFilters: result.view.valueFilters.filter((_, j) => j !== i),
+                })
+              }
+            />
+          </span>
+        );
+      })}
+      {onServerSort && result.truncated && sort && (
+        <span className="sort-notice">
+          {r.sortedLoaded(result.rows.length)}
+          {' — '}
+          <button
+            type="button"
+            className="link"
+            onClick={() => onServerSort(result.columns[sort.column]!.name, sort.dir)}
+          >
+            {r.sortOnServer}
+          </button>
+        </span>
+      )}
       <div className="toolbar-spacer" />
       <label className="results-limit">
         <span>{r.limit}</span>
@@ -262,6 +409,17 @@ function ResultsToolbar({
       </label>
     </div>
   );
+}
+
+/** Los botones de la barra actúan sobre la grilla del resultado aunque no tenga el foco. */
+function activateGridOf(tabId: string, resultId: string): void {
+  const grid = getActiveGrid();
+  if (grid?.tabId === tabId && grid.resultId === resultId) return;
+  document
+    .querySelector<HTMLElement>(
+      `[data-testid="results-grid"][data-result-id="${CSS.escape(resultId)}"] canvas`,
+    )
+    ?.focus();
 }
 
 function formatStat(n: number): string {
@@ -286,6 +444,7 @@ function ResultsFooter({
   stats: SelectionStats | null;
 }): React.JSX.Element {
   const r = es.results;
+  const changes = pendingCount(result.pending);
   return (
     <div className="results-footer" data-testid="results-footer">
       <span>
@@ -335,6 +494,11 @@ function ResultsFooter({
             formatStat(stats.min),
             formatStat(stats.max),
           )}
+        </span>
+      )}
+      {changes > 0 && (
+        <span className="pending-changes" data-testid="pending-changes">
+          {r.edit.pendingChanges(changes)}
         </span>
       )}
     </div>

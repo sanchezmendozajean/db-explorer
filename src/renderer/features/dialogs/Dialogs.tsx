@@ -10,7 +10,8 @@ import { commandTitle, es } from '../../i18n/es';
 import { useOverlayStore } from '../../stores/overlay-store';
 import { ConnectionDialog } from '../connections/ConnectionDialog';
 import { ConfirmDialog, PasswordDialog, PromptDialog } from './SimpleDialogs';
-import { ChoiceDialog, WriteConfirmDialog } from './ChoiceDialogs';
+import { ChoiceDialog, SqlPreviewDialog, WriteConfirmDialog } from './ChoiceDialogs';
+import { ExportDialog } from '../results/ExportDialog';
 import { CompareDialog } from '../editor/CompareDialog';
 
 type PingState =
@@ -150,6 +151,10 @@ export function Dialogs(): React.JSX.Element | null {
       return <ChoiceDialog {...dialog} onClose={close} />;
     case 'writeConfirm':
       return <WriteConfirmDialog {...dialog} onClose={close} />;
+    case 'sqlPreview':
+      return <SqlPreviewDialog {...dialog} onClose={close} />;
+    case 'export':
+      return <ExportDialog {...dialog} onClose={close} />;
     case 'compare':
       return <CompareDialog tabId={dialog.tabId} name={dialog.name} disk={dialog.disk} onClose={close} />;
   }

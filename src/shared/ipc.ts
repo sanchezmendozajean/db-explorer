@@ -6,9 +6,9 @@ import type { IpcEventChannel, IpcInvokeChannel } from './channels';
 import { UiStateSchema } from './ui-state';
 import type { ServerInfo } from './connection';
 import { ConnectionConfigSchema } from './connection';
-import type { TreeNodeData } from './metadata';
-import { TreeNodeRefSchema } from './metadata';
-import type { ExecuteSummary, FetchMoreResult, QueryEvent } from './query';
+import type { TableDetails, TreeNodeData } from './metadata';
+import { ObjectKindSchema, TreeNodeRefSchema } from './metadata';
+import type { ApplyChangesResult, ExecuteSummary, ExportSummary, FetchMoreResult, QueryEvent } from './query';
 import type { Settings } from './settings';
 import type { FileNode, ScriptFile, WorkspaceInfo } from './workspace';
 import { WorkspaceStateSchema } from './workspace';
@@ -118,6 +118,94 @@ export const ExecuteRequestSchema = z.object({
   schema: Name.optional(),
   statements: z.array(z.string().max(50_000_000)).min(1).max(100_000),
   maxRows: z.number().int().positive().nullable(),
+  autoCommit: z.boolean().optional(),
+  history: z.boolean().optional(),
+});
+
+const SessionId = z.string().min(1).max(4200);
+
+export const ObjectTargetSchema = z.object({
+  connectionId: Id,
+  database: Name,
+  schema: Name,
+  name: Name,
+  kind: ObjectKindSchema,
+});
+
+const Cell = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+const LogicalTypeSchema = z.enum([
+  'integer',
+  'decimal',
+  'float',
+  'boolean',
+  'text',
+  'date',
+  'time',
+  'datetime',
+  'datetimetz',
+  'json',
+  'binary',
+  'uuid',
+  'other',
+]);
+
+const SessionTargetShape = {
+  sessionId: SessionId,
+  connectionId: Id,
+  database: Name.optional(),
+  schema: Name.optional(),
+  autoCommit: z.boolean().optional(),
+};
+
+export const ApplyChangesSchema = z.object({
+  ...SessionTargetShape,
+  statements: z
+    .array(
+      z.object({
+        sql: z.string().max(1_000_000),
+        params: z.array(Cell).max(10_000),
+        types: z.array(LogicalTypeSchema).max(10_000),
+        expectOne: z.boolean(),
+      }),
+    )
+    .min(1)
+    .max(100_000),
+});
+
+export const ExportFormatSchema = z.enum(['csv', 'json', 'xlsx', 'sql']);
+
+const ResultColumnSchema = z.object({
+  name: z.string().max(1000),
+  nativeType: z.string().max(1000),
+  logicalType: LogicalTypeSchema,
+  sourceSchema: z.string().max(1000).optional(),
+  sourceTable: z.string().max(1000).optional(),
+  sourceColumn: z.string().max(1000).optional(),
+  isPk: z.boolean().optional(),
+});
+
+export const ExportRequestSchema = z.object({
+  exportId: QueryId,
+  /** Ruta elegida en el diálogo de `data:pick-export-path` (main rechaza otras). */
+  path: z.string().min(1).max(4096),
+  format: ExportFormatSchema,
+  options: z.object({
+    separator: z.string().min(1).max(4),
+    header: z.boolean(),
+    bom: z.boolean(),
+    table: z.string().max(4000),
+    engine: z.enum(['postgres', 'mariadb', 'sqlite', 'sqlserver']).optional(),
+  }),
+  columns: z.array(ResultColumnSchema).min(1).max(10_000),
+  source: z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('rows'), rows: z.array(z.array(Cell)).max(10_000_000) }),
+    z.object({
+      kind: z.literal('query'),
+      ...SessionTargetShape,
+      sql: z.string().min(1).max(50_000_000),
+      columnIndexes: z.array(z.number().int().nonnegative()).min(1).max(10_000),
+    }),
+  ]),
 });
 
 export const FetchMoreRequestSchema = z.object({
@@ -161,6 +249,7 @@ export const ipcInvokeContract = {
   'app:zoom': { request: ZoomRequestSchema, response: z.object({ level: z.number() }) },
   'app:edit': { request: EditRequestSchema, response: Empty },
   'app:clipboard-write': { request: ClipboardWriteSchema, response: Empty },
+  'app:clipboard-read': { request: Empty, response: z.object({ text: z.string() }) },
   'app:open-file-dialog': {
     request: OpenFileDialogSchema,
     response: z.object({ path: z.string().nullable() }),
@@ -243,6 +332,19 @@ export const ipcInvokeContract = {
   'query:fetch-more': { request: FetchMoreRequestSchema, response: z.custom<FetchMoreResult>() },
   'query:cancel': { request: z.object({ queryId: QueryId }), response: Empty },
   'query:close-session': { request: z.object({ sessionId: z.string().min(1).max(4200) }), response: Empty },
+  'query:end-transaction': {
+    request: z.object({ sessionId: SessionId, commit: z.boolean() }),
+    response: Empty,
+  },
+  'meta:table': { request: ObjectTargetSchema, response: z.custom<TableDetails>() },
+  'meta:ddl': { request: ObjectTargetSchema, response: z.object({ ddl: z.string() }) },
+  'data:apply': { request: ApplyChangesSchema, response: z.custom<ApplyChangesResult>() },
+  /** Diálogo "Guardar como" de una exportación; la ruta queda autorizada para `data:export`. */
+  'data:pick-export-path': {
+    request: z.object({ format: ExportFormatSchema, defaultName: z.string().min(1).max(255) }),
+    response: z.object({ path: z.string().nullable() }),
+  },
+  'data:export': { request: ExportRequestSchema, response: z.custom<ExportSummary>() },
   'query:history-list': { request: HistoryQuerySchema, response: z.custom<HistoryEntry[]>() },
   'query:history-delete': { request: z.object({ id: z.number().int().positive() }), response: Empty },
   'query:history-clear': { request: Empty, response: Empty },

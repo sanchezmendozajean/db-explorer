@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import type { CellValue, QueryEvent, ResultColumn } from '@shared/query';
+import type { ColumnFormat } from '@shared/settings';
 import { es } from '../../i18n/es';
+import type { EditableInfo, PendingChanges } from './edit-state';
+import { NO_CHANGES } from './edit-state';
 
 /** Sentencia enviada al motor, con su posición en el editor (para marcas y errores). */
 export interface StatementMeta {
@@ -32,6 +35,20 @@ export interface ResultSet {
   pinned: boolean;
   /** Estado de vista (specs/06): filtro rápido y orden en cliente, columnas ocultas y anchos. */
   view: ResultView;
+  /** Tabla de origen si se puede editar (specs/06 §Edición de datos); `null` = solo lectura. */
+  editable: EditableInfo | null;
+  /** Por qué es de solo lectura (tooltip); sin valor mientras se averigua. */
+  readOnlyReason?: string;
+  pending: PendingChanges;
+  /** Sentencia que lo generó (para re-ejecutarla sin límite al exportar). */
+  statementSql?: string;
+}
+
+/** "Filtrar por este valor" / "Excluir este valor" (en cliente, sobre lo cargado). */
+export interface ValueFilter {
+  column: number;
+  value: CellValue;
+  exclude: boolean;
 }
 
 export interface ResultView {
@@ -39,6 +56,9 @@ export interface ResultView {
   sort: { column: number; dir: 'asc' | 'desc' } | null;
   hidden: number[];
   widths: Record<number, number>;
+  valueFilters: ValueFilter[];
+  /** Formato por columna (specs/06 §Formato por columna). */
+  formats: Record<number, ColumnFormat>;
 }
 
 export type MessageKind = 'info' | 'notice' | 'warning' | 'error';
@@ -227,7 +247,7 @@ function findResult(tabId: string, queryId: string, index: number): ResultSet | 
   return resultsOf(tabId, queryId, index).at(-1);
 }
 
-function updateResult(tabId: string, id: string, changes: Partial<ResultSet>): void {
+export function updateResult(tabId: string, id: string, changes: Partial<ResultSet>): void {
   const tab = tabResults(tabId);
   put(tabId, { results: tab.results.map((r) => (r.id === id ? { ...r, ...changes } : r)) });
 }
@@ -246,6 +266,8 @@ export interface ExecutionCallbacks {
     event: Extract<QueryEvent, { type: 'statement-error' }>,
   ) => void;
   onStatementDone?: (tabId: string) => void;
+  /** Un result set recibió todas sus filas (se averigua si es editable). */
+  onResultDone?: (tabId: string, resultId: string) => void;
 }
 
 let callbacks: ExecutionCallbacks = {};
@@ -321,7 +343,10 @@ export function applyQueryEvent(event: QueryEvent): void {
         durationMs: 0,
         executedAt: clockTime(),
         pinned: false,
-        view: { filter: '', sort: null, hidden: [], widths: {} },
+        view: { filter: '', sort: null, hidden: [], widths: {}, valueFilters: [], formats: {} },
+        editable: null,
+        pending: NO_CHANGES,
+        statementSql: meta?.text,
       };
       // El primer resultado de la ejecución pasa a ser la vista activa.
       const first = !tab.results.some((r) => r.queryId === event.queryId);
@@ -361,6 +386,7 @@ export function applyQueryEvent(event: QueryEvent): void {
       if (meta) {
         put(tabId, { outcomes: [...tabResults(tabId).outcomes, { line: meta.startLine, ok: true }] });
       }
+      for (const r of results) callbacks.onResultDone?.(tabId, r.id);
       callbacks.onStatementDone?.(tabId);
       break;
     }

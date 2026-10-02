@@ -54,6 +54,8 @@ export interface ExecuteRequest {
   maxRows: number | null;
   /** Modo de transacción de la pestaña (specs/04 §8); sin valor = auto-commit. */
   autoCommit?: boolean;
+  /** `false`: no se guarda en el historial (datos de la pestaña de objeto). */
+  history?: boolean;
 }
 
 /** Sesión de una pestaña (para Commit/Rollback, aplicar cambios y exportar). */

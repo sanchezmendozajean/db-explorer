@@ -18,7 +18,9 @@ import { useConnectionsStore } from '../../stores/connections-store';
 import { Highlight, SideBarHeader } from '../side-bar/SideBarHeader';
 import * as actions from './actions';
 import { newScript } from '../editor/scripts';
-import { countRows, newTableScript, targetOfRef } from './table-scripts';
+import { countRows, newDdlScript, newTableScript, objectRef, targetOfRef } from './table-scripts';
+import { openObjectTab } from '../objects/object-tabs';
+import { invalidateDetails } from '../objects/object-details';
 import { dotStyle } from '../../components/env-dot';
 
 const ENGINE_BADGE: Record<string, string> = { postgres: 'PG', mariadb: 'MY', sqlite: 'LT', sqlserver: 'MS' };
@@ -228,6 +230,9 @@ export function ConnectionsView(): React.JSX.Element {
   };
 
   const refresh = (node: UiNode): void => {
+    // La estructura cacheada (clave para editar, pestaña Estructura) se vuelve a leer.
+    if (node.type !== 'folder')
+      invalidateDetails(node.type === 'connection' ? node.config.id : node.connectionId);
     if (node.type === 'connection') {
       if (status[node.config.id]?.state === 'connected')
         void loadChildren(node.config.id, { kind: 'connection' }, true);
@@ -382,9 +387,18 @@ export function ConnectionsView(): React.JSX.Element {
         run: () => void newTableScript(node.connectionId, ref, id),
       });
       return [
-        // Pestaña de objeto (Ver datos / Ver estructura) y DDL: hito M7.
-        { type: 'item', id: 'data', label: t.viewData, disabled: true, run: () => undefined },
-        { type: 'item', id: 'structure', label: t.viewStructure, disabled: true, run: () => undefined },
+        {
+          type: 'item',
+          id: 'data',
+          label: t.viewData,
+          run: () => openObjectTab(node.connectionId, objectRef(ref), 'data'),
+        },
+        {
+          type: 'item',
+          id: 'structure',
+          label: t.viewStructure,
+          run: () => openObjectTab(node.connectionId, objectRef(ref), 'structure'),
+        },
         {
           type: 'submenu',
           id: 'script',
@@ -394,7 +408,12 @@ export function ConnectionsView(): React.JSX.Element {
             script('insert', t.scriptInsert),
             script('update', t.scriptUpdate),
             script('delete', t.scriptDelete),
-            { type: 'item', id: 'ddl', label: t.scriptDdl, disabled: true, run: () => undefined },
+            {
+              type: 'item',
+              id: 'ddl',
+              label: t.scriptDdl,
+              run: () => void newDdlScript(node.connectionId, ref),
+            },
           ],
         },
         SEPARATOR,
@@ -650,7 +669,10 @@ export function ConnectionsView(): React.JSX.Element {
               toggleOnClick={false}
               basePadding={6}
               onOpen={(row) => {
-                if (row.expandable) void toggleNode(row.node, !row.expanded);
+                // Doble clic o Enter en una tabla o vista: pestaña de objeto en Datos (specs/04 §6).
+                if (row.node.type === 'meta' && isDataObject(row.node.data.ref)) {
+                  openObjectTab(row.node.connectionId, objectRef(row.node.data.ref), 'data');
+                } else if (row.expandable) void toggleNode(row.node, !row.expanded);
               }}
               onRowKeyDown={onRowKeyDown}
               onContextMenu={(row, e) => showContextMenu(e, contextEntries(row.node))}

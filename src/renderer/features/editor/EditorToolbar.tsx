@@ -10,6 +10,7 @@ import { anchorOf } from '../../stores/overlay-store';
 import { dotStyle } from '../../components/env-dot';
 import type { EditorTab } from '../../stores/workbench-store';
 import { EMPTY_TAB_RESULTS, useResultsStore } from '../results/results-store';
+import { endTransaction, setTransactionMode, useTransaction } from '../execution/transactions';
 import {
   effectiveTarget,
   hasSessionSchema,
@@ -36,6 +37,7 @@ export function useElapsed(startedAt: number | undefined): string | null {
 /** Barra del editor SQL (specs/04 §8). */
 export function EditorToolbar({ tab }: { tab: EditorTab }): React.JSX.Element {
   const t = es.editor.toolbar;
+  const tx = useTransaction(tab.id);
   const conn = useConnectionsStore((s) => s.connections.find((c) => c.id === tab.connectionId));
   // Suscripción al estado para refrescar base/esquema predeterminados al conectar.
   const connected = useConnectionsStore(
@@ -121,15 +123,46 @@ export function EditorToolbar({ tab }: { tab: EditorTab }): React.JSX.Element {
         <span className="toolbar-separator" />
         <Dropdown
           className="chip"
-          title={t.transaction(t.auto)}
+          title={t.transaction(tx.manual ? t.manual : t.auto)}
+          testId="transaction-chip"
           entries={[
-            { type: 'item', id: 'auto', label: t.auto, checked: true, run: () => undefined },
-            // El modo manual con Commit/Rollback llega en M7.
-            { type: 'item', id: 'manual', label: t.manual, disabled: true, run: () => undefined },
+            {
+              type: 'item',
+              id: 'auto',
+              label: t.auto,
+              checked: !tx.manual,
+              run: () => void setTransactionMode(tab.id, false),
+            },
+            {
+              type: 'item',
+              id: 'manual',
+              label: t.manual,
+              checked: tx.manual,
+              run: () => void setTransactionMode(tab.id, true),
+            },
           ]}
         >
-          <span>{t.transaction(t.auto)}</span>
+          <span>{t.transaction(tx.manual ? t.manual : t.auto)}</span>
         </Dropdown>
+        {tx.manual && (
+          <>
+            <IconButton
+              icon="check"
+              label={es.transactions.commitTitle}
+              onClick={() => void endTransaction(tab.id, true)}
+            />
+            <IconButton
+              icon="discard"
+              label={es.transactions.rollbackTitle}
+              onClick={() => void endTransaction(tab.id, false)}
+            />
+            {tx.pending > 0 && (
+              <span className="tx-pending" data-testid="tx-pending">
+                {es.transactions.pending(tx.pending)}
+              </span>
+            )}
+          </>
+        )}
         <span className="toolbar-spacer" />
         <IconButton
           icon="list-selection"

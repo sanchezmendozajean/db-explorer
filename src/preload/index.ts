@@ -27,6 +27,7 @@ const api: DbExplorerApi = {
     zoom: invoke('app:zoom'),
     edit: invoke('app:edit'),
     clipboardWrite: invoke('app:clipboard-write'),
+    clipboardRead: invoke('app:clipboard-read'),
     openFileDialog: invoke('app:open-file-dialog'),
     closeReady: invoke('app:close-ready'),
   },
@@ -72,15 +73,23 @@ const api: DbExplorerApi = {
   meta: {
     children: invoke('meta:children'),
     count: invoke('meta:count'),
+    table: invoke('meta:table'),
+    ddl: invoke('meta:ddl'),
   },
   query: {
     execute: invoke('query:execute'),
     fetchMore: invoke('query:fetch-more'),
     cancel: invoke('query:cancel'),
     closeSession: invoke('query:close-session'),
+    endTransaction: invoke('query:end-transaction'),
     historyList: invoke('query:history-list'),
     historyDelete: invoke('query:history-delete'),
     historyClear: invoke('query:history-clear'),
+  },
+  data: {
+    apply: invoke('data:apply'),
+    pickExportPath: invoke('data:pick-export-path'),
+    export: invoke('data:export'),
   },
   on<C extends IpcEventChannel>(channel: C, listener: (payload: IpcEventPayload<C>) => void) {
     if (!allowedEvents.includes(channel)) throw new Error(`Canal no permitido: ${String(channel)}`);

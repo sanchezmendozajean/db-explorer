@@ -44,7 +44,7 @@
 
 ## Contrato IPC
 - Definido en `src/shared/ipc.ts` como un único tipo con canales request/response y canales de eventos. Todos los payloads se validan con zod en main.
-- Nombres por dominio: `conn:*`, `meta:*`, `query:*`, `fs:*`, `settings:*`, `app:*`.
+- Nombres por dominio: `conn:*`, `meta:*`, `query:*`, `data:*` (guardar ediciones de la grilla y exportar), `fs:*`, `settings:*`, `app:*`.
 - Resultados grandes: el DB Host envía filas en **lotes** (p. ej. 500 filas) por evento `query:rows` con `queryId`; el renderer acumula. Nunca serializar 100 000 filas en un solo mensaje.
 - Cancelación: `query:cancel(queryId)` → el driver ejecuta su mecanismo nativo (ver `03`).
 

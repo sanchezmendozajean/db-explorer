@@ -1,5 +1,7 @@
-import { BrowserWindow, dialog } from 'electron';
-import type { OpenDialogOptions } from 'electron';
+import { join } from 'node:path';
+import { app, BrowserWindow, dialog } from 'electron';
+import type { OpenDialogOptions, SaveDialogOptions } from 'electron';
+import type { ExportFormat } from '@shared/query';
 import type { ConnectionConfig } from '@shared/connection';
 import { CompleteConnectionSchema } from '@shared/connection';
 import type { DbHostClient } from '../services/db-host-client';
@@ -16,6 +18,13 @@ interface Deps {
   secrets: SecretStore;
   history: HistoryService;
 }
+
+const EXPORT_FILTERS: Record<ExportFormat, { name: string; extensions: string[] }> = {
+  csv: { name: 'CSV', extensions: ['csv'] },
+  json: { name: 'JSON', extensions: ['json'] },
+  xlsx: { name: 'Excel', extensions: ['xlsx'] },
+  sql: { name: 'SQL', extensions: ['sql'] },
+};
 
 function requireComplete(config: ConnectionConfig): ConnectionConfig {
   const result = CompleteConnectionSchema.safeParse(config);
@@ -106,7 +115,7 @@ export function registerConnectionHandlers({
 
   // Ejecución: sin límite de tiempo (el usuario la controla con Cancelar); las filas llegan por `query:event`.
   handle('query:execute', (req) => {
-    history.begin(req);
+    if (req.history !== false) history.begin(req);
     return dbHost.request('query.execute', req, { timeoutMs: null });
   });
   handle('query:history-list', (query) => history.list(query));
@@ -126,6 +135,35 @@ export function registerConnectionHandlers({
   handle('query:close-session', async ({ sessionId }) => {
     await dbHost.request('session.close', { sessionId });
     return {};
+  });
+
+  handle('query:end-transaction', async (req) => {
+    await dbHost.request('session.end-transaction', req);
+    return {};
+  });
+
+  handle('meta:table', (req) => dbHost.request('meta.table', req));
+  handle('meta:ddl', async (req) => ({ ddl: await dbHost.request('meta.ddl', req) }));
+  handle('data:apply', (req) => dbHost.request('data.apply', req, { timeoutMs: null }));
+
+  // El renderer no elige rutas libremente: solo exporta a una ruta elegida en el diálogo de main.
+  const exportPaths = new Set<string>();
+  handle('data:pick-export-path', async ({ format, defaultName }, event) => {
+    const filter = EXPORT_FILTERS[format];
+    const options: SaveDialogOptions = {
+      title: 'Exportar',
+      defaultPath: join(app.getPath('documents'), `${defaultName}.${filter.extensions[0]}`),
+      filters: [filter],
+    };
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const result = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options);
+    if (result.canceled || !result.filePath) return { path: null };
+    exportPaths.add(result.filePath);
+    return { path: result.filePath };
+  });
+  handle('data:export', async (req) => {
+    if (!exportPaths.delete(req.path)) throw new AppError('forbidden', 'Ruta de exportación no autorizada');
+    return dbHost.request('export.start', req, { timeoutMs: null });
   });
 
   handle('app:open-file-dialog', async ({ title, defaultPath, allowCreate, filters }, event) => {

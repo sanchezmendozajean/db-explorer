@@ -168,8 +168,8 @@ export function objectPath(connectionId: string, engine: Engine, object: Catalog
 }
 
 /**
- * Muestra un objeto en el árbol de conexiones (F12 y Ctrl+P). La pestaña de
- * objeto llega en M7; mientras tanto se selecciona en el árbol.
+ * Muestra un objeto en el árbol de conexiones: F12 y Ctrl+P lo usan para los
+ * objetos sin pestaña de objeto (funciones, secuencias…); ver `openCatalogObject`.
  */
 export function revealObject(connectionId: string, object: CatalogObject): void {
   const engine = connectionById(connectionId)?.engine;

@@ -24,6 +24,8 @@ import {
   waitForDone,
 } from '../results/results-store';
 import { useUiStore } from '../../stores/ui-store';
+import { confirmDiscardGridChanges } from '../results/grid-edit';
+import { isManual, trackExecuted } from './transactions';
 
 export type ExecuteMode = 'statement' | 'script';
 
@@ -131,6 +133,7 @@ async function runStatements(
 ): Promise<void> {
   const conn = connectionById(tab.connectionId)!;
   if (!(await confirmStatements(tab, statements))) return;
+  if (!options.newResultTab && !(await confirmDiscardGridChanges(tab.id))) return;
   if (!(await ensureConnected(conn.id))) return;
 
   // Con guardado automático, el archivo se guarda antes de ejecutar; si falla, la ejecución sigue (specs/11 §4).
@@ -151,9 +154,18 @@ async function runStatements(
     schema: tab.schema,
     statements: statements.map((s) => s.text),
     maxRows,
+    autoCommit: !isManual(tab.id),
   });
   if (r.ok) {
-    await done.promise;
+    const event = await done.promise;
+    if (event.type === 'execution-done') {
+      const ok = event.summary.executed - (event.summary.failed ? 1 : 0);
+      trackExecuted(
+        tab.id,
+        statements.slice(0, ok).map((s) => s.text),
+        dialectOf(conn.engine),
+      );
+    }
   } else {
     // Falló antes de ejecutar (sin conexión, pestaña ocupada…): no habrá evento de cierre.
     done.cancel();

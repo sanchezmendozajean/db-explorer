@@ -20,8 +20,16 @@ export function askWriteConfirm(options: {
   statements: string[];
   unbounded: boolean;
   language: string;
+  allowSkip?: boolean;
 }): Promise<{ confirmed: boolean; dontAskAgain: boolean }> {
   return new Promise((resolve) => {
     useOverlayStore.getState().openDialog({ id: 'writeConfirm', ...options, onResult: resolve });
+  });
+}
+
+/** "Ver SQL" de la grilla: muestra las sentencias y resuelve `true` si se elige Aplicar. */
+export function askSqlPreview(options: { statements: string[]; language: string }): Promise<boolean> {
+  return new Promise((resolve) => {
+    useOverlayStore.getState().openDialog({ id: 'sqlPreview', ...options, onResult: resolve });
   });
 }

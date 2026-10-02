@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ObjectKind } from '@shared/metadata';
 
 export type EditorTabKind = 'script' | 'object' | 'preferences';
 
@@ -16,6 +17,9 @@ export interface EditorTab {
   dirty: boolean;
   /** Pestaña de vista previa (cursiva): se reemplaza al abrir otra desde el árbol. */
   preview: boolean;
+  /** Pestaña de objeto (specs/04 §9): tabla o vista y subpestaña elegida. */
+  object?: { database: string; schema: string; name: string; kind: ObjectKind };
+  objectView?: 'data' | 'structure' | 'ddl';
 }
 
 interface WorkbenchStore {

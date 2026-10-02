@@ -10,6 +10,7 @@ import { getDocument } from '../features/editor/documents';
 import { useElapsed } from '../features/editor/EditorToolbar';
 import { effectiveTarget } from '../features/editor/target-pickers';
 import { EMPTY_TAB_RESULTS, useResultsStore } from '../features/results/results-store';
+import { useTransaction } from '../features/execution/transactions';
 
 const ENGINE_LANGUAGE: Record<string, string> = {
   postgres: 'SQL (PostgreSQL)',
@@ -37,6 +38,7 @@ function languageLabel(path: string | undefined, engine: string | undefined): st
 /** Status bar (specs/04 §11). En Producción se tiñe entera. */
 export function StatusBar(): React.JSX.Element {
   const tab = useWorkbenchStore((s) => s.tabs.find((t) => t.id === s.activeId));
+  const tx = useTransaction(tab?.id);
   const keyMessage = useKeyStatus((s) => s.message);
   const connection = useConnectionsStore((s) => s.connections.find((c) => c.id === tab?.connectionId));
   const status = useConnectionsStore((s) => (tab?.connectionId ? s.status[tab.connectionId] : undefined));
@@ -131,7 +133,17 @@ export function StatusBar(): React.JSX.Element {
               {eol}
             </button>
             <span className="statusbar-item">{languageLabel(tab?.path, connection?.engine)}</span>
-            {connection && <span className="statusbar-item">{es.statusBar.autoCommit}</span>}
+            {connection && (
+              <button
+                type="button"
+                className="statusbar-item"
+                title={es.commands['db.toggleAutoCommit'] as string}
+                data-testid="transaction-status"
+                onClick={() => void commands.execute('db.toggleAutoCommit')}
+              >
+                {tx.manual ? es.transactions.statusManual(tx.pending) : es.statusBar.autoCommit}
+              </button>
+            )}
           </>
         )}
         <span className="statusbar-item" title={es.statusBar.notifications}>

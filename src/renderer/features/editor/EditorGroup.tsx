@@ -7,7 +7,7 @@ import { ResultsPanel } from '../results/ResultsPanel';
 import { EditorTabs } from './EditorTabs';
 import { EditorToolbar } from './EditorToolbar';
 import { PreferencesView } from '../preferences/PreferencesView';
-import { ObjectView } from './ObjectView';
+import { ObjectView } from '../objects/ObjectView';
 import { SqlEditor } from './SqlEditor';
 import { Watermark } from './Watermark';
 
@@ -68,7 +68,7 @@ export function EditorGroup(): React.JSX.Element {
         {!tab ? (
           <Watermark />
         ) : tab.kind === 'object' ? (
-          <ObjectView tab={tab} />
+          <ObjectView key={tab.id} tab={tab} />
         ) : tab.kind === 'preferences' ? (
           <PreferencesView />
         ) : (

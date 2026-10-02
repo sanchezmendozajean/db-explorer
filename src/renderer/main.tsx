@@ -10,12 +10,11 @@ import './theme/workbench.css';
 import './theme/components.css';
 import { App } from './app/App';
 import { registerAppCommands } from './app/app-commands';
-import { applyUserKeybindings, installKeybindingHandler, commands } from './commands/service';
+import { applyUserKeybindings, installKeybindingHandler } from './commands/service';
 import type { UserKeybindings } from '@shared/keybindings';
 import { es } from './i18n/es';
 import { startUiStatePersistence, useUiStore } from './stores/ui-store';
 import { showToast } from './stores/toast-store';
-import { useSampleStore } from './stores/sample-store';
 import { useConnectionsStore } from './stores/connections-store';
 import { useSettingsStore } from './stores/settings-store';
 import { handleBeforeClose, startWorkspacePersistence } from './features/editor/scripts';
@@ -32,6 +31,7 @@ import {
   setExecutionCallbacks,
 } from './features/results/results-store';
 import { markError } from './features/execution/execute';
+import { resolveEditable } from './features/results/editable';
 
 async function bootstrap(): Promise<void> {
   // El estado de UI se carga antes del primer render para no parpadear tamaños ni tema.
@@ -59,16 +59,6 @@ async function bootstrap(): Promise<void> {
   if (kb.ok) applyKeybindings(kb.data);
   window.api.on('settings:keybindings-changed', applyKeybindings);
 
-  // Solo en desarrollo: alternar datos de ejemplo para revisar los estados vacíos.
-  if (import.meta.env.DEV) {
-    commands.register({
-      id: 'db.dev.toggleSampleData',
-      category: es.dev.category,
-      title: es.dev.toggleSampleData,
-      run: () => useSampleStore.getState().toggle(),
-    });
-  }
-
   window.api.on('app:db-host-restarted', () => {
     useConnectionsStore.getState().resetSessions();
     resetAllRunning();
@@ -86,6 +76,7 @@ async function bootstrap(): Promise<void> {
           : { line: meta.startLine, column: meta.startColumn };
       markError(tabId, pos.line, pos.column, event.message);
     },
+    onResultDone: (tabId, resultId) => void resolveEditable(tabId, resultId),
   });
 
   // Conexiones antes que el espacio de trabajo: las pestañas restauradas muestran su conexión.

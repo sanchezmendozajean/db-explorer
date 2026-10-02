@@ -1,5 +1,7 @@
 import { create } from 'zustand';
+import type { ExportFormat } from '@shared/query';
 import type { MenuEntry } from '../components/menu-types';
+import type { ExportChoice } from '../features/results/ExportDialog';
 
 export type PaletteMode = 'quickOpen' | 'commands';
 
@@ -86,8 +88,21 @@ export type DialogState =
       /** Hay UPDATE/DELETE sin WHERE. */
       unbounded: boolean;
       language: string;
+      allowSkip?: boolean;
       onResult: (result: { confirmed: boolean; dontAskAgain: boolean }) => void;
     }
+  /** Opciones de una exportación a archivo (filas, separador, BOM, tabla de los INSERT). */
+  | {
+      id: 'export';
+      format: ExportFormat;
+      loaded: number;
+      truncated: boolean;
+      canRerun: boolean;
+      defaultTable: string;
+      onResult: (choice: ExportChoice | null) => void;
+    }
+  /** Sentencias que generará el guardado de la grilla ("Ver SQL"): Cancelar / Aplicar. */
+  | { id: 'sqlPreview'; statements: string[]; language: string; onResult: (apply: boolean) => void }
   /** Comparar el archivo en disco con el editor (aviso de cambio externo, specs/11 §4). */
   | { id: 'compare'; tabId: string; name: string; disk: string };
 

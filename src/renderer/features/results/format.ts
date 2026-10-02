@@ -1,5 +1,5 @@
 import type { CellValue, LogicalType } from '@shared/query';
-import type { Settings } from '@shared/settings';
+import type { ColumnFormat, Settings } from '@shared/settings';
 
 /**
  * Formateo de presentación de celdas (specs/06 §Formatos de datos, nivel
@@ -256,9 +256,10 @@ export function formatCell(value: CellValue, type: LogicalType, s: FormatSetting
     return value ? yes : no;
   }
   if (typeof value === 'number') {
-    return type === 'integer' || type === 'decimal' || type === 'float'
-      ? formatDecimalText(String(value), separators(s))
-      : String(value);
+    // SQLite entrega los reales como número: se les aplica igual el formato de decimales o flotantes.
+    if (type === 'decimal') return formatDecimal(String(value), s);
+    if (type === 'float') return formatFloat(String(value), s);
+    return type === 'integer' ? formatDecimalText(String(value), separators(s)) : String(value);
   }
   switch (type) {
     case 'integer':
@@ -291,4 +292,14 @@ function truncate(text: string, max: number): string {
 
 export function isNumericType(type: LogicalType): boolean {
   return type === 'integer' || type === 'decimal' || type === 'float';
+}
+
+/** Formato global con el de una columna encima (specs/06 §Formato por columna). */
+export function withColumnFormat(s: FormatSettings, format: ColumnFormat | undefined): FormatSettings {
+  if (!format) return s;
+  const merged: Record<string, unknown> = { ...s };
+  for (const [key, value] of Object.entries(format)) {
+    if (key !== 'align' && value !== undefined) merged[`format.${key}`] = value;
+  }
+  return merged as FormatSettings;
 }

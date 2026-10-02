@@ -36,8 +36,37 @@ export interface EditorSqlContext {
   offset: number;
 }
 
+/** Campos WHERE / ORDER BY de la pestaña de objeto: su texto se completa como parte de un SELECT. */
+const clauseModels = new WeakMap<Model, { tabId: string; clause: 'where' | 'order' }>();
+
+export function registerClauseModel(model: Model, info: { tabId: string; clause: 'where' | 'order' }): void {
+  clauseModels.set(model, info);
+}
+
+function clauseContext(model: Model, position: Position): EditorSqlContext | null {
+  const info = clauseModels.get(model);
+  if (!info) return null;
+  const tab = useWorkbenchStore.getState().tabs.find((t) => t.id === info.tabId);
+  const object = tab?.object;
+  const scope = object ? catalogScope(tab.connectionId, object.database, object.schema) : null;
+  const engine = scope?.engine;
+  const table = object && engine ? quoteIdent(engine, object.name) : 'x';
+  // `FROM esquema.tabla` para que las columnas de la tabla se sugieran sin calificar.
+  const from =
+    object && engine && engine !== 'sqlite' ? `${quoteIdent(engine, object.schema)}.${table}` : table;
+  const prefix = `SELECT * FROM ${from} ${info.clause === 'where' ? 'WHERE' : 'ORDER BY'} `;
+  return {
+    engine,
+    scope,
+    statement: prefix + model.getValue(),
+    offset: prefix.length + model.getOffsetAt(position),
+  };
+}
+
 /** Sentencia del cursor y ámbito del catálogo para un modelo (pestaña, conexión, base y esquema). */
 export function sqlContextAt(model: Model, position: Position, tabId: string | undefined): EditorSqlContext {
+  const clause = clauseContext(model, position);
+  if (clause) return clause;
   const tab = useWorkbenchStore.getState().tabs.find((t) => t.id === tabId);
   const target = effectiveTarget(tab);
   const scope = catalogScope(tab?.connectionId, target.database, target.schema);

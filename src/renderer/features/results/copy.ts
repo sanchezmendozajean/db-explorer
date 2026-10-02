@@ -115,3 +115,41 @@ export function tableToTsv(source: CopySource, options: CopyOptions): string {
   }
   return selectionToTsv(all, source, options);
 }
+
+/** Interpreta texto TSV (lo que pega Excel): comillas dobles con `""` y saltos de línea dentro. */
+export function parseTsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = '';
+  let i = 0;
+  let quoted = false;
+  const body = text.replace(/\r\n?/g, '\n').replace(/\n$/, '');
+  while (i < body.length) {
+    const ch = body[i]!;
+    if (quoted) {
+      if (ch === '"' && body[i + 1] === '"') {
+        field += '"';
+        i += 2;
+        continue;
+      }
+      if (ch === '"') quoted = false;
+      else field += ch;
+      i++;
+      continue;
+    }
+    if (ch === '"' && field === '') quoted = true;
+    else if (ch === '\t') {
+      row.push(field);
+      field = '';
+    } else if (ch === '\n') {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = '';
+    } else field += ch;
+    i++;
+  }
+  row.push(field);
+  rows.push(row);
+  return rows;
+}

@@ -12,6 +12,29 @@ import { z } from 'zod';
 
 const Bool = z.boolean();
 
+/**
+ * Formato de una columna desde la grilla (specs/06 §Formato por columna): las
+ * mismas claves que `format.*` sin el prefijo, más la alineación.
+ */
+export const ColumnFormatSchema = z
+  .object({
+    'decimal.mode': z.enum(['asStored', 'fixed', 'trimZeros']),
+    'decimal.places': z.number().int().min(0).max(30),
+    'number.thousandsSeparator': Bool,
+    'float.maxDigits': z.number().int().min(1).max(17),
+    date: z.string().min(1).max(50),
+    time: z.string().min(1).max(50),
+    datetime: z.string().min(1).max(80),
+    'datetime.showMillis': z.enum(['always', 'never', 'whenPresent']),
+    'datetimetz.display': z.enum(['asStored', 'local', 'utc']),
+    boolean: z.enum(['checkbox', 'true/false', '1/0', 'sí/no']),
+    binary: z.enum(['hex', 'base64', 'size']),
+    json: z.enum(['compact', 'pretty']),
+    align: z.enum(['left', 'right', 'center']),
+  })
+  .partial();
+export type ColumnFormat = z.infer<typeof ColumnFormatSchema>;
+
 export const SETTINGS_SCHEMA = {
   'workspace.path': z.string().min(1).max(4096).nullable(),
   'files.autoSave': Bool,
@@ -51,6 +74,8 @@ export const SETTINGS_SCHEMA = {
   'format.binary.maxBytes': z.number().int().min(1).max(10_000),
   'format.json': z.enum(['compact', 'pretty']),
   'format.text.maxLength': z.number().int().min(10).max(1_000_000),
+  /** Formatos recordados por columna: `conexión/base/esquema/tabla/columna` → formato. */
+  'format.columns': z.record(z.string().max(4000), ColumnFormatSchema),
 } as const;
 
 export type SettingKey = keyof typeof SETTINGS_SCHEMA;
@@ -94,6 +119,7 @@ export const DEFAULT_SETTINGS: Settings = {
   'format.binary.maxBytes': 64,
   'format.json': 'compact',
   'format.text.maxLength': 500,
+  'format.columns': {},
   editor: {},
 };
 

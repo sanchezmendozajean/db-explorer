@@ -67,9 +67,17 @@ export function ChoiceDialog({
 /** Máximo de líneas de la vista previa de sentencias (specs/04 §14). */
 const PREVIEW_LINES = 8;
 
-function SqlPreview({ sql, language }: { sql: string; language: string }): React.JSX.Element {
+function SqlPreview({
+  sql,
+  language,
+  maxLines = PREVIEW_LINES,
+}: {
+  sql: string;
+  language: string;
+  maxLines?: number;
+}): React.JSX.Element {
   const [html, setHtml] = useState<string | null>(null);
-  const text = sql.split('\n').slice(0, PREVIEW_LINES).join('\n');
+  const text = sql.split('\n').slice(0, maxLines).join('\n');
   useEffect(() => {
     let alive = true;
     const monaco = monacoIfLoaded();
@@ -92,6 +100,7 @@ export function WriteConfirmDialog({
   statements,
   unbounded,
   language,
+  allowSkip = true,
   onResult,
   onClose,
 }: {
@@ -100,6 +109,8 @@ export function WriteConfirmDialog({
   statements: string[];
   unbounded: boolean;
   language: string;
+  /** Mostrar "No volver a preguntar en esta pestaña" (no al guardar ediciones de la grilla). */
+  allowSkip?: boolean;
   onResult: (result: { confirmed: boolean; dontAskAgain: boolean }) => void;
   onClose: () => void;
 }): React.JSX.Element {
@@ -137,9 +148,50 @@ export function WriteConfirmDialog({
       )}
       {unbounded && <p className="dialog-warning">{t.unbounded}</p>}
       <SqlPreview sql={statements.join(';\n\n')} language={language} />
-      {production && (
+      {production && allowSkip && (
         <Checkbox label={t.dontAskAgain} checked={dontAsk} onChange={(e) => setDontAsk(e.target.checked)} />
       )}
+    </Modal>
+  );
+}
+
+/** Vista previa de las sentencias a guardar de la grilla (specs/04 §14): Cancelar / Aplicar. */
+export function SqlPreviewDialog({
+  statements,
+  language,
+  onResult,
+  onClose,
+}: {
+  statements: string[];
+  language: string;
+  onResult: (apply: boolean) => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  const finish = useOnce(onResult);
+  const close = (apply: boolean): void => {
+    onClose();
+    finish(apply);
+  };
+  return (
+    <Modal
+      title={es.results.edit.previewTitle}
+      onClose={() => close(false)}
+      width={720}
+      footer={
+        <>
+          <Button variant="secondary" onClick={() => close(false)}>
+            {es.dialogs.cancel}
+          </Button>
+          <Button variant="primary" data-autofocus onClick={() => close(true)}>
+            {es.results.edit.apply}
+          </Button>
+        </>
+      }
+    >
+      <p>{es.results.edit.previewMessage(statements.length)}</p>
+      <div className="sql-preview-scroll" data-testid="sql-preview">
+        <SqlPreview sql={statements.join('\n')} language={language} maxLines={Infinity} />
+      </div>
     </Modal>
   );
 }

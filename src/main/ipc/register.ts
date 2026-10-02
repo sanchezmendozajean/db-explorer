@@ -78,4 +78,6 @@ export function registerIpcHandlers(deps: { dbHost: DbHostClient; uiState: UiSta
     clipboard.writeText(text);
     return {};
   });
+
+  handle('app:clipboard-read', async () => ({ text: await clipboard.readText() }));
 }

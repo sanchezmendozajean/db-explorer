@@ -25,8 +25,14 @@ export function visibleRows(
   view: ResultView,
 ): number[] | null {
   const query = view.filter.trim().toLowerCase();
-  if (!query && !view.sort) return null;
+  const valueFilters = view.valueFilters ?? [];
+  if (!query && !view.sort && valueFilters.length === 0) return null;
   let indices = Array.from({ length: rows.length }, (_, i) => i);
+  if (valueFilters.length > 0) {
+    indices = indices.filter((i) =>
+      valueFilters.every((f) => sameCell(rows[i]![f.column] ?? null, f.value) !== f.exclude),
+    );
+  }
   if (query) {
     indices = indices.filter((i) =>
       rows[i]!.some(
@@ -47,6 +53,11 @@ export function visibleRows(
     });
   }
   return indices;
+}
+
+function sameCell(a: CellValue, b: CellValue): boolean {
+  if (a === null || b === null) return a === b;
+  return String(a) === String(b);
 }
 
 /** Columnas visibles (índices del result set) en su orden. */
