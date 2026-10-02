@@ -48,6 +48,9 @@ export const IPC_INVOKE_CHANNELS = [
   'query:fetch-more',
   'query:cancel',
   'query:close-session',
+  'query:history-list',
+  'query:history-delete',
+  'query:history-clear',
 ] as const;
 
 export const IPC_EVENT_CHANNELS = [

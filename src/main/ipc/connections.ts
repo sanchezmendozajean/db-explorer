@@ -5,6 +5,7 @@ import { CompleteConnectionSchema } from '@shared/connection';
 import type { DbHostClient } from '../services/db-host-client';
 import type { ConnectionStore } from '../services/connection-store';
 import type { SecretStore } from '../services/secret-store';
+import type { HistoryService } from '../services/history-service';
 import { AppError, handle } from './handle';
 
 interface Deps {
@@ -13,6 +14,7 @@ interface Deps {
   skippedOnLoad: number;
   connections: ConnectionStore;
   secrets: SecretStore;
+  history: HistoryService;
 }
 
 function requireComplete(config: ConnectionConfig): ConnectionConfig {
@@ -25,7 +27,13 @@ function requireComplete(config: ConnectionConfig): ConnectionConfig {
  * Canales `conn:*` y `meta:*`. Las contraseñas guardadas se descifran aquí y
  * van directo al db-host: nunca vuelven al renderer (specs/08).
  */
-export function registerConnectionHandlers({ dbHost, connections, secrets, skippedOnLoad }: Deps): void {
+export function registerConnectionHandlers({
+  dbHost,
+  connections,
+  secrets,
+  history,
+  skippedOnLoad,
+}: Deps): void {
   let skipped = skippedOnLoad;
   handle('conn:list', () => {
     const result = {
@@ -97,7 +105,19 @@ export function registerConnectionHandlers({ dbHost, connections, secrets, skipp
   }));
 
   // Ejecución: sin límite de tiempo (el usuario la controla con Cancelar); las filas llegan por `query:event`.
-  handle('query:execute', (req) => dbHost.request('query.execute', req, { timeoutMs: null }));
+  handle('query:execute', (req) => {
+    history.begin(req);
+    return dbHost.request('query.execute', req, { timeoutMs: null });
+  });
+  handle('query:history-list', (query) => history.list(query));
+  handle('query:history-delete', ({ id }) => {
+    history.remove(id);
+    return {};
+  });
+  handle('query:history-clear', () => {
+    history.clear();
+    return {};
+  });
   handle('query:fetch-more', (req) => dbHost.request('query.fetchMore', req, { timeoutMs: null }));
   handle('query:cancel', async ({ queryId }) => {
     await dbHost.request('query.cancel', { queryId });

@@ -453,6 +453,24 @@ export const es = {
     eolCrlf: 'CRLF (Windows)',
   },
 
+  history: {
+    filterPlaceholder: 'Buscar en el SQL',
+    connection: 'Conexión',
+    allConnections: 'Todas las conexiones',
+    openInNewScript: 'Abrir en un script nuevo',
+    insert: 'Insertar en el script actual',
+    copySql: 'Copiar SQL',
+    delete: 'Quitar del historial',
+    enabled: 'Guardar el historial',
+    clearAll: 'Borrar el historial…',
+    clearTitle: 'Borrar el historial',
+    clearMessage: '¿Borrar todas las consultas del historial? No se puede deshacer.',
+    clear: 'Borrar',
+    disabled: 'El historial está desactivado: las consultas nuevas no se guardan.',
+    noActiveScript: 'Abre un script para insertar la consulta.',
+    rows: (n: number) => `${n.toLocaleString('es')} ${n === 1 ? 'fila' : 'filas'}`,
+  },
+
   preferences: {
     title: 'Preferencias',
     files: 'Archivos',

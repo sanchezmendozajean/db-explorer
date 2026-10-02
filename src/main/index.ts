@@ -15,6 +15,7 @@ import { registerConnectionHandlers } from './ipc/connections';
 import { registerWorkspaceHandlers } from './ipc/workspace';
 import { SettingsStore } from './services/settings-store';
 import { WorkspaceService } from './services/workspace-service';
+import { HistoryService } from './services/history-service';
 
 function broadcast<C extends IpcEventChannel>(channel: C, payload: IpcEventPayload<C>): void {
   for (const win of BrowserWindow.getAllWindows()) win.webContents.send(channel, payload);
@@ -31,9 +32,14 @@ if (userDataOverride && !app.isPackaged) {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
+  // Se crea al estar lista la app (necesita userData); los eventos anteriores no tienen nada que registrar.
+  let history: HistoryService | null = null;
   const dbHost = new DbHostClient(createUtilityTransport, {
     onRestart: (reason) => broadcast('app:db-host-restarted', { reason }),
-    onQueryEvent: (event) => broadcast('query:event', event),
+    onQueryEvent: (event) => {
+      broadcast('query:event', event);
+      history?.onEvent(event);
+    },
   });
 
   app.on('second-instance', () => {
@@ -80,9 +86,26 @@ if (!app.requestSingleInstanceLock()) {
       trashItem,
     );
 
+    const historyService = new HistoryService(join(userData, 'history.sqlite'), {
+      enabled: () => settings.settings['history.enabled'],
+      maxEntries: () => settings.settings['history.maxEntries'],
+      connection: (id) => {
+        const c = connections.get(id);
+        return c ? { name: c.name, engine: c.engine } : undefined;
+      },
+    });
+    history = historyService;
+    app.on('will-quit', () => historyService.close());
+
     dbHost.start();
     registerIpcHandlers({ dbHost, uiState });
-    registerConnectionHandlers({ dbHost, connections, secrets, skippedOnLoad: skipped });
+    registerConnectionHandlers({
+      dbHost,
+      connections,
+      secrets,
+      history: historyService,
+      skippedOnLoad: skipped,
+    });
     registerWorkspaceHandlers({ settings, workspace });
 
     const open = (): BrowserWindow => createMainWindow({ dark: nativeTheme.shouldUseDarkColors });

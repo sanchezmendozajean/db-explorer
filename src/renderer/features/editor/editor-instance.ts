@@ -15,6 +15,17 @@ export function activeEditor(): CodeEditor | null {
   return current;
 }
 
+/** Inserta texto en el cursor del editor activo (p. ej. desde el historial). Devuelve false si no hay editor. */
+export function insertIntoActiveEditor(text: string): boolean {
+  const editor = current;
+  const selection = editor?.getSelection();
+  if (!editor || !selection || !editor.getModel()) return false;
+  editor.executeEdits('db-explorer', [{ range: selection, text, forceMoveMarkers: true }]);
+  editor.pushUndoStop();
+  editor.focus();
+  return true;
+}
+
 interface CursorState {
   line: number;
   column: number;

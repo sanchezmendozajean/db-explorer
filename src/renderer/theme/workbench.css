@@ -1320,3 +1320,48 @@ button.statusbar-item:hover {
 .pref-value {
   color: var(--fg);
 }
+
+/* Historial de consultas (specs/06) */
+.history-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 8px 6px;
+}
+
+.history-note {
+  margin: 0 8px 6px;
+  color: var(--warning);
+  font-size: 12px;
+}
+
+.history-row {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+
+.history-sql {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.history-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+
+.history-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 20px;
+  color: var(--fg-muted);
+  font-size: 11px;
+}

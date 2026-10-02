@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import type { HistoryEntry } from './history';
+import { HistoryQuerySchema } from './history';
 import type { IpcEventChannel, IpcInvokeChannel } from './channels';
 import { UiStateSchema } from './ui-state';
 import type { ServerInfo } from './connection';
@@ -234,6 +236,9 @@ export const ipcInvokeContract = {
   'query:fetch-more': { request: FetchMoreRequestSchema, response: z.custom<FetchMoreResult>() },
   'query:cancel': { request: z.object({ queryId: QueryId }), response: Empty },
   'query:close-session': { request: z.object({ sessionId: z.string().min(1).max(4200) }), response: Empty },
+  'query:history-list': { request: HistoryQuerySchema, response: z.custom<HistoryEntry[]>() },
+  'query:history-delete': { request: z.object({ id: z.number().int().positive() }), response: Empty },
+  'query:history-clear': { request: Empty, response: Empty },
 } as const satisfies Record<IpcInvokeChannel, { request: z.ZodType; response: z.ZodType }>;
 
 export const DbHostRestartedEventSchema = z.object({

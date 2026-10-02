@@ -63,6 +63,9 @@ export interface DbExplorerApi {
     fetchMore: Invoke<'query:fetch-more'>;
     cancel: Invoke<'query:cancel'>;
     closeSession: Invoke<'query:close-session'>;
+    historyList: Invoke<'query:history-list'>;
+    historyDelete: Invoke<'query:history-delete'>;
+    historyClear: Invoke<'query:history-clear'>;
   };
   /** Suscribe a un evento de main. Devuelve la función para desuscribirse. */
   on<C extends IpcEventChannel>(channel: C, listener: (payload: IpcEventPayload<C>) => void): () => void;

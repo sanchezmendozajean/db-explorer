@@ -76,6 +76,9 @@ const api: DbExplorerApi = {
     fetchMore: invoke('query:fetch-more'),
     cancel: invoke('query:cancel'),
     closeSession: invoke('query:close-session'),
+    historyList: invoke('query:history-list'),
+    historyDelete: invoke('query:history-delete'),
+    historyClear: invoke('query:history-clear'),
   },
   on<C extends IpcEventChannel>(channel: C, listener: (payload: IpcEventPayload<C>) => void) {
     if (!allowedEvents.includes(channel)) throw new Error(`Canal no permitido: ${String(channel)}`);

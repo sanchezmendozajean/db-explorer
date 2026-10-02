@@ -91,7 +91,6 @@ export function ResultsPanel({ tab }: { tab: EditorTab }): React.JSX.Element {
       icon: state.messages.some((m) => m.kind === 'error') ? 'error' : undefined,
       iconColor: 'var(--error)',
     },
-    { id: 'history', label: es.results.history },
   ];
   const activeId = items.some((i) => i.id === state.activeView) ? state.activeView : 'messages';
 
@@ -178,13 +177,7 @@ export function ResultsPanel({ tab }: { tab: EditorTab }): React.JSX.Element {
         <MessagesView tabId={tab.id} messages={state.messages} />
       ) : (
         <div className="panel-body panel-empty">
-          <p>
-            {state.running
-              ? es.execution.running
-              : activeId === 'history'
-                ? es.sideBar.historyEmpty
-                : es.results.empty}
-          </p>
+          <p>{state.running ? es.execution.running : es.results.empty}</p>
         </div>
       )}
     </section>

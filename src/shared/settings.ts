@@ -25,6 +25,9 @@ export const SETTINGS_SCHEMA = {
   'files.autoReveal': Bool,
   /** Qué separa las sentencias de un script: solo el punto y coma, o también una línea en blanco. */
   'sql.statementSeparator': z.enum(['semicolon', 'blankLine']),
+  /** Guardar las consultas ejecutadas en el historial (specs/06, specs/08). */
+  'history.enabled': Bool,
+  'history.maxEntries': z.number().int().min(100).max(1_000_000),
 
   'results.maxRows': z.number().int().positive().max(10_000_000),
   'results.alternateRows': Bool,
@@ -66,6 +69,8 @@ export const DEFAULT_SETTINGS: Settings = {
   'files.confirmDragAndDrop': true,
   'files.autoReveal': true,
   'sql.statementSeparator': 'semicolon',
+  'history.enabled': true,
+  'history.maxEntries': 5000,
 
   'results.maxRows': 500,
   'results.alternateRows': true,
