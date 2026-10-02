@@ -198,7 +198,7 @@ Barra superior con breadcrumb `PayBox Prod › paybox › public › CRendicione
 Ocupa por defecto el 40% inferior del grupo de editor. Se asocia a la pestaña SQL activa (cada script conserva sus propios resultados).
 
 ### Pestañas del panel (30 px)
-`Resultado 1`, `Resultado 2`… (una por cada result set; el nombre se reemplaza por el nombre de la tabla principal cuando se detecta, p. ej. `CRendiciones_Conf_Generales`), **Plan** (si se pidió un plan de ejecución; ver `12` §5), **Mensajes** (NOTICE/PRINT, filas afectadas, errores con hora y duración), **Historial** (si no está en la activity bar).
+`Resultado 1`, `Resultado 2`… (una por cada result set; el nombre se reemplaza por el nombre de la tabla principal cuando se detecta, p. ej. `CRendiciones_Conf_Generales`), **Plan** (si se pidió un plan de ejecución; ver `12` §5), **Mensajes** (NOTICE/PRINT, filas afectadas, errores con hora y duración). El historial está en la activity bar (no se repite en el panel).
 Pestaña de resultado con error: icono `codicon-error` rojo. Botón de fijar resultado (`codicon-pin`) para que no se reemplace en la siguiente ejecución.
 Derecha: `codicon-chevron-up` maximizar panel, `codicon-close` ocultar.
 

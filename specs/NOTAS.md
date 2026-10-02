@@ -311,3 +311,30 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 - Comentario `-- @connection:` en la primera línea (`07`, opcional y desactivado por defecto): no implementado.
 - El árbol tiene selección simple (sin Ctrl/Shift+clic para varios archivos).
 - El filtro al escribir busca solo en las carpetas ya cargadas (expandidas alguna vez).
+
+## M6 — Productividad del editor (2026-10-02)
+
+### Criterios de aceptación
+
+| Criterio | Estado |
+|---|---|
+| En `SELECT c. FROM clientes c` sugiere columnas de `clientes` | ✅ e2e `productivity.spec.ts` y unitarias `sql-context.test.ts` |
+| Nombres con mayúsculas en Postgres se insertan entrecomillados | ✅ e2e (`"CRendiciones_Conf_Generales"`) |
+| Reasignar Ctrl+Enter en `keybindings.json` surte efecto sin reiniciar | ✅ e2e (Ctrl+E ejecuta y Ctrl+Enter queda libre, guardando el archivo desde fuera) |
+| Hover, F12, formateo, historial, `settings.json` con autocompletado de claves | ✅ e2e |
+| Pruebas | ✅ 161 unitarias, 53 de integración, 72 e2e (tres corridas seguidas); lint, tipos y Prettier limpios |
+
+### Decisiones
+- **Catálogo = caché del árbol de conexiones**: tablas y vistas por esquema, y columnas solo de las tablas que hacen falta (las de la sentencia o la del calificador). Traer todas las columnas de una vez sería muy pesado en bases de miles de tablas (SAP B1). Se precarga en segundo plano el esquema de la pestaña activa al conectar o cambiar de base/esquema. Los nodos de columna ahora traen tipo, nulo, default y comentario (`TreeNodeData.column`).
+- **Contexto de autocompletado** (`shared/sql-context.ts`, puro y probado): tablas de la sentencia con alias (`FROM`, `JOIN`, `UPDATE`, `INTO`, listas con coma) e identificadores entre comillas de cada dialecto; tipo de lugar (tablas, columnas, `algo.`, general). En PostgreSQL los nombres sin esquema se buscan en el esquema elegido y luego en `public`.
+- **Entrecomillado** con `quoteIdent` del motor; si se empieza a escribir con comilla (`"CRe`), se filtra con el nombre entre comillas.
+- **F12 y Ctrl+P sobre un objeto** lo seleccionan en el árbol de conexiones (la pestaña de objeto llega en M7). Ctrl+P busca en los objetos ya cargados en la caché (specs/04 §13).
+- **Formateo** con `sql-formatter` (dialecto según el motor, tabulación de `editor.tabSize`, mayúsculas como estén escritas) **sentencia por sentencia**: lo que hay entre sentencias (`GO`, `DELIMITER`, comentarios sueltos) queda intacto, porque `sql-formatter` rompe `DELIMITER`. Una sentencia que no se puede analizar se deja como estaba y se avisa. Es el proveedor de formato de Monaco: también funciona "Dar formato al documento/selección".
+- **Historial** en `userData/history.sqlite` (con `node:sqlite` en main): main asocia cada sentencia de `query:execute` con sus eventos y guarda fecha, conexión (nombre y motor del momento), base, SQL, duración, filas y error. `history.enabled` y `history.maxEntries` (5000, se recorta cada 50 inserciones). Vista en la barra lateral: filtro por texto (sin comodines) y conexión; doble clic abre en un script nuevo, Enter inserta en el script actual, Supr quita. La pestaña Historial del panel de resultados se quitó (specs/04 la pedía solo si no estaba en la activity bar).
+- **settings.json y keybindings.json** se abren en el editor (creándolos con una plantilla comentada) con esquema JSON: claves y valores de `SETTINGS_SCHEMA` (generados con `z.toJSONSchema`) y comandos de la app para `keybindings.json`. Main observa la carpeta de `userData`, así que guardar en la app o con otro editor se aplica sin reiniciar. Las entradas no válidas de `keybindings.json` se omiten con aviso. Los archivos `.json` del espacio de trabajo también usan ahora el servicio de JSON de Monaco (con su worker empaquetado).
+
+### Pendientes / avisos
+- Los acordes de dos teclas de `keybindings.json` (p. ej. `ctrl+k ctrl+e`) funcionan fuera del editor; dentro de Monaco solo se registran los acordes por defecto.
+- El diálogo Ayuda › Atajos de teclado muestra los atajos por defecto, no los personalizados.
+- El autocompletado no sugiere columnas de subconsultas ni de CTE (solo de tablas y vistas del catálogo).
+- Una vez la preparación de `productivity.spec.ts` y otra una prueba de `connections.spec.ts` fallaron por tiempo en corridas completas; no se reprodujeron en tres corridas seguidas.

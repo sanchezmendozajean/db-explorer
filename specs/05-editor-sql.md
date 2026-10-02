@@ -119,7 +119,7 @@ Contexto mínimo que debe entender (análisis ligero con tokens, sin parser comp
 
 Otros providers:
 - **Hover**: tabla → columnas con tipos; columna → tipo, nulo, default.
-- **Definition (F12)**: abre pestaña de objeto.
+- **Definition (F12)**: abre pestaña de objeto. *Hasta M7 (pestaña de objeto real) selecciona la tabla en el árbol de conexiones.*
 - **Markers**: errores devueltos por el motor en la posición indicada.
 
 ## Sentencia activa y ejecución
