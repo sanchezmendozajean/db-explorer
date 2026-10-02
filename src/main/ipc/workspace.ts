@@ -7,18 +7,27 @@ import { TEXT_EXTENSIONS } from '@shared/workspace';
 import type { SettingsStore } from '../services/settings-store';
 import type { WorkspaceService } from '../services/workspace-service';
 import { WorkspaceWatcher } from '../services/workspace-watcher';
+import { ConfigWatcher } from '../services/config-watcher';
+import type { KeybindingsStore } from '../services/keybindings-store';
+import { ensureFile, KEYBINDINGS_TEMPLATE, SETTINGS_TEMPLATE } from '../services/keybindings-store';
 import { AppError, handle } from './handle';
 
 interface Deps {
   settings: SettingsStore;
   workspace: WorkspaceService;
+  keybindings: KeybindingsStore;
+  /** Carpeta de `settings.json` y `keybindings.json`. */
+  userData: string;
 }
 
 function windowOf(event: IpcMainInvokeEvent): BrowserWindow | null {
   return BrowserWindow.fromWebContents(event.sender);
 }
 
-function broadcast(channel: 'settings:changed' | 'fs:changed', payload: unknown): void {
+function broadcast(
+  channel: 'settings:changed' | 'settings:keybindings-changed' | 'fs:changed',
+  payload: unknown,
+): void {
   for (const win of BrowserWindow.getAllWindows()) win.webContents.send(channel, payload);
 }
 
@@ -30,7 +39,30 @@ const FILE_FILTERS = [
 ];
 
 /** Canales `settings:*` y `fs:*` del espacio de trabajo, los scripts y la vista Archivos (specs/07 y 11). */
-export function registerWorkspaceHandlers({ settings, workspace }: Deps): void {
+export function registerWorkspaceHandlers({ settings, workspace, keybindings, userData }: Deps): void {
+  const settingsFile = join(userData, 'settings.json');
+  const keybindingsFile = join(userData, 'keybindings.json');
+  // Editar settings.json o keybindings.json (en la app o con otro editor) se aplica sin reiniciar.
+  new ConfigWatcher(userData, {
+    'settings.json': () =>
+      void settings.load().then((updated) => {
+        workspace.setExclude(updated['files.exclude']);
+        broadcast('settings:changed', updated);
+      }),
+    'keybindings.json': () =>
+      void keybindings.load().then((kb) => broadcast('settings:keybindings-changed', kb)),
+  }).start();
+
+  handle('settings:get-keybindings', () => keybindings.keybindings);
+
+  handle('settings:open-file', async ({ file }) => {
+    const path = file === 'settings' ? settingsFile : keybindingsFile;
+    await ensureFile(path, file === 'settings' ? SETTINGS_TEMPLATE : KEYBINDINGS_TEMPLATE);
+    // Se edita como cualquier archivo abierto con el diálogo (está fuera del espacio de trabajo).
+    workspace.allow(path);
+    return { path };
+  });
+
   const watcher = new WorkspaceWatcher(
     (paths) => broadcast('fs:changed', { paths }),
     (name) => workspace.isExcluded(name),

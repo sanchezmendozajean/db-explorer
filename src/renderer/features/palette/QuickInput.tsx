@@ -9,6 +9,17 @@ import type { FileNode } from '@shared/workspace';
 import { useFilesStore } from '../../stores/files-store';
 import { useWorkspaceStore } from '../../stores/workspace-store';
 import { openScript } from '../editor/scripts';
+import { cachedObjects, revealObject } from '../editor/catalog';
+import { useConnectionsStore } from '../../stores/connections-store';
+
+/** Íconos de los objetos de BD (mismos que el árbol de conexiones). */
+const OBJECT_ICON: Record<string, string> = {
+  table: 'table',
+  view: 'eye',
+  materializedView: 'eye',
+  function: 'symbol-method',
+  procedure: 'symbol-event',
+};
 import type { FuzzyMatch } from './fuzzy';
 import { fuzzyMatch } from './fuzzy';
 
@@ -89,7 +100,32 @@ function quickOpenItems(query: string): PickItem[] {
     }
   };
   walk(useFilesStore.getState().all);
-  return files.sort((a, b) => b.match.score - a.match.score);
+  const objects: PickItem[] = [];
+  if (query) {
+    const connections = useConnectionsStore.getState().connections;
+    const seen = new Set<string>();
+    for (const { connectionId, object } of cachedObjects()) {
+      const key = `${connectionId}|${object.database}|${object.schema}|${object.kind}|${object.name}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const match = fuzzyMatch(query, object.name);
+      if (!match) continue;
+      const conn = connections.find((c) => c.id === connectionId);
+      objects.push({
+        id: `obj:${key}`,
+        label: object.name,
+        icon: OBJECT_ICON[object.kind] ?? 'symbol-misc',
+        iconColor: 'var(--icon-table)',
+        detail: [conn?.name, object.database, object.schema !== object.database ? object.schema : null]
+          .filter(Boolean)
+          .join(' · '),
+        group: es.palette.groupObjects,
+        match,
+        run: () => revealObject(connectionId, object),
+      });
+    }
+  }
+  return [...objects, ...files].sort((a, b) => b.match.score - a.match.score);
 }
 
 function pickItems(pick: QuickPick, query: string): PickItem[] {

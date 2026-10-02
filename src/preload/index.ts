@@ -33,6 +33,8 @@ const api: DbExplorerApi = {
   settings: {
     get: invoke('settings:get'),
     update: invoke('settings:update'),
+    getKeybindings: invoke('settings:get-keybindings'),
+    openFile: invoke('settings:open-file'),
   },
   workspace: {
     open: invoke('fs:open-workspace'),

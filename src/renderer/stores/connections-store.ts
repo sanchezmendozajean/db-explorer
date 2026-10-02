@@ -27,6 +27,9 @@ interface ConnectionsStore {
   expandOnConnect: string | null;
   /** Conexión, base y esquema del nodo seleccionado en el árbol (destino de "Nuevo script"). */
   treeSelection: TreeTarget | null;
+  /** Pedido de mostrar un nodo en el árbol (F12, Ctrl+P): claves de la ruta, de la conexión al nodo. */
+  revealRequest: { connectionId: string; keys: string[] } | null;
+  reveal: (connectionId: string, keys: string[]) => void;
 
   /** Devuelve la cantidad de entradas inválidas omitidas al leer el archivo. */
   load: () => Promise<number>;
@@ -71,6 +74,8 @@ export const useConnectionsStore = create<ConnectionsStore>((set, get) => ({
   nodeErrors: {},
   expandOnConnect: null,
   treeSelection: null,
+  revealRequest: null,
+  reveal: (connectionId, keys) => set({ revealRequest: { connectionId, keys } }),
 
   load: async () => {
     const r = await window.api.conn.list({});

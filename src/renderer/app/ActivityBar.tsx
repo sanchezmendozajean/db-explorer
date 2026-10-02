@@ -56,7 +56,9 @@ export function ActivityBar(): React.JSX.Element {
         <Menu
           entries={[
             commandEntry('db.preferences'),
+            commandEntry('db.preferences.openJson'),
             commandEntry('db.help.keybindings'),
+            commandEntry('db.keybindings.open'),
             SEPARATOR,
             { type: 'submenu', id: 'theme', label: es.menu.theme, entries: themeEntries() },
           ]}

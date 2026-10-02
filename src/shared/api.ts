@@ -20,6 +20,8 @@ export interface DbExplorerApi {
   settings: {
     get: Invoke<'settings:get'>;
     update: Invoke<'settings:update'>;
+    getKeybindings: Invoke<'settings:get-keybindings'>;
+    openFile: Invoke<'settings:open-file'>;
   };
   workspace: {
     open: Invoke<'fs:open-workspace'>;

@@ -14,9 +14,13 @@ import {
   closeActiveTab,
   newScript,
   openFileWithDialog,
+  openScript,
   saveActiveAs,
 } from '../features/editor/scripts';
+import { registerConfigSchema } from '../features/editor/json-schemas';
 import * as fileActions from '../features/files/file-actions';
+import { symbolAt } from '../features/editor/sql-intellisense';
+import { revealObject } from '../features/editor/catalog';
 import {
   changeWorkspace,
   openRecentWorkspace,
@@ -219,6 +223,38 @@ export function registerAppCommands(): () => void {
       run: async () => void (await settings().update('sql.statementSeparator', value)),
     })),
 
+    // F12 (specs/05): la tabla o vista bajo el cursor (pestaña de objeto en M7; hoy se muestra en el árbol).
+    {
+      id: 'db.goToDefinition',
+      category: cat.query,
+      enabled: hasScript,
+      run: async () => {
+        const editor = activeEditor();
+        const model = editor?.getModel();
+        const position = editor?.getPosition();
+        if (!editor || !model || !position) return;
+        const symbol = await symbolAt(model, position, activeScript());
+        if (!symbol?.table) {
+          showToast('info', es.editor.definitionNotFound);
+          return;
+        }
+        revealObject(symbol.scope.connectionId, symbol.table);
+      },
+    },
+
+    // Formateo (specs/05): proveedor de formato de Monaco con sql-formatter.
+    {
+      id: 'db.formatSql',
+      category: cat.query,
+      enabled: hasScript,
+      run: async () => {
+        const editor = activeEditor();
+        if (!editor) return;
+        const action = hasSelection() ? 'editor.action.formatSelection' : 'editor.action.formatDocument';
+        await editor.getAction(action)?.run();
+      },
+    },
+
     // Ejecución (specs/05)
     {
       id: 'db.executeStatement',
@@ -285,6 +321,8 @@ export function registerAppCommands(): () => void {
     })),
 
     { id: 'db.newConnection', category: cat.file, run: () => newConnection() },
+    { id: 'db.preferences.openJson', category: cat.file, run: () => openConfigFile('settings') },
+    { id: 'db.keybindings.open', category: cat.help, run: () => openConfigFile('keybindings') },
     {
       id: 'db.preferences',
       category: cat.file,
@@ -308,6 +346,17 @@ export function registerAppCommands(): () => void {
   ];
 
   return commands.registerMany(list);
+}
+
+/** Abre settings.json o keybindings.json en el editor, con su esquema JSON (specs/05, M6). */
+async function openConfigFile(file: 'settings' | 'keybindings'): Promise<void> {
+  const r = await window.api.settings.openFile({ file });
+  if (!r.ok) {
+    showToast('error', r.error.message);
+    return;
+  }
+  registerConfigSchema(file, r.data.path);
+  await openScript(r.data.path);
 }
 
 /** Aviso para acciones visibles en la maqueta que llegan en hitos posteriores. */

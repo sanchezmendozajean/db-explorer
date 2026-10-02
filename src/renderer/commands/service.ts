@@ -2,13 +2,25 @@ import { create } from 'zustand';
 import { es } from '../i18n/es';
 import { CommandRegistry } from './registry';
 import { DEFAULT_KEYBINDINGS } from './default-keybindings';
-import type { KeySequence } from './keybindings';
+import type { KeybindingRule, KeySequence } from './keybindings';
 import { KeybindingResolver, chordFromEvent, formatChord, formatSequence } from './keybindings';
 
 /** Instancias únicas de la aplicación. */
 export const commands = new CommandRegistry();
 export const keybindings = new KeybindingResolver();
 keybindings.setRules(DEFAULT_KEYBINDINGS);
+
+/**
+ * Aplica `keybindings.json` sobre los atajos por defecto (la última regla
+ * gana y `-comando` quita un atajo, como en VS Code). Sin reiniciar.
+ */
+export function applyUserKeybindings(rules: readonly KeybindingRule[]): void {
+  keybindings.setRules([...DEFAULT_KEYBINDINGS, ...rules]);
+  useKeybindingsVersion.setState((s) => ({ version: s.version + 1 }));
+}
+
+/** Cambia al aplicar atajos del usuario (los menús y la paleta vuelven a leer los atajos). */
+export const useKeybindingsVersion = create<{ version: number }>(() => ({ version: 0 }));
 
 /** Mensaje transitorio en la status bar (p. ej. acorde pendiente). */
 interface KeyStatusState {

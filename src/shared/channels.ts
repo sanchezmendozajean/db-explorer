@@ -15,6 +15,8 @@ export const IPC_INVOKE_CHANNELS = [
   'app:close-ready',
   'settings:get',
   'settings:update',
+  'settings:get-keybindings',
+  'settings:open-file',
   'fs:open-workspace',
   'fs:save-workspace-state',
   'fs:new-script',
@@ -58,6 +60,7 @@ export const IPC_EVENT_CHANNELS = [
   'app:window-state',
   'app:before-close',
   'settings:changed',
+  'settings:keybindings-changed',
   'fs:changed',
   'query:event',
 ] as const;

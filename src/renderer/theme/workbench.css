@@ -1365,3 +1365,10 @@ button.statusbar-item:hover {
   color: var(--fg-muted);
   font-size: 11px;
 }
+
+.pref-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 760px;
+}

@@ -96,6 +96,12 @@ export async function childrenOf(
         label: c.name,
         secondary: c.nullable ? c.nativeType : `${c.nativeType} · NOT NULL`,
         primaryKey: c.primaryKey,
+        column: {
+          nativeType: c.nativeType,
+          nullable: c.nullable,
+          defaultValue: c.defaultValue,
+          comment: c.comment,
+        },
         expandable: false,
       }));
       if (ref.objectKind !== 'view') {

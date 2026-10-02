@@ -196,6 +196,21 @@ export function ConnectionsView(): React.JSX.Element {
     setExpanded((prev) => new Set(prev).add(key));
   }, [expandOnConnect, status]);
 
+  // Mostrar un nodo pedido desde fuera (F12, Ctrl+P): se expande su ruta y se selecciona.
+  const revealRequest = useConnectionsStore((s) => s.revealRequest);
+  useEffect(() => {
+    if (!revealRequest) return;
+    const { keys } = revealRequest;
+    useConnectionsStore.setState({ revealRequest: null });
+    /* eslint-disable react-hooks/set-state-in-effect -- responde a un pedido externo del store */
+    setExpanded((prev) => new Set([...prev, ...keys.slice(0, -1)]));
+    setSelected(keys[keys.length - 1] ?? null);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLElement>('[data-view="connections"] .tree')?.focus(),
+    );
+  }, [revealRequest]);
+
   const setOpen = (id: string, open: boolean): void =>
     setExpanded((prev) => {
       const next = new Set(prev);

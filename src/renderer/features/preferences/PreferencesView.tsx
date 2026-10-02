@@ -3,6 +3,7 @@ import { Button } from '../../components/Button';
 import { Checkbox, TextInput } from '../../components/Inputs';
 import { es } from '../../i18n/es';
 import { useSettingsStore } from '../../stores/settings-store';
+import { commands } from '../../commands/service';
 import { useWorkspaceStore } from '../../stores/workspace-store';
 import { autoSaveChanged } from '../editor/documents';
 import { changeWorkspace, resetWorkspace, revealWorkspace } from '../files/workspace-actions';
@@ -51,7 +52,16 @@ export function PreferencesView(): React.JSX.Element {
 
   return (
     <div className="preferences" data-testid="preferences">
-      <h1 className="pref-heading">{p.title}</h1>
+      <div className="pref-header">
+        <h1 className="pref-heading">{p.title}</h1>
+        <Button
+          variant="secondary"
+          icon="go-to-file"
+          onClick={() => void commands.execute('db.preferences.openJson')}
+        >
+          {p.openJson}
+        </Button>
+      </div>
       <section className="pref-group" aria-labelledby="pref-files">
         <h2 id="pref-files" className="pref-group-title">
           {p.files}

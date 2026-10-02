@@ -15,6 +15,7 @@ export const DEFAULT_KEYBINDINGS: readonly KeybindingRule[] = [
   { key: 'alt+pause', command: 'db.cancel' },
   { key: 'ctrl+alt+e', command: 'db.explainPlan' },
   { key: 'shift+alt+f', command: 'db.formatSql' },
+  { key: 'f12', command: 'db.goToDefinition', when: 'editorTextFocus' },
   { key: 'ctrl+alt+c', command: 'db.commit' },
   { key: 'ctrl+alt+r', command: 'db.rollback' },
 

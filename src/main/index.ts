@@ -16,6 +16,7 @@ import { registerWorkspaceHandlers } from './ipc/workspace';
 import { SettingsStore } from './services/settings-store';
 import { WorkspaceService } from './services/workspace-service';
 import { HistoryService } from './services/history-service';
+import { KeybindingsStore } from './services/keybindings-store';
 
 function broadcast<C extends IpcEventChannel>(channel: C, payload: IpcEventPayload<C>): void {
   for (const win of BrowserWindow.getAllWindows()) win.webContents.send(channel, payload);
@@ -106,7 +107,9 @@ if (!app.requestSingleInstanceLock()) {
       history: historyService,
       skippedOnLoad: skipped,
     });
-    registerWorkspaceHandlers({ settings, workspace });
+    const keybindings = new KeybindingsStore(join(userData, 'keybindings.json'));
+    await keybindings.load();
+    registerWorkspaceHandlers({ settings, workspace, keybindings, userData });
 
     const open = (): BrowserWindow => createMainWindow({ dark: nativeTheme.shouldUseDarkColors });
     open();

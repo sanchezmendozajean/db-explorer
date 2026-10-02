@@ -100,6 +100,8 @@ export interface TreeNodeData {
   count?: number;
   /** Columna que forma parte de la clave primaria (icono de llave). */
   primaryKey?: boolean;
+  /** Detalle de una columna (autocompletado y hover del editor). */
+  column?: { nativeType: string; nullable: boolean; defaultValue?: string; comment?: string };
 }
 
 /** Identificador estable de un nodo dentro de una conexión (nombres codificados para evitar colisiones). */

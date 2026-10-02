@@ -16,6 +16,7 @@ import type { CodeEditor } from './editor-instance';
 import { attachEditor } from './editor-instance';
 import { editorContextMenu } from './editor-menu';
 import { loadMonaco } from './monaco/loader';
+import { registerSqlProviders } from './monaco/providers';
 import type { Monaco } from './monaco/loader';
 import { scheduleWorkspaceSave } from './scripts';
 
@@ -86,6 +87,7 @@ export function SqlEditor({ tab }: { tab: EditorTab }): React.JSX.Element {
         ariaLabel: es.editor.ariaLabel,
         contextmenu: false,
       });
+      registerSqlProviders(monaco);
       const detach = attachEditor(monaco, editor);
       // Menú contextual propio (ver editor-menu.ts); el de Monaco queda desactivado.
       const menu = editor.onContextMenu((e) =>

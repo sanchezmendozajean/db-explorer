@@ -131,7 +131,11 @@ export function EditorToolbar({ tab }: { tab: EditorTab }): React.JSX.Element {
           <span>{t.transaction(t.auto)}</span>
         </Dropdown>
         <span className="toolbar-spacer" />
-        <IconButton icon="list-selection" label={t.format} onClick={() => notAvailable(t.format)} />
+        <IconButton
+          icon="list-selection"
+          label={t.format}
+          onClick={() => void commands.execute('db.formatSql')}
+        />
         <IconButton
           icon="layout-panel"
           label={t.togglePanel}

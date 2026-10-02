@@ -37,6 +37,7 @@ export const es = {
     'db.quickOpen': 'Ir a objeto o archivo…',
     'db.newScript': 'Nuevo script SQL',
     'db.openFile': 'Abrir archivo…',
+    'db.goToDefinition': 'Ir a la definición',
     'db.workspace.change': 'Cambiar espacio de trabajo…',
     'db.workspace.openRecent': 'Abrir espacio de trabajo reciente…',
     'db.workspace.reset': 'Volver al espacio de trabajo predeterminado',
@@ -62,7 +63,8 @@ export const es = {
     'db.toggleAutoSave': 'Guardado automático',
     'db.newConnection': 'Nueva conexión…',
     'db.preferences': 'Preferencias',
-    'db.keybindings.open': 'Atajos de teclado',
+    'db.keybindings.open': 'Abrir keybindings.json (atajos de teclado)',
+    'db.preferences.openJson': 'Abrir settings.json',
     'db.window.quit': 'Salir',
     'db.edit.undo': 'Deshacer',
     'db.edit.redo': 'Rehacer',
@@ -300,6 +302,21 @@ export const es = {
   },
 
   editor: {
+    objectKinds: {
+      table: 'Tabla',
+      view: 'Vista',
+      materializedView: 'Vista materializada',
+      function: 'Función',
+      procedure: 'Procedimiento',
+      sequence: 'Secuencia',
+      trigger: 'Disparador',
+      schema: 'Esquema',
+    },
+    moreColumns: (n: number) => `… y ${n} columnas más`,
+    definitionNotFound: 'No se encontró una tabla o vista con ese nombre en la conexión de la pestaña.',
+    formatPartial: (n: number) =>
+      `${n === 1 ? 'Una sentencia no se pudo' : `${n} sentencias no se pudieron`} formatear (revisa la sintaxis); quedaron como estaban.`,
+    formatFailed: (message: string) => `No se pudo formatear la selección: ${message}`,
     watermark: {
       newScript: 'Nuevo script',
       findObject: 'Buscar objeto o archivo',
@@ -473,6 +490,7 @@ export const es = {
 
   preferences: {
     title: 'Preferencias',
+    openJson: 'Abrir settings.json',
     files: 'Archivos',
     workspace: 'Espacio de trabajo',
     workspaceDescription: 'Carpeta donde se crean los scripts y que muestra la vista Archivos.',
@@ -610,6 +628,8 @@ export const es = {
   },
 
   toasts: {
+    keybindingsInvalid: (n: number) =>
+      `keybindings.json tiene ${n === 1 ? 'una entrada no válida' : `${n} entradas no válidas`}; se omitieron.`,
     dbHostRestarted: 'Conexiones reiniciadas: el proceso de base de datos se reinició.',
     notAvailable: (what: string) => `"${what}" todavía no está disponible en esta versión.`,
     copied: 'Copiado al portapapeles',

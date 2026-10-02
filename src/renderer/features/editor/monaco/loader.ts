@@ -1,7 +1,11 @@
 import type { Monaco } from './setup';
+import type * as SetupModule from './setup';
 
 let loading: Promise<Monaco> | null = null;
 let loaded: Monaco | null = null;
+let json: JsonDefaults | null = null;
+
+type JsonDefaults = typeof SetupModule.jsonDefaults;
 
 /** Variantes de Cascadia Code que usa el editor (normal, cursiva de comentarios y negrita). */
 const EDITOR_FONTS = ['13px "Cascadia Code"', 'italic 13px "Cascadia Code"', '600 13px "Cascadia Code"'];
@@ -27,6 +31,7 @@ export function loadMonaco(): Promise<Monaco> {
   loading ??= import('./setup').then(async (m) => {
     await waitForFonts(m.monaco);
     loaded = m.monaco;
+    json = m.jsonDefaults;
     return m.monaco;
   });
   return loading;
@@ -37,4 +42,9 @@ export function monacoIfLoaded(): Monaco | null {
   return loaded;
 }
 
-export type { Monaco };
+/** Opciones del servicio de JSON (esquemas), una vez cargado Monaco. */
+export function jsonDefaultsIfLoaded(): JsonDefaults | null {
+  return json;
+}
+
+export type { Monaco, JsonDefaults };

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { HistoryEntry } from './history';
 import { HistoryQuerySchema } from './history';
+import type { UserKeybindings } from './keybindings';
 import type { IpcEventChannel, IpcInvokeChannel } from './channels';
 import { UiStateSchema } from './ui-state';
 import type { ServerInfo } from './connection';
@@ -171,6 +172,12 @@ export const ipcInvokeContract = {
   },
   'settings:get': { request: Empty, response: z.custom<Settings>() },
   'settings:update': { request: SettingsUpdateSchema, response: z.custom<Settings>() },
+  'settings:get-keybindings': { request: Empty, response: z.custom<UserKeybindings>() },
+  /** Abre (creando con una plantilla si falta) `settings.json` o `keybindings.json`; devuelve su ruta. */
+  'settings:open-file': {
+    request: z.object({ file: z.enum(['settings', 'keybindings']) }),
+    response: z.object({ path: z.string() }),
+  },
   'fs:open-workspace': {
     /** `useDefault`: abrir el predeterminado sin cambiar la configuración (espacio no disponible). */
     request: z.object({ useDefault: z.boolean().optional() }),
@@ -251,6 +258,8 @@ export const ipcEventContract = {
   /** La ventana se va a cerrar: el renderer guarda y responde con `app:close-ready`. */
   'app:before-close': Empty,
   'settings:changed': z.custom<Settings>(),
+  /** `keybindings.json` cambió (al guardarlo o desde otro editor). */
+  'settings:keybindings-changed': z.custom<UserKeybindings>(),
   /** Rutas del espacio que cambiaron en disco (watcher, agrupadas cada 200 ms). */
   'fs:changed': z.object({ paths: z.array(z.string()) }),
   'query:event': z.custom<QueryEvent>(),

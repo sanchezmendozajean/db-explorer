@@ -16,6 +16,9 @@ import 'monaco-editor/languages/definitions/xml/register';
 import 'monaco-editor/languages/definitions/yaml/register';
 import 'monaco-editor/languages/definitions/javascript/register';
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
+// JSON con esquema (settings.json, keybindings.json y archivos .json del espacio de trabajo).
+import { jsonDefaults } from 'monaco-editor/languages/features/json/register';
+import JsonWorker from 'monaco-editor/languages/features/json/json.worker?worker';
 
 export type Monaco = typeof monaco;
 
@@ -26,8 +29,10 @@ declare global {
 }
 
 window.MonacoEnvironment = {
-  getWorker: () => new EditorWorker(),
+  getWorker: (_id, label) => (label === 'json' ? new JsonWorker() : new EditorWorker()),
 };
+
+export { jsonDefaults };
 
 /** Temas a partir de los tokens de specs/04; el fondo coincide con `bg.editor`. */
 monaco.editor.defineTheme('db-dark', {

@@ -54,8 +54,7 @@ export function languageForFile(path: string, engine: Engine | undefined): strin
     case 'sql':
       return languageFor(engine);
     case 'json':
-      // Sin el servicio de JSON (pesado) se resalta con la gramática de JavaScript.
-      return 'javascript';
+      return 'json';
     case 'md':
       return 'markdown';
     case 'xml':
