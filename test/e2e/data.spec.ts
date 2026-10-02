@@ -187,7 +187,7 @@ test('exporta los datos a CSV', async () => {
   await page.getByRole('menuitem', { name: 'CSV' }).click();
   await page.getByRole('dialog').getByLabel('Separador').selectOption(';');
   await page.getByRole('button', { name: 'Exportar…' }).click();
-  await expect(page.getByText(/Se exportaron 1 filas/)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/Se exportó 1 fila/)).toBeVisible({ timeout: 10_000 });
   expect(readFileSync(path, 'utf8')).toBe('id;nombre;importe\r\n3;Carla;\r\n');
 });
 

@@ -442,7 +442,8 @@ export const es = {
     exportProgress: (n: number) => `Exportando… ${n.toLocaleString('es')} filas`,
     exportFailed: (message: string) => `No se pudo exportar: ${message}`,
     exportCancelled: 'Exportación cancelada; se borró el archivo incompleto.',
-    exported: (n: number, path: string) => `Se exportaron ${n.toLocaleString('es')} filas a ${path}`,
+    exported: (n: number, path: string) =>
+      `${n === 1 ? 'Se exportó 1 fila' : `Se exportaron ${n.toLocaleString('es')} filas`} a ${path}`,
     exportDialog: {
       title: (format: string) => `Exportar a ${format}`,
       export: 'Exportar…',

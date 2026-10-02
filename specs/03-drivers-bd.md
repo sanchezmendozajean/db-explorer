@@ -62,7 +62,7 @@ interface ResultSink {
 ## Sesiones
 - Cada **pestaña de editor** obtiene una sesión dedicada (conexión física) cuando ejecuta por primera vez, para que variables de sesión, tablas temporales y transacciones manuales se mantengan.
 - El **árbol y el autocompletado** usan una conexión de metadatos compartida por conexión.
-- Ver datos de tabla usa la conexión de metadatos (solo lectura) salvo al guardar ediciones.
+- La pestaña de objeto (Ver datos) usa una sesión propia, la misma con la que guarda sus ediciones: así tiene límite y "Cargar más" como el editor (ver `NOTAS.md`, M7).
 - Cerrar la pestaña con transacción abierta → diálogo: Commit / Rollback / Cancelar.
 
 ## Detalles por motor
@@ -105,6 +105,13 @@ interface ResultSink {
 - Tipos: `decimal`, `numeric` y `money` como texto exacto y fechas (`date`, `time`, `datetime`, `datetime2`, `datetimeoffset` con su desplazamiento) como texto sin conversión de zona. `tedious` los convierte a `Number`/`Date`; se reemplaza su lector de valores para esos tipos en tiempo de ejecución, sin parchear `node_modules` (`exact-values.ts`). `uniqueidentifier` como texto, `bigint` como texto.
 - El esquema por defecto es del usuario, no de la sesión: el editor no muestra selector de esquema (solo PostgreSQL lo tiene).
 
+## Modo de transacción y guardado de ediciones (M7)
+- `DbSession` agrega `setAutoCommit`, `commit`, `rollback` y `run(sql, params, types)` (sentencia parametrizada con `$1`, `?` o `@p1`; los binarios `0x…` se envían como bytes).
+- Modo manual: PostgreSQL, SQLite y SQL Server abren una transacción antes de cada sentencia si no hay una (`getTransactionStatus()`, `isTransaction`, `@@TRANCOUNT`); MariaDB usa `SET autocommit = 0`. Volver a auto-commit confirma la abierta. En SQL Server no se usa `IMPLICIT_TRANSACTIONS` (anida el `BEGIN TRANSACTION` del usuario).
+- Guardar ediciones de la grilla (`QueryRunner.apply`): en auto-commit `BEGIN` … `COMMIT`; con transacción manual, dentro de un punto de guardado que queda pendiente de Commit. Un error, o un UPDATE/DELETE que no afecta exactamente una fila, revierte todo. MariaDB informa filas encontradas (no cambiadas), así que un UPDATE con el mismo valor cuenta como una.
+- `getConstraints` (PK, únicas, foráneas y CHECK; SQLite sin CHECK) y `getDDL`: PostgreSQL y SQL Server arman el `CREATE TABLE` desde el catálogo (con índices y comentarios); MariaDB usa `SHOW CREATE`; SQLite, el SQL de `sqlite_schema`.
+- Exportar re-ejecutando la consulta usa la sesión `<pestaña>#exportar` y lee por lotes de 5000 filas esperando al disco entre lotes.
+
 ## Separación de sentencias
 Módulo `splitter/` por dialecto, usado para "ejecutar sentencia bajo el cursor" y para scripts:
 - Separa por `;` respetando: comillas simples, dobles, `` ` `` (MariaDB), `[ ]` (SQL Server), comentarios `--` y `/* */`, *dollar quoting* de Postgres (`$$`, `$tag$`), bloques `BEGIN … END` de procedimientos (MariaDB `DELIMITER`), y `GO` en SQL Server.
@@ -112,4 +119,4 @@ Módulo `splitter/` por dialecto, usado para "ejecutar sentencia bajo el cursor"
 - Cobertura de tests unitarios amplia (es la pieza más propensa a bugs).
 
 ## Tests de integración
-`test/integration/docker-compose.yml` con `postgres:16`, `mariadb:11`, `mcr.microsoft.com/mssql/server:2022-latest` y SQLite en archivo temporal. Un mismo set de tests corre contra los 4 drivers: conectar, listar, columnas, DDL, ejecutar SELECT/INSERT/error, cancelar, transacción manual, tipos (decimal, fecha, json, binario, null, unicode). Implementado en `test/integration/common-suite.test.ts` + `engines.ts`; un motor sin servidor alcanzable se salta con el motivo, y uno marcado de solo lectura (`MARIADB_READONLY=1`) salta las pruebas que escriben. DDL y la transacción manual con Commit/Rollback llegan con M7 (hoy se prueba `BEGIN … ROLLBACK` en la misma sesión).
+`test/integration/docker-compose.yml` con `postgres:16`, `mariadb:11`, `mcr.microsoft.com/mssql/server:2022-latest` y SQLite en archivo temporal. Un mismo set de tests corre contra los 4 drivers: conectar, listar, columnas, DDL, ejecutar SELECT/INSERT/error, cancelar, transacción manual, tipos (decimal, fecha, json, binario, null, unicode). Implementado en `test/integration/common-suite.test.ts` + `engines.ts`; un motor sin servidor alcanzable se salta con el motivo, y uno marcado de solo lectura (`MARIADB_READONLY=1`) salta las pruebas que escriben. También se prueban restricciones y DDL, el modo manual con Commit/Rollback, el guardado de ediciones (con reversión ante una clave inexistente o un error) y la exportación en flujo (`export.test.ts`: 500 000 filas a CSV, cancelación y XLSX).

@@ -70,6 +70,10 @@ Todas las opciones de `IEditorOptions` de Monaco se aceptan tal cual (se pasan d
 | Explicar y ejecutar (plan real) | **Ctrl+Alt+Shift+E** | Ejecuta la sentencia; las escrituras se revierten (`12` §4). |
 | Formatear SQL | **Shift+Alt+F** | `sql-formatter` con el dialecto de la conexión. Formatea selección si la hay. |
 | Commit / Rollback | Ctrl+Alt+C / Ctrl+Alt+R | Solo en modo manual. |
+| Grilla: guardar cambios | Ctrl+S | Con foco en la grilla de resultados (`gridFocus`); fuera de ella, Guardar el script. |
+| Grilla: vaciar celdas / establecer NULL | Supr / Shift+Supr | Celdas seleccionadas editables (`06` §Edición de datos). |
+| Grilla: agregar fila / eliminar filas | Alt+Insert / Ctrl+Supr | |
+| Grilla: deshacer cambio / pegar | Ctrl+Z / Ctrl+V | Pegar TSV (Excel) desde la celda con foco; las filas que sobran se agregan. |
 | Guardar / Guardar como | Ctrl+S / Ctrl+Shift+S | Guardar como → diálogo nativo, inicia en el espacio de trabajo. |
 | Nuevo script (conexión actual) | Ctrl+N | Crea `Script-N.sql` en el espacio de trabajo y lo asocia a la conexión seleccionada en el árbol o a la de la pestaña activa. |
 | Cerrar pestaña | Ctrl+W / Ctrl+F4 | |
@@ -96,7 +100,7 @@ Todas las opciones de `IEditorOptions` de Monaco se aceptan tal cual (se pasan d
   ```json
   [{ "key": "ctrl+e", "command": "db.executeStatement", "when": "editorTextFocus" }]
   ```
-- Soportar `key`, `command`, `when` (contextos mínimos: `editorTextFocus`, `resultsFocus`, `treeFocus`, `isProduction`) y comandos negados con `-` (`"command": "-db.executeStatement"`) para quitar un atajo.
+- Soportar `key`, `command`, `when` (contextos mínimos: `editorTextFocus`, `resultsFocus`, `gridFocus`, `treeFocus`, `isProduction`) y comandos negados con `-` (`"command": "-db.executeStatement"`) para quitar un atajo.
 - Todos los comandos tienen un id estable `db.*` listado en la paleta.
 - Las acciones propias de Monaco se exponen con su id (`editor.action.copyLinesDownAction`, etc.) para que puedan re-asignarse igual que en VS Code.
 
@@ -119,7 +123,7 @@ Contexto mínimo que debe entender (análisis ligero con tokens, sin parser comp
 
 Otros providers:
 - **Hover**: tabla → columnas con tipos; columna → tipo, nulo, default.
-- **Definition (F12)**: abre pestaña de objeto. *Hasta M7 (pestaña de objeto real) selecciona la tabla en el árbol de conexiones.*
+- **Definition (F12)**: abre la pestaña de objeto de la tabla o vista (funciones y otros objetos se seleccionan en el árbol de conexiones).
 - **Markers**: errores devueltos por el motor en la posición indicada.
 
 ## Sentencia activa y ejecución

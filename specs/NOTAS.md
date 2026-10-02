@@ -338,3 +338,46 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 - El diálogo Ayuda › Atajos de teclado muestra los atajos por defecto, no los personalizados.
 - El autocompletado no sugiere columnas de subconsultas ni de CTE (solo de tablas y vistas del catálogo).
 - Una vez la preparación de `productivity.spec.ts` y otra una prueba de `connections.spec.ts` fallaron por tiempo en corridas completas; no se reprodujeron en tres corridas seguidas.
+
+## M7 — Pestaña de objeto, edición y exportación (2026-10-02)
+
+### Criterios de aceptación
+
+| Criterio | Estado |
+|---|---|
+| Editar, insertar y eliminar filas en una tabla con PK en los 4 motores | ✅ integración (`common-suite.test.ts`: guardado con UPDATE/INSERT/DELETE, reversión ante clave inexistente y ante error del motor, y dentro de una transacción manual) en PostgreSQL, MariaDB, SQLite y SQL Server; e2e en SQLite (editar celda, Alt+Insert, Ctrl+Supr, "Ver SQL" → Aplicar) |
+| Tabla sin PK de solo lectura con explicación | ✅ e2e (`data.spec.ts`: candado "Solo lectura" con el motivo en el tooltip) |
+| Exportar 500 000 filas a CSV sin exceder ~500 MB | ✅ integración (`export.test.ts`): el proceso crece unos 110 MB exportando 500 000 filas de PostgreSQL (archivo de ~35 MB) |
+| Modo manual con Commit/Rollback | ✅ integración en los 4 motores y e2e (contador de pendientes, Rollback con el botón y Commit con Ctrl+Alt+C) |
+| Pruebas | ✅ 171 unitarias, 82 de integración (4 motores), 82 e2e; lint, tipos y Prettier limpios |
+
+### Qué se construyó
+- **Pestaña de objeto** (tablas y vistas): doble clic o Enter en el árbol, "Ver datos" / "Ver estructura", F12 y Ctrl+P. Breadcrumb real y subpestañas **Datos** (WHERE y ORDER BY con Monaco de una línea y autocompletado de columnas; Enter ejecuta), **Estructura** (columnas, índices, claves y restricciones) y **DDL** (Monaco de solo lectura y "Abrir en script"). "Nuevo script ▸ DDL" en el menú de la tabla.
+- **Edición en grilla** (specs/06): editar celda (doble clic, F2, Enter o escribir), Supr vacía, Shift+Supr NULL, Alt+Insert agrega fila (las columnas sin valor quedan en `DEFAULT`), duplicar fila (sin la clave), Ctrl+Supr elimina, Ctrl+Z deshace, Ctrl+V pega TSV de Excel. Colores de pendientes (editada, nueva, eliminada), "Guardar (n)", Descartar, "Ver SQL" (sentencias con literales → Aplicar) y "n cambios pendientes" en el pie. En Producción siempre pide confirmación. Un error revierte todo y marca la fila (texto en rojo y tooltip con el mensaje).
+- **Editable** si el resultado viene de una sola tabla e incluye todas las columnas de la PK (o de un índice único sin nulos); las columnas que son expresiones quedan de solo lectura. La clave sale de `meta:table` (cacheado por conexión; "Refrescar" en el árbol lo vuelve a leer). Motivos de solo lectura: conexión de solo lectura, vista, varias tablas, motor sin tabla de origen, sin clave, clave incompleta.
+- **Formato por columna** (menú de celda › "Formato de columna…"): popover de 280 px con los controles del tipo, alineación, vista previa con la celda seleccionada y "Recordar para tabla.columna" (`format.columns` en settings.json, clave `conexión/base/esquema/tabla/columna`).
+- **Copiar como** (CSV, TSV, JSON, Markdown, INSERT, lista IN y TSV con formato) sobre la selección; **Filtrar por este valor / Excluir este valor** (chips en la barra para quitarlos).
+- **Exportar** CSV (separador, cabeceras, BOM), JSON, XLSX (números, fechas y booleanos con su tipo) y SQL INSERT: diálogo de opciones y "Guardar como" de main; avance y cancelación en una notificación; si el resultado está truncado se puede re-ejecutar sin límite y exportar en flujo. "Copiar como Markdown" copia la tabla cargada.
+- **Modo de transacción** por pestaña: chip Auto/Manual, Commit/Rollback y "n sentencias pendientes" en la barra; "Manual (n)" en la status bar (clic alterna); menú Consulta. Cerrar la pestaña o la app con una transacción abierta pregunta Commit / Rollback / Cancelar; pasar a Auto con pendientes, también.
+- **"Ordenar en servidor"** en la pestaña de objeto cuando el resultado está truncado y se ordenó en cliente: escribe el ORDER BY y re-ejecuta.
+- Se quitaron la grilla de maqueta (`ResultsGrid.tsx`), los datos de ejemplo y el comando de desarrollo que los alternaba.
+
+### Decisiones
+- **La pestaña de objeto usa una sesión propia** (no la de metadatos, como decía specs/03): así tiene límite, "Cargar más" y cancelación como el editor, y guarda las ediciones en la misma conexión. Su modo de transacción es siempre auto-commit. Sus consultas de datos no van al historial.
+- **Vista previa en el árbol**: la pestaña de objeto abierta desde el árbol es *preview* (cursiva) y se reemplaza al abrir otra; al editar datos queda fija. F12 y Ctrl+P la abren fija. Las pestañas de objeto no se restauran al reiniciar (solo los scripts, specs/11).
+- **Orden de las sentencias al guardar**: eliminaciones, ediciones e inserciones (libera claves únicas antes de reutilizarlas).
+- **Tras guardar**: la pestaña de objeto vuelve a leer los datos (muestra valores por defecto y claves generadas); en el panel de resultados las filas se actualizan en la grilla y las columnas que no se escribieron de una fila nueva quedan en NULL hasta re-ejecutar (re-ejecutar un script podría repetir escrituras).
+- **Contador de pendientes**: cuenta las escrituras ejecutadas en modo manual (y las sentencias de un guardado de grilla); un `COMMIT`/`ROLLBACK` escrito por el usuario lo vuelve a cero.
+- **Exportar re-ejecutando** usa una sesión aparte (`<pestaña>#exportar`) para no cerrar el cursor de "Cargar más" ni ocupar la pestaña; por eso no ve cambios sin confirmar de una transacción manual. Exporta las columnas visibles; las filas cargadas van en el orden y filtro de la vista, las re-ejecutadas en el orden del servidor. Los cambios pendientes de la grilla no se exportan.
+- **Rutas de exportación**: el renderer solo puede exportar a una ruta elegida en el diálogo de main (`data:pick-export-path`), según specs/08. Nuevo dominio IPC `data:*` (specs/02).
+- **XLSX propio** (sin dependencias): ZIP en flujo con `deflate` y descriptor de datos, hoja con texto en línea; decimales de más de 15 dígitos se dejan como texto para no perder precisión.
+- **Formato de los reales que llegan como número** (SQLite): ahora se les aplica el modo de decimales y los dígitos de flotantes (antes solo separadores).
+- **Literales de "Ver SQL"**: decimales y enteros sin comillas, binarios según el motor (`'\x…'::bytea`, `X'…'`, `0x…`), `N'…'` en SQL Server y barra invertida escapada en MariaDB.
+
+### Pendientes / avisos
+- El visor de valor sigue siendo de solo lectura (specs/04 lo pide editable si la celda lo es).
+- SQLite no informa las restricciones CHECK por separado (se ven en el DDL).
+- Cancelar en SQLite termina el hilo de la sesión y con él la transacción manual abierta; el contador de pendientes no se entera. Cambiar de base con una transacción manual abierta también la revierte (se abre otra sesión) sin preguntar.
+- Pulsar Commit/Rollback mientras la pestaña ejecuta da "La pestaña ya está ejecutando una consulta".
+- El editor de celda de Glide pierde teclas con la escritura instantánea de Playwright (no a velocidad humana): las pruebas llenan el editor con `fill`.
+- El formato por conexión (nivel 2 de specs/06) llega con las Preferencias de M9.
