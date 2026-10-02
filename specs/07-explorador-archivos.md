@@ -10,7 +10,7 @@ Segunda vista de la side bar (activity bar → `codicon-files`, Ctrl+Shift+E). C
 ## Árbol
 - Carga perezosa por carpeta, orden: carpetas primero, luego archivos, alfabético sin distinguir mayúsculas.
 - Excluidos por defecto (`files.exclude`): `.git`, `node_modules`, `.DS_Store`, `Thumbs.db`.
-- Watcher (`chokidar` o `fs.watch` recursivo en Windows) para reflejar cambios externos; debounce 200 ms.
+- Watcher (`fs.watch` recursivo, nativo en Windows) para reflejar cambios externos; debounce 200 ms. Un archivo abierto sin cambios se recarga solo; si tiene cambios sin guardar, aparece el aviso con Comparar / Sobrescribir / Recargar.
 - Iconos: `.sql` (`codicon-database` pequeño o icono SQL), `.json` (`codicon-json`), `.md` (`codicon-markdown`), `.csv` (`codicon-table`), carpeta abierta/cerrada (`codicon-folder-opened` / `codicon-folder`), otros (`codicon-file`).
 - Sincroniza la selección con la pestaña activa (`files.autoReveal: true`).
 
@@ -31,7 +31,7 @@ Segunda vista de la side bar (activity bar → `codicon-files`, Ctrl+Shift+E). C
 
 ## Asociación archivo ↔ conexión
 - Al abrir un `.sql` se restaura la última conexión usada con ese archivo (`fileConnections` en el estado del espacio, ver `11` §3; clave = ruta relativa al espacio).
-- Opcional: comentario en la primera línea `-- @connection: PayBox Prod` reconocido al abrir (útil al compartir scripts). Desactivado por defecto (`files.connectionHeader`).
+- Opcional: comentario en la primera línea `-- @connection: PayBox Prod` reconocido al abrir (útil al compartir scripts). Desactivado por defecto (`files.connectionHeader`). *No implementado en M5 (ver `NOTAS.md`).*
 
 ## Guardado
 - Reglas de guardado, guardado automático y cierre: ver `11` §4.

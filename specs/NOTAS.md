@@ -279,3 +279,35 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 ## Ajuste (2026-10-01): ancho de columnas según el contenido
 
 - El ancho inicial de cada columna de la grilla era fijo por tipo y un decimal largo con separadores quedaba recortado. Ahora se mide (canvas, misma fuente que la grilla) la cabecera y el texto ya formateado de las primeras 100 filas, entre 60 y 400 px. Se calcula al llegar el primer lote y no cambia con los siguientes, para que la columna no salte mientras se cargan filas; un ancho ajustado a mano sigue teniendo prioridad.
+
+## M5 — Explorador de archivos (2026-10-01)
+
+### Criterios de aceptación
+
+| Criterio | Estado |
+|---|---|
+| Crear, renombrar, mover y eliminar (a la papelera) desde el árbol | ✅ e2e `files.spec.ts` (campo en línea, F2, arrastrar con confirmación, Supr) |
+| Los cambios externos se reflejan | ✅ e2e (archivo creado y borrado por fuera; archivo abierto recargado) |
+| Cambiar el espacio de trabajo y reiniciar abre el nuevo con sus pestañas | ✅ e2e (incluye `workspace.path` en settings.json y título de la ventana) |
+| Criterios de `11` §6 | ✅ Ctrl+N aparece en Archivos; guardado automático (5 s, al ejecutar, Alt+F4); restaurar pestañas; nuevos scripts en el espacio nuevo; cambio externo no se pisa; script vacío se elimina al cerrar |
+| Pruebas | ✅ 146 unitarias, 64 e2e; lint, tipos y Prettier limpios |
+
+### Decisiones
+- **Árbol perezoso** por carpeta (`fs:list-dir`); Ctrl+P lee el árbol completo (hasta 5000 entradas) al abrirse.
+- **Exclusiones**: `files.exclude` (`.git`, `node_modules`, `.DS_Store`, `Thumbs.db`) más los temporales `*.tmp` del guardado atómico. Antes se ocultaban todos los archivos que empiezan con punto; ahora `.env` y similares se ven.
+- **Seguridad**: toda operación del árbol se valida en main con la ruta escrita y la real (`realpath`) dentro del espacio. Un archivo de fuera solo se puede leer y guardar si el usuario lo eligió en un diálogo (Abrir archivo, Guardar como); sigue permitido al restaurar sus pestañas.
+- **Renombrar o mover un archivo abierto** conserva la pestaña (sesión, resultados y cambios sin guardar); solo cambian ruta y título. La asociación archivo ↔ conexión se mueve con él.
+- **Papelera**: `shell.trashItem`. En pruebas (perfil aislado con `DBX_USER_DATA_DIR`) es una carpeta `Papelera` del perfil, para no tocar la Papelera de Windows.
+- **Pestaña provisional**: clic simple en el árbol (cursiva), la reemplaza la siguiente; editar, doble clic o Enter la fija.
+- **Archivos de texto** (`.txt`, `.json`, `.md`, `.csv`, `.log`, `.xml`, `.yml`) en el editor sin barra de ejecución ni resultados; los demás con la aplicación del sistema. JSON se resalta con la gramática de JavaScript (el servicio de JSON de Monaco necesita otro worker pesado).
+- **Espacios recientes** en `userData/workspaces/recientes.json` (máx. 10). El predeterminado se guarda como "sin valor" en `workspace.path`, para que siga a la carpeta Documentos.
+- **Espacio no disponible**: modal con Reintentar / Elegir otra carpeta / Usar el predeterminado; este último no borra `workspace.path`.
+- **Comparar** en el aviso de cambio externo: editor de diferencias de Monaco (disco a la izquierda, editor a la derecha) con Sobrescribir / Recargar.
+- **Fin de línea**: clic en la status bar para elegir LF o CRLF.
+- **Preferencias** como pestaña del editor (`04` §15) con solo el grupo Archivos (`11` §5) más `files.confirmDragAndDrop` y `files.autoReveal`; el buscador y el resto de los grupos llegan en M9.
+- **Asociación archivo ↔ conexión** (corregido): las claves de `fileConnections` se guardaban como rutas absolutas; ahora son relativas al espacio, como dice `11` §3.
+
+### Pendientes / avisos
+- Comentario `-- @connection:` en la primera línea (`07`, opcional y desactivado por defecto): no implementado.
+- El árbol tiene selección simple (sin Ctrl/Shift+clic para varios archivos).
+- El filtro al escribir busca solo en las carpetas ya cargadas (expandidas alguna vez).
