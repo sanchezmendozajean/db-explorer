@@ -273,8 +273,20 @@ export function waitForDone(
   return { promise, cancel };
 }
 
+const exportListeners = new Map<string, (rows: number) => void>();
+
+/** Escucha el avance de una exportación a archivo; devuelve la función para dejar de escuchar. */
+export function onExportProgress(exportId: string, listener: (rows: number) => void): () => void {
+  exportListeners.set(exportId, listener);
+  return () => exportListeners.delete(exportId);
+}
+
 /** Aplica un evento de ejecución del db-host al estado de la pestaña correspondiente. */
 export function applyQueryEvent(event: QueryEvent): void {
+  if (event.type === 'export-progress') {
+    exportListeners.get(event.queryId)?.(event.rows);
+    return;
+  }
   if (event.type === 'execution-done' || event.type === 'fetch-done') {
     flushNow();
     const key = `${event.type === 'execution-done' ? 'execution' : 'fetch'}:${event.queryId}`;

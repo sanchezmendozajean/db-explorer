@@ -1,4 +1,9 @@
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
+import type { EditTable } from '@shared/data-edit';
+import { buildStatements } from '@shared/data-edit';
 import type { QueryEvent } from '@shared/query';
 import type { TreeNodeRef } from '@shared/metadata';
 import { ConnectionManager, defaultDriverFactory } from '../../src/db-host/connection-manager';
@@ -180,6 +185,190 @@ describe.each(cases)('$label', (c: EngineCase) => {
       // En otra ejecución de la misma pestaña la transacción sigue abierta.
       const rollback = await exec([c.sql.rollback, `SELECT count(*) AS n FROM ${t}`]);
       expect(Number(rowsOf(rollback.queryId)[0]![0])).toBe(3);
+    });
+
+    it('describe restricciones, índices y DDL de la tabla', async () => {
+      const ref = { database: table.database, schema: table.schema, name: table.name };
+      const details = await manager.tableDetails(id, ref, 'table');
+      expect(details.columns.map((col) => col.name)).toContain(table.pk);
+      const pk = details.constraints.find((k) => k.type === 'primaryKey');
+      expect(pk?.columns).toEqual([table.pk]);
+      expect(details.indexes.some((i) => i.primary)).toBe(true);
+      if (c.writable) {
+        const ddl = await manager.ddl(id, ref, 'table');
+        expect(ddl).toMatch(/CREATE TABLE/i);
+        expect(ddl).toMatch(/clientes/);
+        expect(ddl).toMatch(/idx_clientes_nombre/);
+      }
+    });
+
+    /** Filas de `clientes` vistas desde otra sesión (lo confirmado). */
+    async function committedIds(): Promise<number[]> {
+      const queryId = `${id}-${n++}`;
+      await manager.execute({
+        queryId,
+        sessionId: `otra-${id}`,
+        connectionId: id,
+        database: table.database,
+        schema: table.schema,
+        statements: [
+          // SQL Server bloquearía la lectura de filas con cambios sin confirmar.
+          ...(c.engine === 'sqlserver' ? ['SET TRANSACTION ISOLATION LEVEL SNAPSHOT'] : []),
+          `SELECT id FROM ${quoted(c, table)} ORDER BY id`,
+        ],
+        maxRows: null,
+      });
+      return rowsOf(queryId).map((r) => Number(r[0]));
+    }
+
+    async function execManual(statements: string[]) {
+      const queryId = `${id}-${n++}`;
+      const summary = await manager.execute({
+        queryId,
+        sessionId: `tab-${id}`,
+        connectionId: id,
+        database: table.database,
+        schema: table.schema,
+        statements,
+        maxRows: 500,
+        autoCommit: false,
+      });
+      expect(of(queryId, 'statement-error').map((e) => e.message)).toEqual([]);
+      return summary;
+    }
+
+    it.runIf(c.writable)('modo manual: Rollback descarta y Commit confirma', async () => {
+      const t = quoted(c, table);
+      await execManual([`INSERT INTO ${t} (id, nombre) VALUES (200, 'manual')`]);
+      expect(await committedIds()).not.toContain(200);
+      await manager.queries.endTransaction(`tab-${id}`, false);
+      await execManual([`INSERT INTO ${t} (id, nombre) VALUES (201, 'manual')`]);
+      await manager.queries.endTransaction(`tab-${id}`, true);
+      const ids = await committedIds();
+      expect(ids).not.toContain(200);
+      expect(ids).toContain(201);
+      // Volver a auto-commit; limpieza.
+      await exec([`DELETE FROM ${t} WHERE id = 201`]);
+      expect(await committedIds()).toEqual([1, 2, 3]);
+    });
+
+    const editTable = (): EditTable => ({
+      engine: c.engine,
+      schema: c.engine === 'sqlite' ? undefined : table.schema,
+      name: table.name,
+      columns: [
+        { name: 'id', type: 'integer' },
+        { name: 'nombre', type: 'text' },
+        { name: 'importe', type: 'decimal' },
+      ],
+      keyColumns: [0],
+    });
+
+    const target = (autoCommit = true) => ({
+      sessionId: `tab-${id}`,
+      connectionId: id,
+      database: table.database,
+      schema: table.schema,
+      autoCommit,
+    });
+
+    it.runIf(c.writable)('guarda ediciones, inserciones y eliminaciones en una transacción', async () => {
+      const generated = buildStatements(editTable(), [
+        { kind: 'delete', key: [3] },
+        // Mismo valor que ya tenía: debe contar como una fila (MariaDB informa filas encontradas).
+        { kind: 'update', key: [1], changes: [{ column: 1, value: 'Ana' }] },
+        {
+          kind: 'update',
+          key: [2],
+          changes: [
+            { column: 2, value: '99.95' },
+            { column: 1, value: "O'Neil" },
+          ],
+        },
+        {
+          kind: 'insert',
+          values: [
+            { column: 0, value: 300 },
+            { column: 1, value: 'nuevo ñ' },
+          ],
+        },
+      ]);
+      const result = await manager.apply({ ...target(), statements: generated.map((g) => g.statement) });
+      expect(result).toEqual({ ok: true, affected: [1, 1, 1, 1] });
+      const { queryId } = await exec([`SELECT id, nombre, importe FROM ${quoted(c, table)} ORDER BY id`]);
+      expect(rowsOf(queryId).map((r) => [Number(r[0]), r[1], r[2] === null ? null : Number(r[2])])).toEqual([
+        [1, 'Ana', 10.5],
+        [2, "O'Neil", 99.95],
+        [300, 'nuevo ñ', null],
+      ]);
+
+      // Una clave que no existe revierte todo, incluida la inserción anterior.
+      const failing = buildStatements(editTable(), [
+        {
+          kind: 'insert',
+          values: [
+            { column: 0, value: 400 },
+            { column: 1, value: 'no queda' },
+          ],
+        },
+        { kind: 'update', key: [999], changes: [{ column: 1, value: 'x' }] },
+      ]);
+      const bad = await manager.apply({ ...target(), statements: failing.map((g) => g.statement) });
+      expect(bad).toMatchObject({ ok: false, index: 1 });
+      expect(await committedIds()).toEqual([1, 2, 300]);
+
+      // Un error del motor también revierte (clave duplicada).
+      const duplicate = buildStatements(editTable(), [
+        { kind: 'update', key: [2], changes: [{ column: 1, value: 'tampoco' }] },
+        {
+          kind: 'insert',
+          values: [
+            { column: 0, value: 1 },
+            { column: 1, value: 'dup' },
+          ],
+        },
+      ]);
+      const dup = await manager.apply({ ...target(), statements: duplicate.map((g) => g.statement) });
+      expect(dup).toMatchObject({ ok: false, index: 1 });
+      const after = await exec([`SELECT nombre FROM ${quoted(c, table)} WHERE id = 2`]);
+      expect(rowsOf(after.queryId)).toEqual([["O'Neil"]]);
+
+      // En modo manual queda pendiente hasta Commit/Rollback.
+      const manual = buildStatements(editTable(), [{ kind: 'delete', key: [300] }]);
+      expect(await manager.apply({ ...target(false), statements: manual.map((g) => g.statement) })).toEqual({
+        ok: true,
+        affected: [1],
+      });
+      expect(await committedIds()).toEqual([1, 2, 300]);
+      await manager.queries.endTransaction(`tab-${id}`, false);
+      expect(await committedIds()).toEqual([1, 2, 300]);
+
+      // Restaura los datos de la suite.
+      await c.prepare(runner(manager, events, id));
+    });
+
+    it('exporta a CSV re-ejecutando la consulta sin límite', async () => {
+      const dir = mkdtempSync(join(tmpdir(), 'dbx-export-'));
+      const path = join(dir, 'clientes.csv');
+      const columns = [
+        { name: 'nombre', nativeType: '', logicalType: 'text' as const },
+        { name: 'id', nativeType: '', logicalType: 'integer' as const },
+      ];
+      const summary = await manager.export({
+        exportId: `${id}-export`,
+        path,
+        format: 'csv',
+        options: { separator: ';', header: true, bom: false, table: '' },
+        columns,
+        source: {
+          kind: 'query',
+          ...target(),
+          sql: `SELECT id, nombre FROM ${quoted(c, table)} ORDER BY id`,
+          columnIndexes: [1, 0],
+        },
+      });
+      expect(summary).toEqual({ rows: 3, cancelled: false });
+      expect(readFileSync(path, 'utf8')).toBe('nombre;id\r\nAna;1\r\nBeto;2\r\nÑandú 🦆;3\r\n');
     });
   });
 });

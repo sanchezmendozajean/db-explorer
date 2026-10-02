@@ -1,5 +1,6 @@
 import { tokenize } from '@shared/splitter';
 import type { SqlDialect } from '@shared/splitter';
+import type { CellValue, LogicalType } from '@shared/query';
 
 /**
  * Utilidades compartidas por los drivers que no reciben del motor la
@@ -22,6 +23,22 @@ export function isDml(command: string): boolean {
 /** Binario como texto `0x…` (formato de literal de SQL Server, MariaDB y SQLite). */
 export function hexText(bytes: Uint8Array): string {
   return `0x${Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString('hex').toUpperCase()}`;
+}
+
+/**
+ * Bytes de un valor binario tal como lo muestra la grilla (`0x89AB`, o
+ * `\x89ab` en PostgreSQL); `null` si el texto no es hexadecimal.
+ */
+export function hexBytes(text: string): Buffer | null {
+  const m = /^(?:0x|\\x)([0-9a-f]*)$/i.exec(text.trim());
+  if (!m || m[1]!.length % 2 !== 0) return null;
+  return Buffer.from(m[1]!, 'hex');
+}
+
+/** Parámetro de una sentencia de edición: los binarios en hexadecimal se envían como bytes. */
+export function paramValue(value: CellValue, type: LogicalType | undefined): CellValue | Buffer {
+  if (type === 'binary' && typeof value === 'string') return hexBytes(value) ?? value;
+  return value;
 }
 
 /**

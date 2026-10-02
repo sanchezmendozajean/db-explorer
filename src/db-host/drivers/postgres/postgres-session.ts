@@ -1,11 +1,12 @@
 import type pg from 'pg';
 import type { FieldDef } from 'pg';
 import Cursor from 'pg-cursor';
-import type { CellValue, ResultColumn } from '@shared/query';
+import type { CellValue, LogicalType, ResultColumn } from '@shared/query';
 import { ROW_BATCH_SIZE } from '@shared/query';
 import { quoteIdent } from '@shared/sql-quote';
 import type { DbSession, StatementOutcome, StatementSink } from '../types';
 import { DriverError } from '../types';
+import { paramValue } from '../common';
 import { toDriverError } from './errors';
 
 /** Booleanos y enteros de 32 bits como valores JS; todo lo demás como texto crudo del servidor. */
@@ -50,6 +51,8 @@ export class PostgresSession implements DbSession {
   private open: OpenCursor | null = null;
   private currentSink: StatementSink | null = null;
   private schema: string | undefined;
+  /** Modo de transacción manual (specs/04 §8). */
+  private manual = false;
 
   constructor(
     private readonly client: pg.Client,
@@ -76,6 +79,7 @@ export class PostgresSession implements DbSession {
 
   async execute(sql: string, maxRows: number | null, sink: StatementSink): Promise<StatementOutcome> {
     await this.closeCursor();
+    await this.beginIfManual();
     this.currentSink = sink;
     const cursor = this.client.query(
       new Cursor<CellValue[]>(sql, undefined, { rowMode: 'array', types: sessionTypes }),
@@ -154,6 +158,45 @@ export class PostgresSession implements DbSession {
     const open = this.open;
     this.open = null;
     if (open) await open.cursor.close().catch(() => undefined);
+  }
+
+  async setAutoCommit(on: boolean): Promise<void> {
+    if (on === !this.manual) return;
+    if (on) await this.commit();
+    this.manual = !on;
+  }
+
+  async commit(): Promise<void> {
+    await this.closeCursor();
+    if (this.client.getTransactionStatus() !== 'I') await this.simple('COMMIT');
+  }
+
+  async rollback(): Promise<void> {
+    await this.closeCursor();
+    if (this.client.getTransactionStatus() !== 'I') await this.simple('ROLLBACK');
+  }
+
+  async run(sql: string, params: CellValue[] = [], types: LogicalType[] = []): Promise<number> {
+    await this.closeCursor();
+    await this.beginIfManual();
+    try {
+      const values = params.map((v, i) => paramValue(v, types[i]));
+      const result = await this.client.query({ text: sql, values, types: sessionTypes });
+      return result.rowCount ?? 0;
+    } catch (err) {
+      throw toDriverError(err);
+    }
+  }
+
+  /** En modo manual, abre la transacción antes de la primera sentencia. */
+  private async beginIfManual(): Promise<void> {
+    if (this.manual && this.client.getTransactionStatus() === 'I') await this.simple('BEGIN');
+  }
+
+  private async simple(sql: string): Promise<void> {
+    await this.client.query(sql).catch((err: unknown) => {
+      throw toDriverError(err);
+    });
   }
 
   async cancel(): Promise<void> {

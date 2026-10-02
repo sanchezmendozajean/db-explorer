@@ -20,9 +20,14 @@ export interface SqliteWorkerData {
 }
 
 export type SqliteWorkerRequest =
-  | { type: 'execute'; sql: string; maxRows: number | null; dml: boolean }
+  /** `manual`: modo de transacción manual (abre una transacción si no hay una abierta). */
+  | { type: 'execute'; sql: string; maxRows: number | null; dml: boolean; manual: boolean }
   | { type: 'fetch'; count: number | null }
-  | { type: 'close-cursor' };
+  | { type: 'close-cursor' }
+  /** Sentencia sin resultados con parámetros (binarios ya convertidos a bytes). */
+  | { type: 'run'; sql: string; params: (string | number | null | Uint8Array)[]; manual: boolean }
+  /** `COMMIT` o `ROLLBACK` de la transacción abierta, si la hay. */
+  | { type: 'end-transaction'; commit: boolean };
 
 export type SqliteWorkerMessage =
   | { type: 'ready'; version: string }
@@ -30,6 +35,7 @@ export type SqliteWorkerMessage =
   | { type: 'rows'; rows: CellValue[][] }
   | { type: 'done'; rowCount: number; affected?: number; truncated: boolean }
   | { type: 'fetched'; loaded: number; hasMore: boolean }
+  | { type: 'ran'; changes: number }
   | { type: 'error'; message: string; code?: string };
 
 export function sqliteWorkerMain(): void {
@@ -172,7 +178,19 @@ export function sqliteWorkerMain(): void {
         post({ type: 'fetched', ...result });
         return;
       }
+      if (request.type === 'end-transaction') {
+        closeCursor();
+        if (db.isTransaction) db.exec(request.commit ? 'COMMIT' : 'ROLLBACK');
+        post({ type: 'ran', changes: 0 });
+        return;
+      }
       closeCursor();
+      if (request.manual && !db.isTransaction) db.exec('BEGIN');
+      if (request.type === 'run') {
+        const result = db.prepare(request.sql).run(...request.params);
+        post({ type: 'ran', changes: Number(result.changes) });
+        return;
+      }
       const stmt = db.prepare(request.sql);
       const columns = stmt.columns();
       if (columns.length === 0) {

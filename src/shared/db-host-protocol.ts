@@ -1,6 +1,25 @@
 import type { ConnectionConfig, ServerInfo } from './connection';
-import type { TreeNodeData, TreeNodeRef } from './metadata';
-import type { ExecuteRequest, ExecuteSummary, FetchMoreRequest, FetchMoreResult, QueryEvent } from './query';
+import type { ObjectKind, TableDetails, TreeNodeData, TreeNodeRef } from './metadata';
+import type {
+  ApplyChangesRequest,
+  ApplyChangesResult,
+  ExecuteRequest,
+  ExecuteSummary,
+  ExportRequest,
+  ExportSummary,
+  FetchMoreRequest,
+  FetchMoreResult,
+  QueryEvent,
+} from './query';
+
+/** Objeto de una base (tabla, vista…) para la pestaña de objeto. */
+export interface ObjectTarget {
+  connectionId: string;
+  database: string;
+  schema: string;
+  name: string;
+  kind: ObjectKind;
+}
 
 /**
  * Protocolo de mensajes entre main y el proceso db-host (utilityProcess).
@@ -29,6 +48,11 @@ export interface DbHostMethods {
   'query.fetchMore': { params: FetchMoreRequest; result: FetchMoreResult };
   'query.cancel': { params: { queryId: string }; result: null };
   'session.close': { params: { sessionId: string }; result: null };
+  'session.end-transaction': { params: { sessionId: string; commit: boolean }; result: null };
+  'meta.table': { params: ObjectTarget; result: TableDetails };
+  'meta.ddl': { params: ObjectTarget; result: string };
+  'data.apply': { params: ApplyChangesRequest; result: ApplyChangesResult };
+  'export.start': { params: ExportRequest; result: ExportSummary };
 }
 
 export type DbHostMethod = keyof DbHostMethods;

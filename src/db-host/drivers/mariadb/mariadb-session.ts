@@ -1,10 +1,10 @@
 import type { Connection, FieldPacket, ResultSetHeader } from 'mysql2';
-import type { CellValue } from '@shared/query';
+import type { CellValue, LogicalType } from '@shared/query';
 import { ROW_BATCH_SIZE } from '@shared/query';
 import { quoteIdent } from '@shared/sql-quote';
 import type { DbSession, StatementOutcome, StatementSink } from '../types';
 import { DriverError } from '../types';
-import { commandOf, isDml } from '../common';
+import { commandOf, isDml, paramValue } from '../common';
 import { toMariaDbError } from './errors';
 import { createTypeCast, describeFields, toCell } from './mariadb-types';
 
@@ -54,6 +54,7 @@ export class MariaDbSession implements DbSession {
   private cancelling = false;
   private closed = false;
   private schema: string | undefined;
+  private autoCommit = true;
 
   constructor(
     private readonly connection: Connection,
@@ -227,6 +228,36 @@ export class MariaDbSession implements DbSession {
         this.connection.destroy();
         resolve();
       }, 2000);
+    });
+  }
+
+  /** En MariaDB el modo manual es `autocommit = 0`: el servidor abre la transacción con cada sentencia. */
+  async setAutoCommit(on: boolean): Promise<void> {
+    if (on === this.autoCommit) return;
+    await this.closeCursor();
+    // Volver a `autocommit = 1` confirma la transacción abierta.
+    await this.simple(`SET autocommit = ${on ? 1 : 0}`);
+    this.autoCommit = on;
+  }
+
+  async commit(): Promise<void> {
+    await this.closeCursor();
+    await this.simple('COMMIT');
+  }
+
+  async rollback(): Promise<void> {
+    await this.closeCursor();
+    await this.simple('ROLLBACK');
+  }
+
+  async run(sql: string, params: CellValue[] = [], types: LogicalType[] = []): Promise<number> {
+    await this.closeCursor();
+    if (this.closed) throw new DriverError('Se perdió la conexión con el servidor', 'disconnected');
+    const values = params.map((v, i) => paramValue(v, types[i]));
+    return new Promise((resolve, reject) => {
+      this.connection.query<ResultSetHeader>({ sql, values }, (err, result) =>
+        err ? reject(toMariaDbError(err, sql)) : resolve(Number(result.affectedRows ?? 0)),
+      );
     });
   }
 

@@ -1,7 +1,14 @@
 import type { ConnectionConfiguration } from 'tedious';
 import { Connection, Request, TYPES } from 'tedious';
 import type { ConnectionConfig, ServerInfo } from '@shared/connection';
-import type { ColumnInfo, DbObject, DriverCapabilities, IndexInfo, ObjectKind } from '@shared/metadata';
+import type {
+  ColumnInfo,
+  ConstraintInfo,
+  DbObject,
+  DriverCapabilities,
+  IndexInfo,
+  ObjectKind,
+} from '@shared/metadata';
 import { qualifiedName } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
@@ -240,6 +247,197 @@ export class SqlServerDriver implements DbDriver {
       index.columns.push(String(r['column_name']));
     }
     return [...byName.values()];
+  }
+
+  async getConstraints(ref: ObjectRef): Promise<ConstraintInfo[]> {
+    const params = { full: `${bracket(ref.schema)}.${bracket(ref.name)}` };
+    const keys = await this.queryIn(
+      ref.database,
+      `SELECT kc.name, kc.type, c.name AS col
+         FROM sys.key_constraints kc
+         JOIN sys.index_columns ic ON ic.object_id = kc.parent_object_id AND ic.index_id = kc.unique_index_id
+         JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+        WHERE kc.parent_object_id = OBJECT_ID(@full) AND ic.key_ordinal > 0
+        ORDER BY kc.type, kc.name, ic.key_ordinal`,
+      params,
+    );
+    const fks = await this.queryIn(
+      ref.database,
+      `SELECT fk.name, pc.name AS col, rc.name AS ref_col,
+              QUOTENAME(OBJECT_SCHEMA_NAME(fk.referenced_object_id)) + '.' + QUOTENAME(OBJECT_NAME(fk.referenced_object_id)) AS ref_table,
+              fk.delete_referential_action_desc AS on_delete, fk.update_referential_action_desc AS on_update
+         FROM sys.foreign_keys fk
+         JOIN sys.foreign_key_columns fkc ON fkc.constraint_object_id = fk.object_id
+         JOIN sys.columns pc ON pc.object_id = fkc.parent_object_id AND pc.column_id = fkc.parent_column_id
+         JOIN sys.columns rc ON rc.object_id = fkc.referenced_object_id AND rc.column_id = fkc.referenced_column_id
+        WHERE fk.parent_object_id = OBJECT_ID(@full)
+        ORDER BY fk.name, fkc.constraint_column_id`,
+      params,
+    );
+    const checks = await this.queryIn(
+      ref.database,
+      `SELECT cc.name, cc.definition, c.name AS col
+         FROM sys.check_constraints cc
+         LEFT JOIN sys.columns c ON c.object_id = cc.parent_object_id AND c.column_id = cc.parent_column_id
+        WHERE cc.parent_object_id = OBJECT_ID(@full)
+        ORDER BY cc.name`,
+      params,
+    );
+    const q = (cols: string[]): string => cols.map(bracket).join(', ');
+    const result: ConstraintInfo[] = [];
+    const group = (rows: Row[]): Map<string, Row[]> => {
+      const map = new Map<string, Row[]>();
+      for (const r of rows) map.set(String(r['name']), [...(map.get(String(r['name'])) ?? []), r]);
+      return map;
+    };
+    for (const [name, rows] of group(keys)) {
+      const primary = String(rows[0]!['type']).trim() === 'PK';
+      const cols = rows.map((r) => String(r['col']));
+      result.push({
+        name,
+        type: primary ? 'primaryKey' : 'unique',
+        columns: cols,
+        definition: `${primary ? 'PRIMARY KEY' : 'UNIQUE'} (${q(cols)})`,
+      });
+    }
+    result.sort((a, b) => Number(b.type === 'primaryKey') - Number(a.type === 'primaryKey'));
+    for (const [name, rows] of group(fks)) {
+      const first = rows[0]!;
+      const cols = rows.map((r) => String(r['col']));
+      let definition = `FOREIGN KEY (${q(cols)}) REFERENCES ${String(first['ref_table'])} (${q(rows.map((r) => String(r['ref_col'])))})`;
+      for (const [action, label] of [
+        ['on_delete', 'ON DELETE'],
+        ['on_update', 'ON UPDATE'],
+      ] as const) {
+        const value = String(first[action]);
+        if (value !== 'NO_ACTION') definition += ` ${label} ${value.replace(/_/g, ' ')}`;
+      }
+      result.push({ name, type: 'foreignKey', columns: cols, definition });
+    }
+    for (const r of checks) {
+      result.push({
+        name: String(r['name']),
+        type: 'check',
+        columns: r['col'] === null ? [] : [String(r['col'])],
+        definition: `CHECK ${String(r['definition'])}`,
+      });
+    }
+    return result;
+  }
+
+  async getDDL(ref: ObjectRef, kind: ObjectKind): Promise<string> {
+    const full = `${bracket(ref.schema)}.${bracket(ref.name)}`;
+    if (kind === 'view' || kind === 'function' || kind === 'procedure') {
+      const [row] = await this.queryIn(ref.database, 'SELECT OBJECT_DEFINITION(OBJECT_ID(@full)) AS def', {
+        full,
+      });
+      return row?.['def'] === null || row?.['def'] === undefined ? '' : String(row['def']).trim();
+    }
+    if (kind === 'sequence') {
+      const [s] = await this.queryIn(
+        ref.database,
+        `SELECT TYPE_NAME(user_type_id) AS type, CAST(start_value AS nvarchar(40)) AS start_value,
+                CAST(increment AS nvarchar(40)) AS inc, CAST(minimum_value AS nvarchar(40)) AS min_value,
+                CAST(maximum_value AS nvarchar(40)) AS max_value, is_cycling, is_cached, cache_size
+           FROM sys.sequences WHERE object_id = OBJECT_ID(@full)`,
+        { full },
+      );
+      if (!s) return '';
+      const cache = s['is_cached']
+        ? s['cache_size'] === null
+          ? 'CACHE'
+          : `CACHE ${String(s['cache_size'])}`
+        : 'NO CACHE';
+      return [
+        `CREATE SEQUENCE ${full}`,
+        `    AS ${String(s['type'])}`,
+        `    START WITH ${String(s['start_value'])}`,
+        `    INCREMENT BY ${String(s['inc'])}`,
+        `    MINVALUE ${String(s['min_value'])}`,
+        `    MAXVALUE ${String(s['max_value'])}`,
+        `    ${s['is_cycling'] ? 'CYCLE' : 'NO CYCLE'}`,
+        `    ${cache};`,
+      ].join('\n');
+    }
+    return this.tableDDL(ref, full);
+  }
+
+  /** `CREATE TABLE` armado desde el catálogo, con sus restricciones e índices. */
+  private async tableDDL(ref: ObjectRef, full: string): Promise<string> {
+    const columns = await this.queryIn(
+      ref.database,
+      `SELECT c.name,
+              CASE
+                WHEN t.name IN ('nvarchar', 'nchar') THEN t.name + '(' + IIF(c.max_length = -1, 'max', CAST(c.max_length / 2 AS varchar(10))) + ')'
+                WHEN t.name IN ('varchar', 'char', 'varbinary', 'binary') THEN t.name + '(' + IIF(c.max_length = -1, 'max', CAST(c.max_length AS varchar(10))) + ')'
+                WHEN t.name IN ('decimal', 'numeric') THEN t.name + '(' + CAST(c.precision AS varchar(3)) + ',' + CAST(c.scale AS varchar(3)) + ')'
+                WHEN t.name IN ('datetime2', 'time', 'datetimeoffset') THEN t.name + '(' + CAST(c.scale AS varchar(3)) + ')'
+                ELSE t.name
+              END AS type,
+              c.is_nullable, cc.definition AS computed, dc.name AS default_name, dc.definition AS default_def,
+              CAST(ic.seed_value AS nvarchar(40)) AS seed, CAST(ic.increment_value AS nvarchar(40)) AS inc
+         FROM sys.columns c
+         JOIN sys.types t ON t.user_type_id = c.user_type_id
+         LEFT JOIN sys.computed_columns cc ON cc.object_id = c.object_id AND cc.column_id = c.column_id
+         LEFT JOIN sys.default_constraints dc ON dc.object_id = c.default_object_id
+         LEFT JOIN sys.identity_columns ic ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+        WHERE c.object_id = OBJECT_ID(@full)
+        ORDER BY c.column_id`,
+      { full },
+    );
+    const lines = columns.map((c) => {
+      const name = bracket(String(c['name']));
+      if (c['computed'] !== null) return `    ${name} AS ${String(c['computed'])}`;
+      let line = `    ${name} ${String(c['type'])}`;
+      if (c['seed'] !== null) line += ` IDENTITY(${String(c['seed'])}, ${String(c['inc'])})`;
+      line += c['is_nullable'] ? ' NULL' : ' NOT NULL';
+      if (c['default_def'] !== null) {
+        line += ` CONSTRAINT ${bracket(String(c['default_name']))} DEFAULT ${String(c['default_def'])}`;
+      }
+      return line;
+    });
+    for (const c of await this.getConstraints(ref)) {
+      lines.push(`    CONSTRAINT ${bracket(c.name)} ${c.definition ?? ''}`);
+    }
+    const indexRows = await this.queryIn(
+      ref.database,
+      `SELECT i.name, i.is_unique, i.type_desc, i.filter_definition, c.name AS col, ic.is_descending_key,
+              ic.is_included_column
+         FROM sys.indexes i
+         JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
+         JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+        WHERE i.object_id = OBJECT_ID(@full) AND i.type > 0 AND i.is_hypothetical = 0
+          AND i.is_primary_key = 0 AND i.is_unique_constraint = 0
+        ORDER BY i.name, ic.is_included_column, ic.key_ordinal, ic.index_column_id`,
+      { full },
+    );
+    const indexes = new Map<string, Row[]>();
+    for (const r of indexRows) indexes.set(String(r['name']), [...(indexes.get(String(r['name'])) ?? []), r]);
+    const parts = [`CREATE TABLE ${full} (\n${lines.join(',\n')}\n);`];
+    const creates = [...indexes].map(([name, rows]) => {
+      const first = rows[0]!;
+      const keys = rows
+        .filter((r) => !r['is_included_column'])
+        .map((r) => `${bracket(String(r['col']))}${r['is_descending_key'] ? ' DESC' : ''}`);
+      const included = rows.filter((r) => r['is_included_column']).map((r) => bracket(String(r['col'])));
+      let sql = `CREATE ${first['is_unique'] ? 'UNIQUE ' : ''}${String(first['type_desc'])} INDEX ${bracket(name)} ON ${full} (${keys.join(', ')})`;
+      if (included.length > 0) sql += ` INCLUDE (${included.join(', ')})`;
+      if (first['filter_definition'] !== null) sql += ` WHERE ${String(first['filter_definition'])}`;
+      return `${sql};`;
+    });
+    if (creates.length > 0) parts.push(creates.join('\n'));
+    return parts.join('\n\n');
+  }
+
+  /** Consulta de metadatos ejecutada en el contexto de otra base (para `OBJECT_ID`, `OBJECT_DEFINITION`…). */
+  private queryIn(database: string, sql: string, params: Record<string, string>): Promise<Row[]> {
+    const names = Object.keys(params);
+    const declare = names.map((n) => `@${n} nvarchar(max)`).join(', ');
+    const assign = names.map((n) => `@${n} = @${n}`).join(', ');
+    return this.query(
+      `EXEC ${bracket(database)}.sys.sp_executesql @stmt, N'${declare}'${assign ? `, ${assign}` : ''}`,
+      { stmt: sql, ...params },
+    );
   }
 
   async countRows(ref: ObjectRef): Promise<number> {

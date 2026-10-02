@@ -1,8 +1,12 @@
 import { Worker } from 'node:worker_threads';
 import { ROW_BATCH_SIZE } from '@shared/query';
+import type { CellValue, LogicalType } from '@shared/query';
 import type { DbSession, StatementOutcome, StatementSink } from '../types';
 import { DriverError } from '../types';
-import { commandOf, isDml, positionOfSnippet } from '../common';
+import { commandOf, isDml, paramValue, positionOfSnippet } from '../common';
+
+/** Receptor vacío para las peticiones sin resultados. */
+const NO_SINK: StatementSink = { columns: () => undefined, rows: () => undefined, message: () => undefined };
 import { sqliteWorkerMain } from './sqlite-worker';
 import type { SqliteWorkerData, SqliteWorkerMessage, SqliteWorkerRequest } from './sqlite-worker';
 
@@ -32,6 +36,7 @@ export class SqliteSession implements DbSession {
   private ready: Promise<void> | null = null;
   private pending: Pending | null = null;
   private timer: ReturnType<typeof setTimeout> | undefined;
+  private manual = false;
 
   constructor(
     private readonly data: Omit<SqliteWorkerData, 'batchSize'>,
@@ -80,7 +85,11 @@ export class SqliteSession implements DbSession {
 
   async execute(sql: string, maxRows: number | null, sink: StatementSink): Promise<StatementOutcome> {
     const command = commandOf(sql, 'sqlite');
-    const done = await this.request({ type: 'execute', sql, maxRows, dml: isDml(command) }, sink, sql);
+    const done = await this.request(
+      { type: 'execute', sql, maxRows, dml: isDml(command), manual: this.manual },
+      sink,
+      sql,
+    );
     if (done.type !== 'done') throw new DriverError('Respuesta inesperada de la sesión de SQLite');
     return { command, rowCount: done.rowCount, affected: done.affected, truncated: done.truncated };
   }
@@ -94,6 +103,41 @@ export class SqliteSession implements DbSession {
 
   async closeCursor(): Promise<void> {
     this.worker?.postMessage({ type: 'close-cursor' } satisfies SqliteWorkerRequest);
+  }
+
+  /**
+   * Modo manual: el hilo abre una transacción antes de cada sentencia si no
+   * hay una abierta. Cancelar termina el hilo y con él la transacción.
+   */
+  async setAutoCommit(on: boolean): Promise<void> {
+    if (on === !this.manual) return;
+    if (on) await this.commit();
+    this.manual = !on;
+  }
+
+  commit(): Promise<void> {
+    return this.endTransaction(true);
+  }
+
+  rollback(): Promise<void> {
+    return this.endTransaction(false);
+  }
+
+  async run(sql: string, params: CellValue[] = [], types: LogicalType[] = []): Promise<number> {
+    const values = params.map((v, i) => {
+      const value = paramValue(v, types[i]);
+      // `node:sqlite` no acepta booleanos.
+      return typeof value === 'boolean' ? (value ? 1 : 0) : value;
+    });
+    const done = await this.request({ type: 'run', sql, params: values, manual: this.manual }, NO_SINK, sql);
+    if (done.type !== 'ran') throw new DriverError('Respuesta inesperada de la sesión de SQLite');
+    return done.changes;
+  }
+
+  private async endTransaction(commit: boolean): Promise<void> {
+    // Sin hilo no hay transacción abierta (se perdió al cancelar).
+    if (!this.worker) return;
+    await this.request({ type: 'end-transaction', commit }, NO_SINK, commit ? 'COMMIT' : 'ROLLBACK');
   }
 
   cancel(): Promise<void> {

@@ -2,8 +2,15 @@ import { readFile } from 'node:fs/promises';
 import mysql from 'mysql2';
 import type { Connection, ConnectionOptions, RowDataPacket } from 'mysql2';
 import type { ConnectionConfig, ServerInfo } from '@shared/connection';
-import type { ColumnInfo, DbObject, DriverCapabilities, IndexInfo, ObjectKind } from '@shared/metadata';
-import { qualifiedName } from '@shared/sql-quote';
+import type {
+  ColumnInfo,
+  ConstraintInfo,
+  DbObject,
+  DriverCapabilities,
+  IndexInfo,
+  ObjectKind,
+} from '@shared/metadata';
+import { qualifiedName, quoteIdent } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
 import { formatRowEstimate } from '../common';
@@ -181,6 +188,84 @@ export class MariaDbDriver implements DbDriver {
       index.columns.push(r['col'] === null ? '(expresión)' : String(r['col']));
     }
     return [...byName.values()];
+  }
+
+  async getConstraints(ref: ObjectRef): Promise<ConstraintInfo[]> {
+    const rows = await this.query(
+      `SELECT tc.constraint_name AS name, tc.constraint_type AS type, k.column_name AS col,
+              k.referenced_table_schema AS ref_schema, k.referenced_table_name AS ref_table,
+              k.referenced_column_name AS ref_col
+         FROM information_schema.table_constraints tc
+         LEFT JOIN information_schema.key_column_usage k
+           ON k.constraint_schema = tc.constraint_schema AND k.constraint_name = tc.constraint_name
+          AND k.table_schema = tc.table_schema AND k.table_name = tc.table_name
+        WHERE tc.table_schema = ? AND tc.table_name = ?
+        ORDER BY FIELD(tc.constraint_type, 'PRIMARY KEY', 'UNIQUE', 'FOREIGN KEY', 'CHECK'),
+                 tc.constraint_name, k.ordinal_position`,
+      [ref.database, ref.name],
+    );
+    const TYPES: Record<string, ConstraintInfo['type']> = {
+      'PRIMARY KEY': 'primaryKey',
+      UNIQUE: 'unique',
+      'FOREIGN KEY': 'foreignKey',
+      CHECK: 'check',
+    };
+    const byName = new Map<string, ConstraintInfo & { refCols: string[]; refTable?: string }>();
+    for (const r of rows) {
+      const type = TYPES[String(r['type'])];
+      if (!type) continue;
+      const name = String(r['name']);
+      const key = `${type}:${name}`;
+      let c = byName.get(key);
+      if (!c) {
+        c = { name, type, columns: [], refCols: [] };
+        if (r['ref_table']) {
+          c.refTable = qualifiedName('mariadb', {
+            schema: String(r['ref_schema']),
+            name: String(r['ref_table']),
+          });
+        }
+        byName.set(key, c);
+      }
+      if (r['col'] !== null && r['col'] !== undefined) c.columns.push(String(r['col']));
+      if (r['ref_col'] !== null && r['ref_col'] !== undefined) c.refCols.push(String(r['ref_col']));
+    }
+    // Las expresiones CHECK (MariaDB 10.2+, MySQL 8.0.16+); en versiones anteriores la vista no existe.
+    const checks = await this.query(
+      `SELECT constraint_name AS name, check_clause AS clause FROM information_schema.check_constraints
+        WHERE constraint_schema = ? AND constraint_name IN (
+          SELECT constraint_name FROM information_schema.table_constraints
+           WHERE table_schema = ? AND table_name = ? AND constraint_type = 'CHECK')`,
+      [ref.database, ref.database, ref.name],
+    ).catch(() => [] as Row[]);
+    const clauses = new Map(checks.map((r) => [String(r['name']), String(r['clause'])]));
+    const q = (cols: string[]): string => cols.map((col) => quoteIdent('mariadb', col)).join(', ');
+    return [...byName.values()].map(({ refCols, refTable, ...c }) => {
+      let definition: string | undefined;
+      if (c.type === 'primaryKey') definition = `PRIMARY KEY (${q(c.columns)})`;
+      else if (c.type === 'unique') definition = `UNIQUE (${q(c.columns)})`;
+      else if (c.type === 'foreignKey')
+        definition = `FOREIGN KEY (${q(c.columns)}) REFERENCES ${refTable ?? '?'} (${q(refCols)})`;
+      else if (clauses.has(c.name)) definition = `CHECK (${clauses.get(c.name)})`;
+      return { ...c, definition };
+    });
+  }
+
+  async getDDL(ref: ObjectRef, kind: ObjectKind): Promise<string> {
+    const name = qualifiedName('mariadb', { schema: ref.database, name: ref.name });
+    const statement: Partial<Record<ObjectKind, string>> = {
+      table: 'TABLE',
+      view: 'VIEW',
+      function: 'FUNCTION',
+      procedure: 'PROCEDURE',
+      sequence: 'SEQUENCE',
+    };
+    const what = statement[kind] ?? 'TABLE';
+    const [row] = await this.query(`SHOW CREATE ${what} ${name}`);
+    if (!row) return '';
+    // La columna se llama `Create Table`, `Create View`, `Create Procedure`…
+    const key = Object.keys(row).find((k) => /^create /i.test(k));
+    return key ? `${String(row[key])};` : '';
   }
 
   async countRows(ref: ObjectRef): Promise<number> {

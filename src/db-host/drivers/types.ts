@@ -1,6 +1,13 @@
 import type { ConnectionConfig, Engine, ServerInfo } from '@shared/connection';
-import type { ColumnInfo, DbObject, DriverCapabilities, IndexInfo, ObjectKind } from '@shared/metadata';
-import type { CellValue, MessageSeverity, ResultColumn } from '@shared/query';
+import type {
+  ColumnInfo,
+  ConstraintInfo,
+  DbObject,
+  DriverCapabilities,
+  IndexInfo,
+  ObjectKind,
+} from '@shared/metadata';
+import type { CellValue, LogicalType, MessageSeverity, ResultColumn } from '@shared/query';
 
 export interface Scope {
   database: string;
@@ -47,6 +54,20 @@ export interface DbSession {
   /** Cancela la sentencia en curso con el mecanismo nativo del motor. */
   cancel(): Promise<void>;
   close(): Promise<void>;
+  /**
+   * Modo de transacción (specs/04 §8). En manual, cada sentencia abre una
+   * transacción si no hay una abierta; volver a auto-commit confirma la abierta.
+   */
+  setAutoCommit(on: boolean): Promise<void>;
+  /** Confirma la transacción abierta, si la hay. */
+  commit(): Promise<void>;
+  /** Revierte la transacción abierta, si la hay. */
+  rollback(): Promise<void>;
+  /**
+   * Ejecuta una sentencia sin resultados, con parámetros en el formato del
+   * motor (`$1`, `?` o `@p1`). Devuelve las filas afectadas.
+   */
+  run(sql: string, params?: CellValue[], types?: LogicalType[]): Promise<number>;
 }
 
 /**
@@ -69,6 +90,10 @@ export interface DbDriver {
   listObjects(scope: Scope, kind: ObjectKind): Promise<DbObject[]>;
   getColumns(ref: ObjectRef): Promise<ColumnInfo[]>;
   getIndexes(ref: ObjectRef): Promise<IndexInfo[]>;
+  /** Clave primaria, claves foráneas, únicas y CHECK. */
+  getConstraints(ref: ObjectRef): Promise<ConstraintInfo[]>;
+  /** Sentencia de creación del objeto. */
+  getDDL(ref: ObjectRef, kind: ObjectKind): Promise<string>;
   /** `SELECT count(*)` de una tabla o vista. */
   countRows(ref: ObjectRef): Promise<number>;
 

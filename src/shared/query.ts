@@ -3,6 +3,8 @@
  * (specs/03 §Interfaz y specs/06).
  */
 
+import type { Engine } from './connection';
+
 /** Tipo lógico de columna, para formatear y alinear en la grilla (specs/03). */
 export type LogicalType =
   | 'integer'
@@ -50,6 +52,67 @@ export interface ExecuteRequest {
   statements: string[];
   /** Límite de filas por resultado; `null` = sin límite. */
   maxRows: number | null;
+  /** Modo de transacción de la pestaña (specs/04 §8); sin valor = auto-commit. */
+  autoCommit?: boolean;
+}
+
+/** Sesión de una pestaña (para Commit/Rollback, aplicar cambios y exportar). */
+export interface SessionTarget {
+  sessionId: string;
+  connectionId: string;
+  database?: string;
+  schema?: string;
+  autoCommit?: boolean;
+}
+
+/** Sentencia parametrizada generada por la edición en grilla (specs/06 §Edición de datos). */
+export interface ParamStatement {
+  sql: string;
+  params: CellValue[];
+  /** Tipo lógico de cada parámetro (los binarios `0x…` se envían como bytes). */
+  types: LogicalType[];
+  /** `UPDATE`/`DELETE` que debe afectar exactamente una fila. */
+  expectOne: boolean;
+}
+
+export interface ApplyChangesRequest extends SessionTarget {
+  statements: ParamStatement[];
+}
+
+/** Resultado de aplicar cambios: todo o nada (ante un error se revierte). */
+export type ApplyChangesResult =
+  { ok: true; affected: number[] } | { ok: false; index: number; message: string };
+
+export type ExportFormat = 'csv' | 'json' | 'xlsx' | 'sql';
+
+export interface ExportOptions {
+  /** CSV: separador de campos. */
+  separator: string;
+  /** CSV: incluir la fila de cabeceras. */
+  header: boolean;
+  /** CSV y SQL: escribir la marca BOM de UTF-8. */
+  bom: boolean;
+  /** SQL: nombre calificado de la tabla de los `INSERT`. */
+  table: string;
+  /** SQL: dialecto de los literales. */
+  engine?: Engine;
+}
+
+/** Exportación a archivo (specs/06 §Otros formatos): filas cargadas o la consulta re-ejecutada sin límite. */
+export interface ExportRequest {
+  exportId: string;
+  path: string;
+  format: ExportFormat;
+  options: ExportOptions;
+  columns: ResultColumn[];
+  source:
+    | { kind: 'rows'; rows: CellValue[][] }
+    | (SessionTarget & { kind: 'query'; sql: string; columnIndexes: number[] });
+}
+
+export interface ExportSummary {
+  rows: number;
+  cancelled: boolean;
 }
 
 export interface FetchMoreRequest {
@@ -102,7 +165,9 @@ export type QueryEvent =
    */
   | { type: 'execution-done'; queryId: string; summary: ExecuteSummary }
   /** Último evento de un "Cargar más" (mismo motivo). */
-  | { type: 'fetch-done'; queryId: string; index: number; result: FetchMoreResult | null; error?: string };
+  | { type: 'fetch-done'; queryId: string; index: number; result: FetchMoreResult | null; error?: string }
+  /** Avance de una exportación a archivo (`queryId` = id de la exportación). */
+  | { type: 'export-progress'; queryId: string; rows: number };
 
 export interface ExecuteSummary {
   queryId: string;

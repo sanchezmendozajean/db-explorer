@@ -204,7 +204,14 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
     password: env('MSSQL_PASSWORD') ?? env('MSSQL_SA_PASSWORD'),
     async prepare(run) {
       // Solo se escribe en una base propia de las pruebas (nunca en las existentes).
-      await run([`IF DB_ID(N'${msDatabase}') IS NULL CREATE DATABASE [${msDatabase}]`], 'master');
+      await run(
+        [
+          `IF DB_ID(N'${msDatabase}') IS NULL CREATE DATABASE [${msDatabase}]`,
+          // Lecturas desde otra sesión sin bloquearse con la transacción abierta de la prueba.
+          `ALTER DATABASE [${msDatabase}] SET ALLOW_SNAPSHOT_ISOLATION ON`,
+        ],
+        'master',
+      );
       await run(
         [
           "IF SCHEMA_ID(N'comun') IS NULL EXEC (N'CREATE SCHEMA comun')",

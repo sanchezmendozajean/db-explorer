@@ -1,6 +1,15 @@
 import type { ConnectionConfig, Engine, ServerInfo } from '@shared/connection';
-import type { TreeNodeData, TreeNodeRef } from '@shared/metadata';
-import type { ExecuteRequest, ExecuteSummary, FetchMoreRequest, FetchMoreResult } from '@shared/query';
+import type { ObjectKind, TableDetails, TreeNodeData, TreeNodeRef } from '@shared/metadata';
+import type {
+  ApplyChangesRequest,
+  ApplyChangesResult,
+  ExecuteRequest,
+  ExecuteSummary,
+  ExportRequest,
+  ExportSummary,
+  FetchMoreRequest,
+  FetchMoreResult,
+} from '@shared/query';
 import type { DbDriver, ObjectRef } from './drivers/types';
 import { DriverError } from './drivers/types';
 import { MariaDbDriver } from './drivers/mariadb/mariadb-driver';
@@ -93,6 +102,28 @@ export class ConnectionManager {
 
   countRows(id: string, ref: ObjectRef): Promise<number> {
     return this.get(id).driver.countRows(ref);
+  }
+
+  /** Columnas, índices y restricciones (pestaña de objeto y clave para editar en la grilla). */
+  async tableDetails(id: string, ref: ObjectRef, kind: ObjectKind): Promise<TableDetails> {
+    const { driver } = this.get(id);
+    const columns = await driver.getColumns(ref);
+    if (kind !== 'table') return { columns, indexes: [], constraints: [] };
+    const [indexes, constraints] = [await driver.getIndexes(ref), await driver.getConstraints(ref)];
+    return { columns, indexes, constraints };
+  }
+
+  ddl(id: string, ref: ObjectRef, kind: ObjectKind): Promise<string> {
+    return this.get(id).driver.getDDL(ref, kind);
+  }
+
+  apply(req: ApplyChangesRequest): Promise<ApplyChangesResult> {
+    return this.queries.apply(req);
+  }
+
+  export(req: ExportRequest): Promise<ExportSummary> {
+    if (req.source.kind === 'query') this.get(req.source.connectionId);
+    return this.queries.export(req);
   }
 
   execute(req: ExecuteRequest): Promise<ExecuteSummary> {

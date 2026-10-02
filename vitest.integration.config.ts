@@ -3,8 +3,8 @@ import { defineConfig } from 'vitest/config';
 
 /**
  * Pruebas de integración contra los motores levantados con
- * `docker compose -f test/integration/docker-compose
- * o, si no hay Docker, contra un clúster temporal creado con los binarios locales de PostgreSQL.yml up -d`.
+ * `docker compose -f test/integration/docker-compose.yml up -d` o, si no hay
+ * Docker, contra un clúster temporal creado con los binarios locales de PostgreSQL.
  */
 export default defineConfig({
   resolve: { alias: { '@shared': resolve('src/shared') } },

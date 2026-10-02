@@ -2,9 +2,16 @@ import { readFile } from 'node:fs/promises';
 import pg from 'pg';
 import type { ClientConfig, FieldDef } from 'pg';
 import type { ConnectionConfig, ServerInfo } from '@shared/connection';
-import type { ColumnInfo, DbObject, DriverCapabilities, IndexInfo, ObjectKind } from '@shared/metadata';
+import type {
+  ColumnInfo,
+  ConstraintInfo,
+  DbObject,
+  DriverCapabilities,
+  IndexInfo,
+  ObjectKind,
+} from '@shared/metadata';
 import type { LogicalType, ResultColumn } from '@shared/query';
-import { qualifiedName } from '@shared/sql-quote';
+import { qualifiedName, quoteIdent } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
 import { formatRowEstimate } from '../common';
@@ -267,6 +274,138 @@ export class PostgresDriver implements DbDriver {
       [ref.schema, ref.name],
     );
     return rows.map((r) => ({ name: r.name, unique: r.unique, primary: r.primary, columns: r.columns }));
+  }
+
+  async getConstraints(ref: ObjectRef): Promise<ConstraintInfo[]> {
+    const { rows } = await this.query<{ name: string; type: string; columns: string[]; def: string }>(
+      ref.database,
+      `SELECT con.conname AS name, con.contype AS type,
+              ARRAY(SELECT a.attname::text FROM unnest(con.conkey) WITH ORDINALITY AS k(n, i)
+                      JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = k.n
+                     ORDER BY k.i) AS columns,
+              pg_get_constraintdef(con.oid, true) AS def
+         FROM pg_constraint con
+         JOIN pg_class t ON t.oid = con.conrelid
+         JOIN pg_namespace n ON n.oid = t.relnamespace
+        WHERE n.nspname = $1 AND t.relname = $2 AND con.contype IN ('p', 'f', 'u', 'c')
+        ORDER BY strpos('pufc', con.contype::text), con.conname`,
+      [ref.schema, ref.name],
+    );
+    const TYPES: Record<string, ConstraintInfo['type']> = {
+      p: 'primaryKey',
+      f: 'foreignKey',
+      u: 'unique',
+      c: 'check',
+    };
+    return rows.map((r) => ({ name: r.name, type: TYPES[r.type]!, columns: r.columns, definition: r.def }));
+  }
+
+  async getDDL(ref: ObjectRef, kind: ObjectKind): Promise<string> {
+    const name = qualifiedName('postgres', { schema: ref.schema, name: ref.name });
+    if (kind === 'view' || kind === 'materializedView') {
+      const { rows } = await this.query<{ def: string }>(
+        ref.database,
+        `SELECT pg_get_viewdef(c.oid, true) AS def FROM pg_class c
+           JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = $1 AND c.relname = $2`,
+        [ref.schema, ref.name],
+      );
+      const prefix = kind === 'view' ? 'CREATE OR REPLACE VIEW' : 'CREATE MATERIALIZED VIEW';
+      return `${prefix} ${name} AS\n${(rows[0]?.def ?? '').trimEnd()}`;
+    }
+    if (kind === 'function' || kind === 'procedure') {
+      const { rows } = await this.query<{ def: string }>(
+        ref.database,
+        `SELECT pg_get_functiondef(p.oid) AS def FROM pg_proc p
+           JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE n.nspname = $1 AND p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' = $2`,
+        [ref.schema, ref.name],
+      );
+      return (rows[0]?.def ?? '').trimEnd();
+    }
+    if (kind === 'sequence') {
+      const { rows } = await this.query<Record<string, string | boolean>>(
+        ref.database,
+        `SELECT data_type::text AS type, start_value::text AS start, increment_by::text AS inc,
+                min_value::text AS min, max_value::text AS max, cache_size::text AS cache, cycle
+           FROM pg_sequences WHERE schemaname = $1 AND sequencename = $2`,
+        [ref.schema, ref.name],
+      );
+      const s = rows[0];
+      if (!s) return '';
+      return [
+        `CREATE SEQUENCE ${name}`,
+        `    AS ${String(s['type'])}`,
+        `    INCREMENT BY ${String(s['inc'])}`,
+        `    MINVALUE ${String(s['min'])}`,
+        `    MAXVALUE ${String(s['max'])}`,
+        `    START WITH ${String(s['start'])}`,
+        `    CACHE ${String(s['cache'])}${s['cycle'] ? '\n    CYCLE' : ''};`,
+      ].join('\n');
+    }
+    return this.tableDDL(ref, name);
+  }
+
+  /** `CREATE TABLE` armado desde el catálogo (PostgreSQL no tiene una función que lo genere). */
+  private async tableDDL(ref: ObjectRef, name: string): Promise<string> {
+    const { rows: columns } = await this.query<{
+      name: string;
+      type: string;
+      notnull: boolean;
+      def: string | null;
+      identity: string;
+      generated: string;
+      comment: string | null;
+    }>(
+      ref.database,
+      `SELECT a.attname AS name, format_type(a.atttypid, a.atttypmod) AS type, a.attnotnull AS notnull,
+              pg_get_expr(d.adbin, d.adrelid) AS def, a.attidentity::text AS identity,
+              a.attgenerated::text AS generated, col_description(a.attrelid, a.attnum) AS comment
+         FROM pg_attribute a
+         JOIN pg_class c ON c.oid = a.attrelid
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+        WHERE n.nspname = $1 AND c.relname = $2 AND a.attnum > 0 AND NOT a.attisdropped
+        ORDER BY a.attnum`,
+      [ref.schema, ref.name],
+    );
+    const constraints = await this.getConstraints(ref);
+    const { rows: extra } = await this.query<{ kind: string; def: string }>(
+      ref.database,
+      `SELECT 'index' AS kind, pg_get_indexdef(i.indexrelid) AS def
+         FROM pg_index i JOIN pg_class c ON c.oid = i.indrelid
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = $1 AND c.relname = $2
+          AND NOT EXISTS (SELECT 1 FROM pg_constraint con WHERE con.conindid = i.indexrelid)
+       UNION ALL
+       SELECT 'comment', obj_description(c.oid, 'pg_class')
+         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = $1 AND c.relname = $2 AND obj_description(c.oid, 'pg_class') IS NOT NULL`,
+      [ref.schema, ref.name],
+    );
+    const quote = (s: string): string => `'${s.replace(/'/g, "''")}'`;
+    const lines = columns.map((c) => {
+      let line = `    ${quoteIdent('postgres', c.name)} ${c.type}`;
+      if (c.identity) line += ` GENERATED ${c.identity === 'a' ? 'ALWAYS' : 'BY DEFAULT'} AS IDENTITY`;
+      else if (c.generated === 's' && c.def) line += ` GENERATED ALWAYS AS (${c.def}) STORED`;
+      else if (c.def) line += ` DEFAULT ${c.def}`;
+      if (c.notnull) line += ' NOT NULL';
+      return line;
+    });
+    for (const c of constraints)
+      lines.push(`    CONSTRAINT ${quoteIdent('postgres', c.name)} ${c.definition}`);
+    const parts = [`CREATE TABLE ${name} (\n${lines.join(',\n')}\n);`];
+    const indexes = extra.filter((e) => e.kind === 'index').map((e) => `${e.def};`);
+    if (indexes.length > 0) parts.push(indexes.join('\n'));
+    const comments = extra
+      .filter((e) => e.kind === 'comment')
+      .map((e) => `COMMENT ON TABLE ${name} IS ${quote(e.def)};`);
+    for (const c of columns) {
+      if (c.comment) {
+        comments.push(`COMMENT ON COLUMN ${name}.${quoteIdent('postgres', c.name)} IS ${quote(c.comment)};`);
+      }
+    }
+    if (comments.length > 0) parts.push(comments.join('\n'));
+    return parts.join('\n\n');
   }
 
   async countRows(ref: ObjectRef): Promise<number> {

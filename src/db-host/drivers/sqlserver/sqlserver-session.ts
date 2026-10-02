@@ -1,11 +1,11 @@
 import type { Connection } from 'tedious';
-import { Request } from 'tedious';
+import { Request, TYPES } from 'tedious';
 import type { ColumnMetadata } from 'tedious/lib/token/colmetadata-token-parser';
-import type { CellValue, ResultColumn } from '@shared/query';
+import type { CellValue, LogicalType, ResultColumn } from '@shared/query';
 import { ROW_BATCH_SIZE } from '@shared/query';
 import type { DbSession, StatementOutcome, StatementSink } from '../types';
 import { DriverError } from '../types';
-import { commandOf, isDml } from '../common';
+import { commandOf, isDml, paramValue } from '../common';
 import { toSqlServerError } from './errors';
 import { logicalTypeOf, nativeTypeOf, toCell } from './sqlserver-types';
 
@@ -60,6 +60,7 @@ export class SqlServerSession implements DbSession {
   private running: Running | null = null;
   private cancelling = false;
   private closed = false;
+  private manual = false;
 
   constructor(
     private readonly connection: Connection,
@@ -85,6 +86,7 @@ export class SqlServerSession implements DbSession {
   async execute(sql: string, maxRows: number | null, sink: StatementSink): Promise<StatementOutcome> {
     await this.closeCursor();
     if (this.closed) throw new DriverError('Se perdió la conexión con el servidor', 'disconnected');
+    await this.beginIfManual();
     const command = commandOf(sql, 'sqlserver');
     let complete!: () => void;
     const state: Running = {
@@ -176,6 +178,69 @@ export class SqlServerSession implements DbSession {
       this.connection.once('end', () => resolve());
       this.connection.close();
       setTimeout(resolve, 2000);
+    });
+  }
+
+  /**
+   * Modo manual: antes de cada sentencia se abre una transacción explícita si
+   * no hay una (`@@TRANCOUNT = 0`). No se usa `IMPLICIT_TRANSACTIONS`, que
+   * anida un `BEGIN TRANSACTION` del usuario dentro de la implícita.
+   */
+  async setAutoCommit(on: boolean): Promise<void> {
+    if (on === !this.manual) return;
+    if (on) await this.commit();
+    this.manual = !on;
+  }
+
+  async commit(): Promise<void> {
+    await this.closeCursor();
+    await this.batch('IF @@TRANCOUNT > 0 COMMIT TRANSACTION');
+  }
+
+  async rollback(): Promise<void> {
+    await this.closeCursor();
+    await this.batch('IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION');
+  }
+
+  async run(sql: string, params: CellValue[] = [], types: LogicalType[] = []): Promise<number> {
+    await this.closeCursor();
+    await this.beginIfManual();
+    // Sin parámetros, como lote: un `BEGIN TRANSACTION` dentro de `sp_executesql` no sobrevive al cerrar el procedimiento.
+    if (params.length === 0) return this.batch(sql);
+    return new Promise<number>((resolve, reject) => {
+      const request = new Request(sql, (err, rowCount) =>
+        err ? reject(toSqlServerError(err, sql)) : resolve(rowCount ?? 0),
+      );
+      params.forEach((v, i) => {
+        const value = paramValue(v, types[i]);
+        const type = Buffer.isBuffer(value)
+          ? TYPES.VarBinary
+          : typeof value === 'boolean'
+            ? TYPES.Bit
+            : typeof value === 'number'
+              ? Number.isInteger(value)
+                ? TYPES.BigInt
+                : TYPES.Float
+              : TYPES.NVarChar;
+        request.addParameter(`p${i + 1}`, type, value);
+      });
+      this.connection.execSql(request);
+    });
+  }
+
+  private async beginIfManual(): Promise<void> {
+    if (this.manual) await this.batch('IF @@TRANCOUNT = 0 BEGIN TRANSACTION');
+  }
+
+  /** Lote sin resultados (control de transacciones); devuelve las filas afectadas. */
+  private batch(sql: string): Promise<number> {
+    if (this.closed)
+      return Promise.reject(new DriverError('Se perdió la conexión con el servidor', 'disconnected'));
+    return new Promise<number>((resolve, reject) => {
+      const request = new Request(sql, (err, rowCount) =>
+        err ? reject(toSqlServerError(err, sql)) : resolve(rowCount ?? 0),
+      );
+      this.connection.execSqlBatch(request);
     });
   }
 

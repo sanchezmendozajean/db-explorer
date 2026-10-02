@@ -1,7 +1,14 @@
 import { existsSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import type { ConnectionConfig, ServerInfo } from '@shared/connection';
-import type { ColumnInfo, DbObject, DriverCapabilities, IndexInfo, ObjectKind } from '@shared/metadata';
+import type {
+  ColumnInfo,
+  ConstraintInfo,
+  DbObject,
+  DriverCapabilities,
+  IndexInfo,
+  ObjectKind,
+} from '@shared/metadata';
 import { quoteIdent } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
@@ -156,6 +163,74 @@ export class SqliteDriver implements DbDriver {
       if (pk.length > 0) result.push({ name: 'PRIMARY KEY', unique: true, primary: true, columns: pk });
     }
     return result.sort((a, b) => Number(b.primary) - Number(a.primary) || a.name.localeCompare(b.name));
+  }
+
+  /** Clave primaria, únicas y foráneas por `pragma`; SQLite no expone los CHECK por separado (están en el DDL). */
+  async getConstraints(ref: ObjectRef): Promise<ConstraintInfo[]> {
+    const q = (cols: string[]): string => cols.map((c) => quoteIdent('sqlite', c)).join(', ');
+    const result: ConstraintInfo[] = [];
+    const pk = this.all<{ name: string }>(
+      'SELECT name FROM pragma_table_info(?) WHERE pk > 0 ORDER BY pk',
+      ref.name,
+    ).map((r) => r.name);
+    if (pk.length > 0) {
+      result.push({
+        name: 'PRIMARY KEY',
+        type: 'primaryKey',
+        columns: pk,
+        definition: `PRIMARY KEY (${q(pk)})`,
+      });
+    }
+    for (const index of this.all<{ name: string }>(
+      `SELECT name FROM pragma_index_list(?) WHERE origin = 'u' ORDER BY name`,
+      ref.name,
+    )) {
+      const cols = this.all<{ name: string }>(
+        'SELECT name FROM pragma_index_info(?) ORDER BY seqno',
+        index.name,
+      ).map((r) => r.name);
+      result.push({ name: index.name, type: 'unique', columns: cols, definition: `UNIQUE (${q(cols)})` });
+    }
+    const fks = this.all<{ id: number; table: string; from: string; to: string | null }>(
+      'SELECT id, "table", "from", "to" FROM pragma_foreign_key_list(?) ORDER BY id, seq',
+      ref.name,
+    );
+    const byId = new Map<number, { table: string; from: string[]; to: string[] }>();
+    for (const fk of fks) {
+      let entry = byId.get(fk.id);
+      if (!entry) {
+        entry = { table: fk.table, from: [], to: [] };
+        byId.set(fk.id, entry);
+      }
+      entry.from.push(fk.from);
+      if (fk.to) entry.to.push(fk.to);
+    }
+    for (const [, fk] of byId) {
+      const target = fk.to.length > 0 ? ` (${q(fk.to)})` : '';
+      result.push({
+        name: '',
+        type: 'foreignKey',
+        columns: fk.from,
+        definition: `FOREIGN KEY (${q(fk.from)}) REFERENCES ${quoteIdent('sqlite', fk.table)}${target}`,
+      });
+    }
+    return result;
+  }
+
+  /** El DDL original guardado en `sqlite_schema` (de la tabla, más sus índices y triggers). */
+  async getDDL(ref: ObjectRef, kind: ObjectKind): Promise<string> {
+    const rows =
+      kind === 'table'
+        ? this.all<{ sql: string }>(
+            `SELECT sql FROM sqlite_schema WHERE tbl_name = ? AND sql IS NOT NULL
+              ORDER BY type = 'table' DESC, type = 'index' DESC, name`,
+            ref.name,
+          )
+        : this.all<{ sql: string }>(
+            'SELECT sql FROM sqlite_schema WHERE name = ? AND sql IS NOT NULL',
+            ref.name,
+          );
+    return rows.map((r) => `${r.sql};`).join('\n\n');
   }
 
   async countRows(ref: ObjectRef): Promise<number> {

@@ -50,6 +50,24 @@ export interface IndexInfo {
   primary: boolean;
 }
 
+export type ConstraintType = 'primaryKey' | 'foreignKey' | 'unique' | 'check';
+
+/** Restricción de una tabla para la pestaña Estructura (specs/04 §9). */
+export interface ConstraintInfo {
+  name: string;
+  type: ConstraintType;
+  columns: string[];
+  /** Definición legible: `FOREIGN KEY (…) REFERENCES …` o la expresión del CHECK. */
+  definition?: string;
+}
+
+/** Columnas, índices y restricciones de una tabla o vista (pestaña de objeto y edición en grilla). */
+export interface TableDetails {
+  columns: ColumnInfo[];
+  indexes: IndexInfo[];
+  constraints: ConstraintInfo[];
+}
+
 /**
  * Referencia a un nodo del árbol de objetos. El db-host sabe expandir cada
  * tipo según las `capabilities` del motor.

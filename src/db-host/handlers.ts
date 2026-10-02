@@ -47,6 +47,14 @@ export function createHandlers(
       await connections.queries.closeSession(sessionId);
       return null;
     },
+    'session.end-transaction': async ({ sessionId, commit }) => {
+      await connections.queries.endTransaction(sessionId, commit);
+      return null;
+    },
+    'meta.table': ({ connectionId, kind, ...ref }) => connections.tableDetails(connectionId, ref, kind),
+    'meta.ddl': ({ connectionId, kind, ...ref }) => connections.ddl(connectionId, ref, kind),
+    'data.apply': (req) => connections.apply(req),
+    'export.start': (req) => connections.export(req),
   };
 }
 
