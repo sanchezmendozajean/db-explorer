@@ -23,7 +23,7 @@ El DB Host agrega `explain(sql, { analyze })` a `DbSession`. Cada driver pide el
 |---|---|---|---|
 | PostgreSQL | `EXPLAIN (FORMAT JSON, VERBOSE) …` | `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON, VERBOSE) …` | JSON |
 | MariaDB | `EXPLAIN FORMAT=JSON …` | `ANALYZE FORMAT=JSON …` | JSON |
-| MySQL 8 | `EXPLAIN FORMAT=TREE …` | `EXPLAIN ANALYZE …` | Texto en árbol (`-> Operación (cost=… rows=…) (actual time=… rows=… loops=…)`) |
+| MySQL 8 (**por completar**, ver `NOTAS.md` §MySQL) | `EXPLAIN FORMAT=TREE …` | `EXPLAIN ANALYZE …` | Texto en árbol (`-> Operación (cost=… rows=…) (actual time=… rows=… loops=…)`) |
 | SQLite | `EXPLAIN QUERY PLAN …` | **No disponible** (SQLite no entrega filas ni tiempos reales por paso): el comando se deshabilita con tooltip explicando por qué | Filas `id, parent, detail` |
 | SQL Server | `SET SHOWPLAN_XML ON` + sentencia + `SET SHOWPLAN_XML OFF` | `SET STATISTICS XML ON` + sentencia + `SET STATISTICS XML OFF` | XML de showplan (`RelOp`) |
 

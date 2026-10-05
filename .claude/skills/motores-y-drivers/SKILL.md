@@ -21,6 +21,7 @@ Arquitectura en `specs/02` y `specs/03`; decisiones por hito en `specs/NOTAS.md`
 - Planes: `EXPLAIN (FORMAT JSON, VERBOSE[, ANALYZE, BUFFERS])`. `Plan Rows` es por bucle y **después** del filtro; para "filas leídas" usar `pg_class.reltuples` (−1 si nunca se analizó). PG 18 devuelve `Actual Rows` con decimales.
 
 ## MariaDB / MySQL (`mysql2`)
+- **MySQL está por completar** (fuera del alcance por ahora, decisión del usuario): las ramas de MySQL del driver están marcadas con `POR COMPLETAR` y listadas en `specs/NOTAS.md` §MySQL. No invertir en MySQL sin que el usuario lo pida.
 - El mismo driver sirve a ambos; `isMariaDb` se detecta con `VERSION()` al conectar (secuencias, `max_statement_time` vs `max_execution_time`, formato de plan).
 - Las filas se leen en flujo; al llegar al límite se pausa el socket y la consulta queda como cursor (las filas del bloque ya recibido van a `overflow`). Mientras el cursor está abierto la conexión está ocupada.
 - Avisos: `mysql2` solo informa su cantidad en respuestas OK, no en SELECT.

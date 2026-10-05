@@ -130,7 +130,7 @@ describe('plan de MariaDB y MySQL', () => {
     expect(planTables(fixture('mariadb-join-estimated.json'))).toEqual(['p', 'c']);
   });
 
-  it('MySQL 8: árbol de texto estimado y real', () => {
+  it('MySQL 8 (por completar: fixtures sin servidor real): árbol de texto estimado y real', () => {
     const est = parseMySqlTreePlan(fixture('mysql-join-estimated.txt'), 'SELECT …', false);
     expect(est.rawLanguage).toBe('plaintext');
     expect(nodes(est).map((n) => n.operation)).toEqual([

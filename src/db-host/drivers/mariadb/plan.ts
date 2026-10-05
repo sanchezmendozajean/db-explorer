@@ -188,7 +188,12 @@ function describeTreeLine(text: string): Pick<DraftNode, 'operation' | 'object' 
   return { operation: text };
 }
 
-/** `EXPLAIN FORMAT=TREE` / `EXPLAIN ANALYZE` de MySQL 8 (texto en árbol) → modelo común. */
+/**
+ * `EXPLAIN FORMAT=TREE` / `EXPLAIN ANALYZE` de MySQL 8 (texto en árbol) → modelo común.
+ *
+ * POR COMPLETAR (MySQL queda fuera del alcance por ahora; ver specs/NOTAS.md): probado solo con
+ * fixtures escritos según el formato documentado, no con planes de un servidor real.
+ */
 export function parseMySqlTreePlan(raw: string, statement: string, analyzed: boolean): ExecutionPlan {
   const roots: DraftNode[] = [];
   const stack: { depth: number; node: DraftNode }[] = [];

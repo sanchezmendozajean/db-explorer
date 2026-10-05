@@ -421,3 +421,15 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 - **MySQL 8 sin servidor de pruebas**: el parser del árbol de texto (`EXPLAIN FORMAT=TREE` / `EXPLAIN ANALYZE`) se probó con fixtures escritos según el formato documentado, no con planes capturados de un servidor real.
 - Los anchos de columna de la pestaña Plan no se recuerdan entre planes; si no entran todas, las últimas quedan recortadas (sin desplazamiento horizontal).
 - SQL Server: los planes con cientos de nodos se virtualizan, pero solo se probaron planes reales pequeños.
+
+## MySQL — por completar (2026-10-05)
+
+Decisión del usuario: **MySQL queda fuera del alcance por ahora**; se completará en un futuro próximo. MariaDB sigue soportado y probado. No se borró nada: el driver de MariaDB detecta MySQL al conectar (`VERSION()` sin "MariaDB") y tiene ramas propias, todas marcadas en el código con `POR COMPLETAR`.
+
+Lo que está a medias:
+- **Plan de ejecución** (`drivers/mariadb/plan.ts`, `parseMySqlTreePlan`, y la rama de `MariaDbSession.explain`): `EXPLAIN FORMAT=TREE` / `EXPLAIN ANALYZE`. Probado solo con fixtures escritos según el formato documentado (`test/unit/fixtures/plans/mysql-*.txt`), no con planes de un servidor real. Falta: capturar planes reales y verificar *Explicar y ejecutar* de UPDATE/DELETE (MySQL 8 solo admite `EXPLAIN ANALYZE` de algunas escrituras).
+- **Tiempo límite de consulta**: `SET SESSION max_execution_time` (solo limita `SELECT`); sin probar.
+- **Restricciones CHECK** (`information_schema.check_constraints`, MySQL 8.0.16+): sin verificar.
+- **Secuencias**: se desactivan al detectar MySQL; sin probar.
+- **Interfaz**: la tarjeta del diálogo de conexión sigue diciendo "MariaDB / MySQL" y el resaltado usa el lenguaje `mysql` de Monaco (sirve para ambos).
+- **Pruebas**: no hay servidor MySQL de pruebas. Para completarlo: agregar un `EngineCase` de MySQL en `test/integration/engines.ts` (Docker con `mysql:8`) y correr la suite común.

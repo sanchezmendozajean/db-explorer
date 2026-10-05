@@ -272,6 +272,9 @@ export class MariaDbSession implements DbSession {
    * MariaDB: `EXPLAIN|ANALYZE FORMAT=JSON`; MySQL 8: `EXPLAIN FORMAT=TREE` o
    * `EXPLAIN ANALYZE`. Una escritura medida sobre tablas que no admiten
    * transacciones (MyISAM, Aria) no se ejecuta: no se podría revertir.
+   *
+   * POR COMPLETAR (MySQL queda fuera del alcance por ahora; ver specs/NOTAS.md): la rama MySQL
+   * (formato de árbol) no se probó contra un servidor real.
    */
   async explain(sql: string, options: ExplainOptions, sink: StatementSink): Promise<ExecutionPlan> {
     await this.closeCursor();

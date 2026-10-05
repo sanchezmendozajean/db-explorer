@@ -43,6 +43,7 @@ export class MariaDbDriver implements DbDriver {
     functions: true,
     procedures: true,
     // Las secuencias existen en MariaDB 10.3+, no en MySQL (se ajusta al conectar).
+    // POR COMPLETAR (MySQL queda fuera del alcance por ahora; ver specs/NOTAS.md): la rama MySQL no se probó contra un servidor.
     sequences: true,
     triggers: false,
     materializedViews: false,
@@ -231,6 +232,7 @@ export class MariaDbDriver implements DbDriver {
       if (r['ref_col'] !== null && r['ref_col'] !== undefined) c.refCols.push(String(r['ref_col']));
     }
     // Las expresiones CHECK (MariaDB 10.2+, MySQL 8.0.16+); en versiones anteriores la vista no existe.
+    // POR COMPLETAR (MySQL queda fuera del alcance por ahora; ver specs/NOTAS.md): en MySQL no se verificó esta consulta.
     const checks = await this.query(
       `SELECT constraint_name AS name, check_clause AS clause FROM information_schema.check_constraints
         WHERE constraint_schema = ? AND constraint_name IN (
@@ -280,6 +282,7 @@ export class MariaDbDriver implements DbDriver {
     const connection = await this.open(database || undefined);
     try {
       if (cfg.queryTimeoutSec > 0) {
+        // POR COMPLETAR (MySQL queda fuera del alcance por ahora; ver specs/NOTAS.md): `max_execution_time` solo limita SELECT y no se probó.
         await this.run(
           connection,
           this.isMariaDb

@@ -16,7 +16,7 @@ Más un **explorador de archivos** editable para organizar y abrir scripts `.sql
 | Motor | Versiones mínimas objetivo |
 |---|---|
 | PostgreSQL | 12+ (incluye Amazon RDS / Aurora PostgreSQL) |
-| MariaDB / MySQL | MariaDB 10.5+, MySQL 8+ |
+| MariaDB / MySQL | MariaDB 10.5+. MySQL 8+ **por completar**: queda fuera del alcance por ahora (ver `NOTAS.md` §MySQL) |
 | SQLite | 3.35+ (archivo local) |
 | SQL Server | 2016+ (incluye Azure SQL) |
 
