@@ -21,6 +21,7 @@ export function askWriteConfirm(options: {
   unbounded: boolean;
   language: string;
   allowSkip?: boolean;
+  rollbackNote?: boolean;
 }): Promise<{ confirmed: boolean; dontAskAgain: boolean }> {
   return new Promise((resolve) => {
     useOverlayStore.getState().openDialog({ id: 'writeConfirm', ...options, onResult: resolve });

@@ -101,6 +101,7 @@ export function WriteConfirmDialog({
   unbounded,
   language,
   allowSkip = true,
+  rollbackNote = false,
   onResult,
   onClose,
 }: {
@@ -111,6 +112,8 @@ export function WriteConfirmDialog({
   language: string;
   /** Mostrar "No volver a preguntar en esta pestaña" (no al guardar ediciones de la grilla). */
   allowSkip?: boolean;
+  /** Explicar y ejecutar: la sentencia se mide y se revierte (specs/12 §4). */
+  rollbackNote?: boolean;
   onResult: (result: { confirmed: boolean; dontAskAgain: boolean }) => void;
   onClose: () => void;
 }): React.JSX.Element {
@@ -147,6 +150,7 @@ export function WriteConfirmDialog({
         </p>
       )}
       {unbounded && <p className="dialog-warning">{t.unbounded}</p>}
+      {rollbackNote && <p>{es.plan.rollbackNote}</p>}
       <SqlPreview sql={statements.join(';\n\n')} language={language} />
       {production && allowSkip && (
         <Checkbox label={t.dontAskAgain} checked={dontAsk} onChange={(e) => setDontAsk(e.target.checked)} />

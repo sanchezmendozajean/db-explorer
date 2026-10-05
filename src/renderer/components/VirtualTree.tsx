@@ -23,6 +23,8 @@ export interface VirtualTreeProps<T extends TreeRow> {
   renderRow: (row: T) => ReactNode;
   ariaLabel: string;
   rowHeight?: number;
+  /** Alto de cada fila, si varía (p. ej. filas con una segunda línea). */
+  rowSize?: (row: T) => number;
   /** Sangría por nivel, en px. Por defecto 18 (chevron 16 + margen 2): el chevron de un hijo queda bajo el ícono del padre. */
   indent?: number;
   /** Relleno izquierdo del nivel 0, en px. */
@@ -64,6 +66,7 @@ export function VirtualTree<T extends TreeRow>({
   renderRow,
   ariaLabel,
   rowHeight = 22,
+  rowSize,
   indent = 18,
   basePadding = 8,
   focusContext = 'treeFocus',
@@ -83,9 +86,14 @@ export function VirtualTree<T extends TreeRow>({
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => rowHeight,
+    estimateSize: (index) => (rowSize && rows[index] ? rowSize(rows[index]) : rowHeight),
     overscan: 12,
   });
+
+  // Con altos variables, las posiciones se recalculan cuando cambian las filas visibles.
+  useEffect(() => {
+    if (rowSize) virtualizer.measure();
+  }, [rows, rowSize, virtualizer]);
 
   const selectedIndex = rows.findIndex((r) => r.id === selectedId);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
@@ -217,7 +225,7 @@ export function VirtualTree<T extends TreeRow>({
                 }
               }}
               style={{
-                height: rowHeight,
+                height: rowSize ? rowSize(row) : rowHeight,
                 transform: `translateY(${item.start}px)`,
                 paddingLeft: basePadding + row.depth * indent,
               }}

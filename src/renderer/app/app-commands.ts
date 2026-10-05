@@ -28,7 +28,13 @@ import {
 } from '../features/files/workspace-actions';
 import { useFilesStore } from '../stores/files-store';
 import { pickConnection, pickDatabaseOrSchema } from '../features/editor/target-pickers';
-import { cancelExecution, executeFromEditor, isRunning } from '../features/execution/execute';
+import {
+  cancelExecution,
+  executeFromEditor,
+  explainFromEditor,
+  isRunning,
+} from '../features/execution/execute';
+import { connectionById } from '../stores/connections-store';
 import { endTransaction, isManual, setTransactionMode } from '../features/execution/transactions';
 import {
   addRow,
@@ -71,6 +77,11 @@ export function registerAppCommands(): () => void {
     return tab?.kind === 'script' ? tab.id : undefined;
   };
   const hasScript = (): boolean => activeScript() !== undefined;
+  /** SQLite no tiene plan real (specs/12 §2). */
+  const sqliteScript = (): boolean => {
+    const tab = wb().tabs.find((t) => t.id === activeScript());
+    return connectionById(tab?.connectionId)?.engine === 'sqlite';
+  };
   const activeTabId = (): string | undefined => wb().activeId ?? undefined;
   const hasSelection = (): boolean => {
     const selection = activeEditor()?.getSelection();
@@ -302,6 +313,20 @@ export function registerAppCommands(): () => void {
       category: cat.query,
       enabled: hasScript,
       run: () => executeFromEditor('statement', { newResultTab: true }),
+    },
+    // Plan de ejecución (specs/12)
+    {
+      id: 'db.explainPlan',
+      category: cat.query,
+      enabled: hasScript,
+      run: () => explainFromEditor(false),
+    },
+    {
+      id: 'db.explainAnalyze',
+      category: cat.query,
+      enabled: () => hasScript() && !sqliteScript(),
+      disabledReason: () => (sqliteScript() ? es.plan.sqliteNoAnalyze : undefined),
+      run: () => explainFromEditor(true),
     },
     {
       id: 'db.cancel',

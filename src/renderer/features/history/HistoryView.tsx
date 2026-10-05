@@ -214,6 +214,7 @@ export function HistoryView(): React.JSX.Element {
                 </div>
                 <div className="history-meta">
                   {[
+                    e.plan ? (e.plan === 'analyzed' ? es.plan.tabAnalyzed : es.plan.tab) : null,
                     when(e.at),
                     e.connectionName,
                     es.units.ms(e.durationMs),

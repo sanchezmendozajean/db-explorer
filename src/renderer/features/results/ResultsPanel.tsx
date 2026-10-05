@@ -27,6 +27,7 @@ import { ResultGrid } from './ResultGrid';
 import type { MessageEntry, ResultSet } from './results-store';
 import { EMPTY_TAB_RESULTS, tabResults, useResultsStore } from './results-store';
 import { ValueViewer } from './ValueViewer';
+import { PlanView } from '../plan/PlanView';
 import { visibleColumns, visibleRows } from './view';
 
 /** Confirmación antes de copiar selecciones muy grandes (specs/06). */
@@ -158,7 +159,7 @@ export function ResultsPanel({ tab }: { tab: EditorTab }): React.JSX.Element {
   const toggleMaximize = useUiStore((s) => s.toggleMaximizePanel);
   const togglePanel = useUiStore((s) => s.togglePanel);
   const state = useResultsStore((s) => s.byTab[tab.id] ?? EMPTY_TAB_RESULTS);
-  const { setActiveView, togglePin } = useResultsStore.getState();
+  const { setActiveView, togglePin, closePlan } = useResultsStore.getState();
 
   const result = state.results.find((r) => r.id === state.activeView);
   const items = [
@@ -183,6 +184,32 @@ export function ResultsPanel({ tab }: { tab: EditorTab }): React.JSX.Element {
         </span>
       ),
     })),
+    ...(state.plan || state.planPending
+      ? [
+          {
+            id: 'plan',
+            label: state.plan?.analyzed && !state.planPending ? es.plan.tabAnalyzed : es.plan.tab,
+            icon: 'lightbulb',
+            iconColor: undefined,
+            extra: (
+              <span
+                role="button"
+                tabIndex={-1}
+                className="tab-pin"
+                title={es.plan.close}
+                data-testid="plan-close"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closePlan(tab.id);
+                }}
+              >
+                <Codicon name="close" size={12} />
+              </span>
+            ),
+          },
+        ]
+      : []),
     {
       id: 'messages',
       label: es.results.messages,
@@ -217,6 +244,8 @@ export function ResultsPanel({ tab }: { tab: EditorTab }): React.JSX.Element {
       </div>
       {result ? (
         <ResultSetView tab={tab} result={result} onRerun={() => void rerun(tab.id)} />
+      ) : activeId === 'plan' ? (
+        <PlanView tabId={tab.id} />
       ) : activeId === 'messages' && state.messages.length > 0 ? (
         <MessagesView tabId={tab.id} messages={state.messages} />
       ) : (

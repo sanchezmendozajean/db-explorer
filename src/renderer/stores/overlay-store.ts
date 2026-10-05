@@ -89,6 +89,7 @@ export type DialogState =
       unbounded: boolean;
       language: string;
       allowSkip?: boolean;
+      rollbackNote?: boolean;
       onResult: (result: { confirmed: boolean; dontAskAgain: boolean }) => void;
     }
   /** Opciones de una exportación a archivo (filas, separador, BOM, tabla de los INSERT). */

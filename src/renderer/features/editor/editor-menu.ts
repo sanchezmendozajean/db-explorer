@@ -45,6 +45,8 @@ export function editorContextMenu(editor: CodeEditor): MenuEntry[] {
     commandEntry('db.executeStatement'),
     commandEntry('db.executeScript'),
     commandEntry('db.executeSelection'),
+    commandEntry('db.explainPlan'),
+    commandEntry('db.explainAnalyze'),
     statementSeparatorMenu(),
     SEPARATOR,
     commandEntry('db.newScript'),

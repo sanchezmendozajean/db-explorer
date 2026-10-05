@@ -1616,3 +1616,280 @@ button.statusbar-item:hover {
   flex-direction: column;
   gap: 8px;
 }
+
+/* ---------- M8: pestaña Plan (specs/12 §5) ---------- */
+.plan-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.plan-loading {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-muted);
+}
+
+.plan-loading > .progress-bar {
+  top: 0;
+  bottom: auto;
+}
+
+.plan-chip {
+  flex: none;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid var(--fg-muted);
+  border-radius: 9px;
+  color: var(--fg-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.plan-chip.is-real {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.plan-summary {
+  overflow: hidden;
+  margin-left: 6px;
+  color: var(--fg-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.plan-warnings {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  height: 22px;
+  margin-left: 8px;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--warning);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+button.plan-warnings:hover {
+  background: var(--bg-hover);
+}
+
+.plan-body {
+  display: flex;
+  overflow: hidden;
+}
+
+.plan-body > .split {
+  flex: 1;
+}
+
+.plan-table {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.plan-table > .tree {
+  scrollbar-gutter: stable;
+}
+
+.plan-header {
+  display: flex;
+  flex: none;
+  height: 24px;
+  padding-right: 8px;
+  overflow: hidden;
+  scrollbar-gutter: stable;
+  background: var(--bg-grid-header);
+  border-bottom: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
+.plan-header-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: none;
+  overflow: hidden;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.plan-header-cell.plan-header-op {
+  padding-left: 26px;
+}
+
+.plan-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 6px;
+  cursor: col-resize;
+}
+
+.plan-resizer:hover {
+  background: var(--border-focus);
+}
+
+.plan-op {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: none;
+  min-width: 0;
+  padding-right: 6px;
+  overflow: hidden;
+}
+
+.plan-op-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  line-height: 18px;
+}
+
+.plan-op-icon {
+  flex: none;
+  color: var(--fg-muted);
+}
+
+.plan-op-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-warning-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.plan-condition {
+  overflow: hidden;
+  line-height: 14px;
+  padding-left: 18px;
+  color: var(--fg-muted);
+  font-size: 12px;
+  font-style: italic;
+  text-overflow: ellipsis;
+}
+
+.plan-cell {
+  flex: none;
+  overflow: hidden;
+  padding: 0 6px;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-cell-estimatedRows,
+.plan-cell-actualRows,
+.plan-cell-loops {
+  text-align: right;
+}
+
+.plan-alias {
+  color: var(--fg-muted);
+}
+
+.plan-misestimate {
+  color: var(--warning);
+}
+
+.plan-bar-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.plan-bar {
+  flex: none;
+  width: 60px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--bg-hover);
+}
+
+.plan-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.plan-bar-fill.is-hot {
+  background: var(--warning);
+}
+
+.plan-bar-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-detail-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 10px 10px;
+  font-size: 12px;
+}
+
+.plan-detail-section h4 {
+  margin: 10px 0 4px;
+  color: var(--fg-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.plan-detail-section dl {
+  margin: 0;
+}
+
+.plan-detail-item {
+  display: grid;
+  grid-template-columns: minmax(90px, 40%) 1fr;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.plan-detail-item dt {
+  overflow: hidden;
+  color: var(--fg-muted);
+  text-overflow: ellipsis;
+}
+
+.plan-detail-item dd {
+  grid-column: 2;
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.plan-detail-item dd:only-child {
+  grid-column: 1 / -1;
+}
+
+.plan-detail-item dd.is-mono {
+  font-family: var(--font-code);
+}
+
+.read-only-code {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}

@@ -8,6 +8,8 @@ export type MenuEntry =
       icon?: string;
       disabled?: boolean;
       checked?: boolean;
+      /** Tooltip (p. ej. por qué está deshabilitado). */
+      title?: string;
       run: () => void;
     }
   | { type: 'separator' }

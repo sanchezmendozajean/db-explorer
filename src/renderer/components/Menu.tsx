@@ -195,6 +195,7 @@ export function Menu({
             aria-disabled={entry.disabled || undefined}
             aria-haspopup={entry.type === 'submenu' || undefined}
             aria-checked={entry.type === 'item' && entry.checked !== undefined ? entry.checked : undefined}
+            title={entry.type === 'item' ? entry.title : undefined}
             className={['menu-item', isActive ? 'is-active' : '', entry.disabled ? 'is-disabled' : ''].join(
               ' ',
             )}

@@ -12,6 +12,8 @@ export interface Command {
   run: () => void | Promise<void>;
   /** Si devuelve false, el comando está deshabilitado. */
   enabled?: () => boolean;
+  /** Por qué está deshabilitado (tooltip en menús), si hay un motivo que explicar. */
+  disabledReason?: () => string | undefined;
   /** Estado de marca en menús (p. ej. tema activo). */
   checked?: () => boolean;
   /** No aparece en la paleta. */

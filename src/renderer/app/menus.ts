@@ -11,12 +11,14 @@ import { switchWorkspace } from '../features/files/workspace-actions';
  */
 export function commandEntry(id: string, label?: string): MenuEntry {
   const command = commands.get(id);
+  const disabled = !commands.isEnabled(id);
   return {
     type: 'item',
     id,
     label: label ?? command?.title ?? commandTitle(id),
     keybinding: keybindingLabel(id),
-    disabled: !commands.isEnabled(id),
+    disabled,
+    title: disabled ? command?.disabledReason?.() : undefined,
     checked: command?.checked?.(),
     run: () => void commands.execute(id),
   };
@@ -119,6 +121,8 @@ export const TITLE_BAR_MENUS: TopMenu[] = [
       commandEntry('db.toggleAutoCommit'),
       SEPARATOR,
       commandEntry('db.explainPlan'),
+      commandEntry('db.explainAnalyze'),
+      SEPARATOR,
       commandEntry('db.changeConnection'),
       commandEntry('db.changeSchema'),
     ],

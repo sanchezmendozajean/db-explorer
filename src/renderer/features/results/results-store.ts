@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ExecutionPlan } from '@shared/plan';
 import type { CellValue, QueryEvent, ResultColumn } from '@shared/query';
 import type { ColumnFormat } from '@shared/settings';
 import { es } from '../../i18n/es';
@@ -79,6 +80,8 @@ export interface RunningQuery {
   startedAt: number;
   statements: StatementMeta[];
   cancelling: boolean;
+  /** Pide el plan de ejecución (specs/12) en lugar de ejecutar. */
+  explain: boolean;
 }
 
 export interface TabResults {
@@ -93,6 +96,10 @@ export interface TabResults {
   outcomes: { line: number; ok: boolean }[];
   /** Sentencias de la última ejecución ("Re-ejecutar"). */
   lastRun: StatementMeta[];
+  /** Pestaña Plan (specs/12 §5): el último plan; el siguiente lo reemplaza. */
+  plan: ExecutionPlan | null;
+  /** Se está pidiendo un plan (la pestaña Plan muestra "Obteniendo plan…"). */
+  planPending: boolean;
 }
 
 interface ResultsStore {
@@ -102,6 +109,8 @@ interface ResultsStore {
   togglePin: (tabId: string, resultId: string) => void;
   updateView: (tabId: string, resultId: string, view: Partial<ResultView>) => void;
   clear: (tabId: string) => void;
+  /** Cierra la pestaña Plan. */
+  closePlan: (tabId: string) => void;
 }
 
 export const EMPTY_TAB_RESULTS: TabResults = {
@@ -112,6 +121,8 @@ export const EMPTY_TAB_RESULTS: TabResults = {
   limit: null,
   outcomes: [],
   lastRun: [],
+  plan: null,
+  planPending: false,
 };
 
 export const useResultsStore = create<ResultsStore>((set) => ({
@@ -134,6 +145,12 @@ export const useResultsStore = create<ResultsStore>((set) => ({
         ),
       }),
     })),
+  closePlan: (tabId) =>
+    set((s) => {
+      const tab = tabOf(s.byTab, tabId);
+      const activeView = tab.activeView === 'plan' ? (tab.results.at(-1)?.id ?? 'messages') : tab.activeView;
+      return { byTab: patch(s.byTab, tabId, { plan: null, activeView }) };
+    }),
   clear: (tabId) =>
     set((s) => ({ byTab: Object.fromEntries(Object.entries(s.byTab).filter(([id]) => id !== tabId)) })),
 }));
@@ -177,13 +194,23 @@ export function beginExecution(
   tabId: string,
   queryId: string,
   statements: StatementMeta[],
-  options: { keepPrevious: boolean },
+  options: { keepPrevious: boolean; explain?: boolean },
 ): void {
   queryTabs.set(queryId, tabId);
   const current = tabResults(tabId);
+  if (options.explain) {
+    // El plan convive con los resultados: no se descarta nada y "Re-ejecutar" sigue repitiendo la consulta.
+    put(tabId, {
+      running: { queryId, startedAt: performance.now(), statements, cancelling: false, explain: true },
+      outcomes: [],
+      planPending: true,
+      activeView: 'plan',
+    });
+    return;
+  }
   for (const r of current.results) if (!r.pinned && !options.keepPrevious) queryTabs.delete(r.queryId);
   put(tabId, {
-    running: { queryId, startedAt: performance.now(), statements, cancelling: false },
+    running: { queryId, startedAt: performance.now(), statements, cancelling: false, explain: false },
     results: options.keepPrevious ? current.results : current.results.filter((r) => r.pinned),
     messages: options.keepPrevious ? current.messages : [],
     outcomes: [],
@@ -195,6 +222,12 @@ export function endExecution(tabId: string, queryId: string): void {
   flushNow();
   const current = tabResults(tabId);
   if (current.running?.queryId !== queryId) return;
+  if (current.running.explain) {
+    // Sin plan nuevo (error o cancelación) se muestra Mensajes; la pestaña Plan conserva el anterior.
+    const view = current.activeView === 'plan' && !current.plan ? 'messages' : current.activeView;
+    put(tabId, { running: null, planPending: false, activeView: view });
+    return;
+  }
   // Sin result sets, se muestra la pestaña Mensajes.
   const hasResult = current.results.some((r) => r.queryId === queryId);
   put(tabId, { running: null, activeView: hasResult ? current.activeView : 'messages' });
@@ -413,6 +446,9 @@ export function applyQueryEvent(event: QueryEvent): void {
       callbacks.onStatementError?.(tabId, meta, event);
       break;
     }
+    case 'plan':
+      put(tabId, { plan: event.plan, planPending: false, activeView: 'plan' });
+      break;
     case 'message':
       addMessage(tabId, { kind: event.severity === 'warning' ? 'warning' : 'notice', text: event.text });
       break;

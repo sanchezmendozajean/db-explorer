@@ -4,7 +4,6 @@ import { IconButton } from '../../components/Button';
 import { Dropdown } from '../../components/Dropdown';
 import { commands } from '../../commands/service';
 import { es } from '../../i18n/es';
-import { notAvailable } from '../../app/app-commands';
 import { useConnectionsStore } from '../../stores/connections-store';
 import { anchorOf } from '../../stores/overlay-store';
 import { dotStyle } from '../../components/env-dot';
@@ -77,7 +76,13 @@ export function EditorToolbar({ tab }: { tab: EditorTab }): React.JSX.Element {
             {elapsed}
           </span>
         )}
-        <IconButton icon="lightbulb" label={t.explain} onClick={() => notAvailable(t.explain)} />
+        <IconButton
+          icon="lightbulb"
+          label={t.explain}
+          disabled={!!running}
+          data-testid="explain-button"
+          onClick={() => void commands.execute('db.explainPlan')}
+        />
         <span className="toolbar-separator" />
         <button
           type="button"

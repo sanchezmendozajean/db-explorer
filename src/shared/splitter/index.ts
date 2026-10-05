@@ -511,6 +511,18 @@ const WRITE_KEYWORDS = new Set([
   'lock',
 ]);
 
+/** Sentencias de estructura (o que confirman la transacción en algunos motores, como `TRUNCATE`). */
+const STRUCTURE_KEYWORDS = new Set([
+  'create',
+  'alter',
+  'drop',
+  'truncate',
+  'rename',
+  'grant',
+  'revoke',
+  'comment',
+]);
+
 export interface StatementInfo {
   /** Primera palabra clave, en minúsculas (vacío si no hay). */
   keyword: string;
@@ -518,6 +530,8 @@ export interface StatementInfo {
   isWrite: boolean;
   /** `UPDATE` o `DELETE` sin `WHERE`: siempre se confirma (specs/08). */
   unboundedWrite: boolean;
+  /** Cambia la estructura (`CREATE`, `ALTER`, `DROP`…): no se puede explicar y ejecutar (specs/12 §4). */
+  isStructure: boolean;
 }
 
 /** Clasificación ligera por palabras clave (sin parser completo). */
@@ -557,5 +571,5 @@ export function analyzeStatement(text: string, dialect: SqlDialect = 'postgres')
     }
   }
   const unboundedWrite = (main === 'update' || main === 'delete') && !words.includes('where');
-  return { keyword, isWrite, unboundedWrite };
+  return { keyword, isWrite, unboundedWrite, isStructure: STRUCTURE_KEYWORDS.has(keyword) };
 }

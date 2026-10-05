@@ -1,4 +1,5 @@
 import type { Engine } from '@shared/connection';
+import type { ExecuteRequest } from '@shared/query';
 import type { SplitOptions, SqlDialect, Statement } from '@shared/splitter';
 import { analyzeStatement, splitStatements, statementAt } from '@shared/splitter';
 import { es } from '../../i18n/es';
@@ -102,8 +103,70 @@ export async function executeFromEditor(
   await runStatements(tab, statements, options);
 }
 
+type ExplainRequest = NonNullable<ExecuteRequest['explain']>;
+
+/** Plan de la última explicación de cada pestaña ("Volver a explicar"). */
+const lastExplain = new Map<string, { statement: StatementMeta; analyze: boolean }>();
+
+/**
+ * Explicar plan (estimado) o Explicar y ejecutar (real) de la sentencia bajo
+ * el cursor o de la selección, que debe tener una sola (specs/12 §1).
+ */
+export async function explainFromEditor(analyze: boolean): Promise<void> {
+  const tab = activeTab();
+  if (!tab || tab.kind !== 'script' || !/\.sql$/i.test(tab.path ?? '')) return;
+  if (isRunning(tab.id)) {
+    showToast('info', es.execution.alreadyRunning);
+    return;
+  }
+  const conn = connectionById(tab.connectionId);
+  if (!conn) {
+    showToast('warning', es.execution.noConnection);
+    return;
+  }
+  const statements = collectStatements('statement', dialectOf(conn.engine));
+  if (!statements || statements.length === 0) {
+    showToast('info', es.execution.nothingToRun);
+    return;
+  }
+  if (statements.length > 1) {
+    showToast('info', es.plan.oneStatement);
+    return;
+  }
+  await explainStatement(tab.id, statements[0]!, analyze);
+}
+
+/** "Volver a explicar" desde la pestaña Plan. */
+export async function reexplain(tabId: string): Promise<void> {
+  const last = lastExplain.get(tabId);
+  if (last) await explainStatement(tabId, last.statement, last.analyze);
+}
+
+async function explainStatement(tabId: string, statement: StatementMeta, analyze: boolean): Promise<void> {
+  const tab = useWorkbenchStore.getState().tabs.find((t) => t.id === tabId);
+  const conn = tab && connectionById(tab.connectionId);
+  if (!tab || !conn || isRunning(tabId)) return;
+  const info = analyzeStatement(statement.text, dialectOf(conn.engine));
+  if (analyze) {
+    if (conn.engine === 'sqlite') {
+      showToast('info', es.plan.sqliteNoAnalyze);
+      return;
+    }
+    if (info.isStructure) {
+      showToast('warning', es.plan.structureBlocked);
+      return;
+    }
+  }
+  lastExplain.set(tabId, { statement, analyze });
+  await runStatements(tab, [statement], { explain: { analyze, write: info.isWrite } });
+}
+
 /** Validaciones y confirmaciones antes de enviar (specs/08 §Protección). */
-async function confirmStatements(tab: EditorTab, statements: StatementMeta[]): Promise<boolean> {
+async function confirmStatements(
+  tab: EditorTab,
+  statements: StatementMeta[],
+  options: { rollbackNote?: boolean } = {},
+): Promise<boolean> {
   const conn = connectionById(tab.connectionId)!;
   const dialect = dialectOf(conn.engine);
   const infos = statements.map((s) => ({ s, info: analyzeStatement(s.text, dialect) }));
@@ -121,6 +184,7 @@ async function confirmStatements(tab: EditorTab, statements: StatementMeta[]): P
     statements: (production ? writes : unbounded).map((x) => x.s.text),
     unbounded: unbounded.length > 0,
     language: languageFor(conn.engine),
+    rollbackNote: options.rollbackNote,
   });
   if (result.confirmed && result.dontAskAgain) skipProductionConfirm.add(tab.id);
   return result.confirmed;
@@ -129,20 +193,26 @@ async function confirmStatements(tab: EditorTab, statements: StatementMeta[]): P
 async function runStatements(
   tab: EditorTab,
   statements: StatementMeta[],
-  options: { newResultTab?: boolean },
+  options: { newResultTab?: boolean; explain?: ExplainRequest },
 ): Promise<void> {
   const conn = connectionById(tab.connectionId)!;
-  if (!(await confirmStatements(tab, statements))) return;
-  if (!options.newResultTab && !(await confirmDiscardGridChanges(tab.id))) return;
+  const { explain } = options;
+  if (explain) {
+    // Explicar plan no ejecuta (cuenta como lectura); Explicar y ejecutar se confirma como la sentencia (specs/12 §4).
+    if (explain.analyze && !(await confirmStatements(tab, statements, { rollbackNote: true }))) return;
+  } else {
+    if (!(await confirmStatements(tab, statements))) return;
+    if (!options.newResultTab && !(await confirmDiscardGridChanges(tab.id))) return;
+  }
   if (!(await ensureConnected(conn.id))) return;
 
   // Con guardado automático, el archivo se guarda antes de ejecutar; si falla, la ejecución sigue (specs/11 §4).
-  if (setting('files.autoSave')) await saveDocument(tab.id);
+  if (setting('files.autoSave') && !explain) await saveDocument(tab.id);
 
   clearMarkers(tab.id);
   const queryId = crypto.randomUUID();
   const maxRows = effectiveLimit(tab.id);
-  beginExecution(tab.id, queryId, statements, { keepPrevious: !!options.newResultTab });
+  beginExecution(tab.id, queryId, statements, { keepPrevious: !!options.newResultTab, explain: !!explain });
   if (!useUiStore.getState().panel.visible) useUiStore.getState().togglePanel();
 
   const done = waitForDone(queryId, 'execution');
@@ -155,10 +225,12 @@ async function runStatements(
     statements: statements.map((s) => s.text),
     maxRows,
     autoCommit: !isManual(tab.id),
+    explain,
   });
   if (r.ok) {
     const event = await done.promise;
-    if (event.type === 'execution-done') {
+    // Lo que se ejecuta para medir un plan se revierte: no queda pendiente en la transacción.
+    if (event.type === 'execution-done' && !explain) {
       const ok = event.summary.executed - (event.summary.failed ? 1 : 0);
       trackExecuted(
         tab.id,
