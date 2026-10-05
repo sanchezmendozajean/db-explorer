@@ -122,7 +122,6 @@ export const TITLE_BAR_MENUS: TopMenu[] = [
       SEPARATOR,
       commandEntry('db.explainPlan'),
       commandEntry('db.explainAnalyze'),
-      SEPARATOR,
       commandEntry('db.changeConnection'),
       commandEntry('db.changeSchema'),
     ],
