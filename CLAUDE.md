@@ -15,6 +15,9 @@ Cliente de escritorio para explorar y consultar bases de datos PostgreSQL, Maria
 - Si una definición falta o dos specs se contradicen, elige la opción más simple y regístrala en `specs/NOTAS.md`.
 - No agregues funcionalidades fuera de `specs/01-vision-y-alcance.md` sin preguntar.
 
+## Conocimiento aprendido
+- Lo aprendido durante la implementación vive en `.claude/skills/` (versionado con el proyecto): `flujo-de-trabajo`, `entorno-windows`, `pruebas`, `motores-y-drivers` y `renderer-ui`. Consultar la skill del tema antes de trabajar en él y actualizarla cuando se aprenda algo nuevo que no se deduzca del código.
+
 ## Reglas de código
 - TypeScript estricto; sin `any` salvo en fronteras con librerías sin tipos.
 - Seguridad según `specs/08-conexiones-y-seguridad.md`: nunca guardar ni registrar contraseñas en texto plano, ni registrar datos de resultados.

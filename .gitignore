@@ -6,3 +6,6 @@ playwright-report/
 *.log
 .env
 test/integration/.env
+
+# Ajustes locales de Claude Code (las skills de .claude/skills sí se versionan)
+.claude/settings.local.json
