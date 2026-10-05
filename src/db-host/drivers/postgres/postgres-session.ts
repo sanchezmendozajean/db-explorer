@@ -4,10 +4,13 @@ import Cursor from 'pg-cursor';
 import type { CellValue, LogicalType, ResultColumn } from '@shared/query';
 import { ROW_BATCH_SIZE } from '@shared/query';
 import { quoteIdent } from '@shared/sql-quote';
-import type { DbSession, StatementOutcome, StatementSink } from '../types';
+import type { ExecutionPlan } from '@shared/plan';
+import type { DbSession, ExplainOptions, StatementOutcome, StatementSink } from '../types';
 import { DriverError } from '../types';
 import { paramValue } from '../common';
 import { toDriverError } from './errors';
+import type { TableRows } from './plan';
+import { parsePostgresPlan, seqScanTables } from './plan';
 
 /** Booleanos y enteros de 32 bits como valores JS; todo lo demás como texto crudo del servidor. */
 const NUMBER_OIDS = new Set([21, 23, 26]); // int2, int4, oid
@@ -186,6 +189,43 @@ export class PostgresSession implements DbSession {
     } catch (err) {
       throw toDriverError(err);
     }
+  }
+
+  async explain(sql: string, options: ExplainOptions, sink: StatementSink): Promise<ExecutionPlan> {
+    await this.closeCursor();
+    this.currentSink = sink;
+    const prefix = `EXPLAIN (${options.analyze ? 'ANALYZE, BUFFERS, ' : ''}FORMAT JSON, VERBOSE) `;
+    let raw: string;
+    try {
+      const result = await this.client.query<CellValue[]>({
+        text: prefix + sql,
+        rowMode: 'array',
+        types: sessionTypes,
+      });
+      raw = String(result.rows[0]?.[0] ?? '');
+    } catch (err) {
+      const e = toDriverError(err);
+      // La posición del error se cuenta sobre la sentencia del usuario, sin el prefijo.
+      if (e.extra.position !== undefined) e.extra.position = Math.max(1, e.extra.position - prefix.length);
+      throw e;
+    }
+    return parsePostgresPlan(raw, sql, options.analyze, await this.tableRows(seqScanTables(raw)));
+  }
+
+  /** Filas de las tablas según el catálogo (`reltuples`), para el aviso de recorrido completo. */
+  private async tableRows(tables: { schema: string; name: string }[]): Promise<TableRows> {
+    const rows = new Map<string, number>();
+    if (tables.length === 0) return rows;
+    const result = await this.client
+      .query<{ nspname: string; relname: string; reltuples: string }>(
+        `SELECT n.nspname, c.relname, c.reltuples::text AS reltuples
+           FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE (n.nspname, c.relname) IN (SELECT * FROM unnest($1::text[], $2::text[]))`,
+        [tables.map((t) => t.schema), tables.map((t) => t.name)],
+      )
+      .catch(() => null);
+    for (const r of result?.rows ?? []) rows.set(`${r.nspname}.${r.relname}`, Number(r.reltuples));
+    return rows;
   }
 
   /** En modo manual, abre la transacción antes de la primera sentencia. */

@@ -1,0 +1,68 @@
+{
+  "query_optimization": {
+    "r_total_time_ms": 0.112291279
+  },
+  "query_block": {
+    "select_id": 1,
+    "cost": 21.10929736,
+    "r_loops": 1,
+    "r_total_time_ms": 15.3111235,
+    "filesort": {
+      "sort_key": "sum(p.total) desc",
+      "r_loops": 1,
+      "r_total_time_ms": 0.044846234,
+      "r_used_priority_queue": false,
+      "r_output_rows": 100,
+      "r_buffer_size": "3KiB",
+      "r_sort_mode": "sort_key,rowid",
+      "temporary_table": {
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "p",
+              "access_type": "ALL",
+              "loops": 1,
+              "r_loops": 1,
+              "rows": 19874,
+              "r_rows": 20000,
+              "cost": 3.3323776,
+              "r_table_time_ms": 1.674796384,
+              "r_other_time_ms": 1.491704629,
+              "r_engine_stats": {
+                "pages_accessed": 46
+              },
+              "filtered": 100,
+              "r_total_filtered": 98.9,
+              "attached_condition": "p.total > 10 and p.cliente_id is not null",
+              "r_filtered": 98.9
+            }
+          },
+          {
+            "table": {
+              "table_name": "c",
+              "access_type": "eq_ref",
+              "possible_keys": ["PRIMARY"],
+              "key": "PRIMARY",
+              "key_length": "4",
+              "used_key_parts": ["id"],
+              "ref": ["dbx_test.p.cliente_id"],
+              "loops": 19874,
+              "r_loops": 19780,
+              "rows": 1,
+              "r_rows": 1,
+              "cost": 17.77691976,
+              "r_table_time_ms": 5.483314813,
+              "r_other_time_ms": 6.539669818,
+              "r_engine_stats": {
+                "pages_accessed": 19780
+              },
+              "filtered": 100,
+              "r_total_filtered": 100,
+              "r_filtered": 100
+            }
+          }
+        ]
+      }
+    }
+  }
+}

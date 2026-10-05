@@ -291,9 +291,14 @@ export class MariaDbDriver implements DbDriver {
       connection.destroy();
       throw err;
     }
-    return new MariaDbSession(connection, database ?? '', async (threadId) => {
-      await this.query(`KILL QUERY ${Number(threadId)}`);
-    });
+    return new MariaDbSession(
+      connection,
+      database ?? '',
+      async (threadId) => {
+        await this.query(`KILL QUERY ${Number(threadId)}`);
+      },
+      this.isMariaDb,
+    );
   }
 
   private async query(sql: string, values: unknown[] = []): Promise<Row[]> {

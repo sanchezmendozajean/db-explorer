@@ -1,0 +1,1 @@
+[["8","0","216","SCAN p"],["12","0","45","SEARCH c USING INTEGER PRIMARY KEY (rowid=?)"],["15","0","0","USE TEMP B-TREE FOR GROUP BY"],["52","0","0","USE TEMP B-TREE FOR ORDER BY"]]

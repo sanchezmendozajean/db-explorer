@@ -4,6 +4,7 @@
  */
 
 import type { Engine } from './connection';
+import type { ExecutionPlan } from './plan';
 
 /** Tipo lógico de columna, para formatear y alinear en la grilla (specs/03). */
 export type LogicalType =
@@ -56,6 +57,12 @@ export interface ExecuteRequest {
   autoCommit?: boolean;
   /** `false`: no se guarda en el historial (datos de la pestaña de objeto). */
   history?: boolean;
+  /**
+   * Pide el plan de ejecución en lugar de ejecutar (specs/12). Con `analyze`
+   * se ejecuta dentro de una transacción que siempre se revierte; `write`
+   * indica que la sentencia modifica datos.
+   */
+  explain?: { analyze: boolean; write: boolean };
 }
 
 /** Sesión de una pestaña (para Commit/Rollback, aplicar cambios y exportar). */
@@ -160,6 +167,8 @@ export type QueryEvent =
       durationMs: number;
     }
   | { type: 'message'; queryId: string; index: number; severity: MessageSeverity; text: string }
+  /** Plan de ejecución de una sentencia (antes de su `statement-done`). */
+  | { type: 'plan'; queryId: string; index: number; plan: ExecutionPlan }
   /**
    * Último evento de una ejecución. El renderer termina la ejecución con este
    * evento y no con la respuesta de `query:execute`, que viaja por otro canal

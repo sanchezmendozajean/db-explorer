@@ -49,6 +49,12 @@ export interface EngineCase {
     begin: string;
     rollback: string;
   };
+  /**
+   * Tablas del plan de ejecución (specs/12 §7): `plan_clientes` (100 filas) y
+   * `plan_pedidos` (20 000 filas, para el aviso de recorrido completo).
+   * `prefix` califica sus nombres en las sentencias.
+   */
+  plan: { setup: string[]; prefix: string };
 }
 
 /** Ejecuta sentencias en una sesión propia y devuelve sus eventos (para preparar datos). */
@@ -145,6 +151,17 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
       begin: 'BEGIN',
       rollback: 'ROLLBACK',
     },
+    plan: {
+      prefix: 'comun.',
+      setup: [
+        'DROP TABLE IF EXISTS comun.plan_pedidos, comun.plan_clientes',
+        'CREATE TABLE comun.plan_clientes (id int PRIMARY KEY, nombre text)',
+        'CREATE TABLE comun.plan_pedidos (id int PRIMARY KEY, cliente_id int, total numeric(12,2))',
+        "INSERT INTO comun.plan_clientes SELECT i, 'c' || i FROM generate_series(1, 100) i",
+        'INSERT INTO comun.plan_pedidos SELECT i, i % 100 + 1, i % 1000 FROM generate_series(1, 20000) i',
+        'ANALYZE comun.plan_clientes, comun.plan_pedidos',
+      ],
+    },
   };
 
   const sqliteFile = join(mkdtempSync(join(tmpdir(), 'dbx-sqlite-')), 'pruebas.db');
@@ -182,6 +199,17 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
       },
       begin: 'BEGIN',
       rollback: 'ROLLBACK',
+    },
+    plan: {
+      prefix: '',
+      setup: [
+        'DROP TABLE IF EXISTS plan_pedidos',
+        'DROP TABLE IF EXISTS plan_clientes',
+        'CREATE TABLE plan_clientes (id INTEGER PRIMARY KEY, nombre TEXT)',
+        'CREATE TABLE plan_pedidos (id INTEGER PRIMARY KEY, cliente_id INT, total DECIMAL(12,2))',
+        "WITH RECURSIVE s(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM s WHERE i < 100) INSERT INTO plan_clientes SELECT i, 'c' || i FROM s",
+        'WITH RECURSIVE s(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM s WHERE i < 20000) INSERT INTO plan_pedidos SELECT i, i % 100 + 1, i % 1000 FROM s',
+      ],
     },
   };
 
@@ -268,6 +296,16 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
       begin: 'BEGIN TRAN',
       rollback: 'ROLLBACK',
     },
+    plan: {
+      prefix: 'comun.',
+      setup: [
+        'DROP TABLE IF EXISTS comun.plan_pedidos, comun.plan_clientes',
+        'CREATE TABLE comun.plan_clientes (id int PRIMARY KEY, nombre nvarchar(50))',
+        'CREATE TABLE comun.plan_pedidos (id int PRIMARY KEY, cliente_id int, total decimal(12,2))',
+        "WITH s AS (SELECT 1 AS i UNION ALL SELECT i + 1 FROM s WHERE i < 100) INSERT INTO comun.plan_clientes SELECT i, CONCAT('c', i) FROM s",
+        'WITH s AS (SELECT 1 AS i UNION ALL SELECT i + 1 FROM s WHERE i < 20000) INSERT INTO comun.plan_pedidos SELECT i, i % 100 + 1, i % 1000 FROM s OPTION (MAXRECURSION 0)',
+      ],
+    },
   };
 
   const myHost = env('MARIADB_HOST', '127.0.0.1')!;
@@ -341,6 +379,17 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
       multipleResults: env('MARIADB_READONLY', '0') === '1' ? undefined : 'CALL dos_resultados()',
       begin: 'BEGIN',
       rollback: 'ROLLBACK',
+    },
+    plan: {
+      prefix: '',
+      setup: [
+        'DROP TABLE IF EXISTS plan_pedidos, plan_clientes',
+        'CREATE TABLE plan_clientes (id int PRIMARY KEY, nombre varchar(50)) ENGINE=InnoDB',
+        'CREATE TABLE plan_pedidos (id int PRIMARY KEY, cliente_id int, total decimal(12,2)) ENGINE=InnoDB',
+        "INSERT INTO plan_clientes SELECT seq, concat('c', seq) FROM seq_1_to_100",
+        'INSERT INTO plan_pedidos SELECT seq, seq % 100 + 1, seq % 1000 FROM seq_1_to_20000',
+        'ANALYZE TABLE plan_clientes, plan_pedidos',
+      ],
     },
   };
 

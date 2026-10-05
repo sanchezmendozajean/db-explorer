@@ -16,6 +16,8 @@ export interface HistoryEntry {
   rows?: number;
   ok: boolean;
   error?: string;
+  /** Se pidió su plan de ejecución (specs/12 §4) en lugar de ejecutarla. */
+  plan?: 'estimated' | 'analyzed';
 }
 
 export const HistoryQuerySchema = z.object({

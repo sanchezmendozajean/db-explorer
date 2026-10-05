@@ -1,9 +1,11 @@
 import { Worker } from 'node:worker_threads';
 import { ROW_BATCH_SIZE } from '@shared/query';
 import type { CellValue, LogicalType } from '@shared/query';
-import type { DbSession, StatementOutcome, StatementSink } from '../types';
+import type { ExecutionPlan } from '@shared/plan';
+import type { DbSession, ExplainOptions, StatementOutcome, StatementSink } from '../types';
 import { DriverError } from '../types';
 import { commandOf, isDml, paramValue, positionOfSnippet } from '../common';
+import { parseSqlitePlan } from './plan';
 
 /** Receptor vacío para las peticiones sin resultados. */
 const NO_SINK: StatementSink = { columns: () => undefined, rows: () => undefined, message: () => undefined };
@@ -92,6 +94,35 @@ export class SqliteSession implements DbSession {
     );
     if (done.type !== 'done') throw new DriverError('Respuesta inesperada de la sesión de SQLite');
     return { command, rowCount: done.rowCount, affected: done.affected, truncated: done.truncated };
+  }
+
+  /** `EXPLAIN QUERY PLAN`. SQLite no mide filas ni tiempos por paso: no hay plan real. */
+  async explain(sql: string, options: ExplainOptions, sink: StatementSink): Promise<ExecutionPlan> {
+    if (options.analyze) {
+      throw new DriverError(
+        'SQLite no informa filas ni tiempos reales por paso: solo está disponible Explicar plan',
+        'unsupported',
+      );
+    }
+    const rows: CellValue[][] = [];
+    const collect: StatementSink = {
+      ...sink,
+      columns: () => undefined,
+      rows: (batch) => rows.push(...batch),
+    };
+    await this.request(
+      { type: 'execute', sql: `EXPLAIN QUERY PLAN ${sql}`, maxRows: null, dml: false, manual: false },
+      collect,
+      sql,
+    );
+    return parseSqlitePlan(
+      rows.map(([id, parent, , detail]) => ({
+        id: Number(id),
+        parent: Number(parent),
+        detail: String(detail),
+      })),
+      sql,
+    );
   }
 
   async fetchMore(count: number | null, sink: StatementSink): Promise<{ loaded: number; hasMore: boolean }> {

@@ -2,11 +2,13 @@ import type { Connection, FieldPacket, ResultSetHeader } from 'mysql2';
 import type { CellValue, LogicalType } from '@shared/query';
 import { ROW_BATCH_SIZE } from '@shared/query';
 import { quoteIdent } from '@shared/sql-quote';
-import type { DbSession, StatementOutcome, StatementSink } from '../types';
+import type { ExecutionPlan } from '@shared/plan';
+import type { DbSession, ExplainOptions, StatementOutcome, StatementSink } from '../types';
 import { DriverError } from '../types';
 import { commandOf, isDml, paramValue } from '../common';
 import { toMariaDbError } from './errors';
 import { createTypeCast, describeFields, toCell } from './mariadb-types';
+import { parseMariaDbPlan, parseMySqlTreePlan, planTables } from './plan';
 
 interface Waiter {
   resolve: (truncated: boolean) => void;
@@ -55,11 +57,15 @@ export class MariaDbSession implements DbSession {
   private closed = false;
   private schema: string | undefined;
   private autoCommit = true;
+  /** Hay un `explain` en curso (para cancelarlo). */
+  private explaining = false;
 
   constructor(
     private readonly connection: Connection,
     readonly database: string,
     private readonly killQuery: (threadId: number) => Promise<void>,
+    /** false = MySQL (otro formato de plan). */
+    private readonly isMariaDb = true,
   ) {
     connection.on('error', () => {
       this.closed = true;
@@ -214,7 +220,8 @@ export class MariaDbSession implements DbSession {
   }
 
   async cancel(): Promise<void> {
-    if (!this.running || this.running.ended) return;
+    const busy = (this.running && !this.running.ended) || this.explaining;
+    if (!busy) return;
     this.cancelling = true;
     await this.killQuery(this.connection.threadId);
   }
@@ -257,6 +264,89 @@ export class MariaDbSession implements DbSession {
     return new Promise((resolve, reject) => {
       this.connection.query<ResultSetHeader>({ sql, values }, (err, result) =>
         err ? reject(toMariaDbError(err, sql)) : resolve(Number(result.affectedRows ?? 0)),
+      );
+    });
+  }
+
+  /**
+   * MariaDB: `EXPLAIN|ANALYZE FORMAT=JSON`; MySQL 8: `EXPLAIN FORMAT=TREE` o
+   * `EXPLAIN ANALYZE`. Una escritura medida sobre tablas que no admiten
+   * transacciones (MyISAM, Aria) no se ejecuta: no se podría revertir.
+   */
+  async explain(sql: string, options: ExplainOptions, sink: StatementSink): Promise<ExecutionPlan> {
+    await this.closeCursor();
+    if (this.closed) throw new DriverError('Se perdió la conexión con el servidor', 'disconnected');
+    this.cancelling = false;
+    this.explaining = true;
+    try {
+      if (options.analyze && options.write) await this.requireTransactional(sql);
+      const prefix = this.isMariaDb
+        ? `${options.analyze ? 'ANALYZE' : 'EXPLAIN'} FORMAT=JSON `
+        : options.analyze
+          ? 'EXPLAIN ANALYZE '
+          : 'EXPLAIN FORMAT=TREE ';
+      const raw = await this.firstCell(prefix + sql, sql);
+      if (this.cancelling) throw new DriverError('Consulta cancelada', 'cancelled');
+      const warnings = await this.warningCount();
+      if (warnings > 0) await this.showWarnings(sink);
+      return this.isMariaDb
+        ? parseMariaDbPlan(raw, sql, options.analyze)
+        : parseMySqlTreePlan(raw, sql, options.analyze);
+    } finally {
+      this.explaining = false;
+    }
+  }
+
+  /** Bloquea la medición si alguna tabla de la sentencia no admite transacciones. */
+  private async requireTransactional(sql: string): Promise<void> {
+    const plan = await this.firstCell(`EXPLAIN FORMAT=JSON ${sql}`, sql);
+    // Nombres del plan (tablas de vistas incluidas) y palabras de la sentencia: comprobar de más es inofensivo.
+    const words = sql.match(/[\p{L}_][\p{L}\p{N}_$]*/gu) ?? [];
+    const names = [...new Set([...planTables(plan), ...words].map((w) => w.toLowerCase()))];
+    const rows = await new Promise<unknown[][]>((resolve, reject) => {
+      this.connection.query(
+        {
+          sql: `SELECT t.TABLE_NAME FROM information_schema.TABLES t
+                  JOIN information_schema.ENGINES e ON e.ENGINE = t.ENGINE
+                 WHERE e.TRANSACTIONS <> 'YES' AND LOWER(t.TABLE_NAME) IN (?)
+                   AND (t.TABLE_SCHEMA = DATABASE() OR LOWER(t.TABLE_SCHEMA) IN (?))`,
+          values: [names, names],
+          rowsAsArray: true,
+        },
+        (err, result) => (err ? reject(toMariaDbError(err)) : resolve(result as unknown[][])),
+      );
+    });
+    const [first] = rows;
+    if (first) {
+      throw new DriverError(
+        `La tabla ${String(first[0])} no admite transacciones; no se puede ejecutar y revertir`,
+        'non-transactional',
+      );
+    }
+  }
+
+  /** Primera celda del resultado de una consulta (el plan). */
+  private firstCell(sql: string, original: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      this.connection.query({ sql, rowsAsArray: true }, (err, result) => {
+        if (err) {
+          reject(
+            this.cancelling
+              ? new DriverError('Consulta cancelada', 'cancelled')
+              : toMariaDbError(err, original),
+          );
+          return;
+        }
+        const rows = result as unknown[][];
+        resolve(String(rows[0]?.[0] ?? ''));
+      });
+    });
+  }
+
+  private warningCount(): Promise<number> {
+    return new Promise((resolve) => {
+      this.connection.query({ sql: 'SELECT @@warning_count', rowsAsArray: true }, (err, result) =>
+        resolve(err ? 0 : Number((result as unknown[][])[0]?.[0] ?? 0)),
       );
     });
   }

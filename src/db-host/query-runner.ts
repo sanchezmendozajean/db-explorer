@@ -11,7 +11,8 @@ import type {
   QueryEvent,
   SessionTarget,
 } from '@shared/query';
-import type { DbDriver, DbSession, StatementSink } from './drivers/types';
+import type { ExecutionPlan } from '@shared/plan';
+import type { DbDriver, DbSession, ExplainOptions, StatementSink } from './drivers/types';
 import { DriverError } from './drivers/types';
 import { FileExporter } from './export/file-exporter';
 import { TRANSACTION_SQL } from './transaction-sql';
@@ -69,6 +70,28 @@ export class QueryRunner {
         const statementStart = this.now();
         this.emit({ type: 'statement-start', queryId: req.queryId, index, startedAt: Date.now() });
         try {
+          if (req.explain) {
+            const plan = await this.explain(
+              entry,
+              req.connectionId,
+              req.statements[index]!,
+              req.explain,
+              this.sink(req.queryId, index),
+            );
+            if (run.cancelled) throw new DriverError('Consulta cancelada', 'cancelled');
+            this.emit({ type: 'plan', queryId: req.queryId, index, plan });
+            this.emit({
+              type: 'statement-done',
+              queryId: req.queryId,
+              index,
+              command: 'EXPLAIN',
+              rowCount: 0,
+              truncated: false,
+              hasMore: false,
+              durationMs: Math.round(this.now() - statementStart),
+            });
+            continue;
+          }
           const outcome = await entry.session.execute(
             req.statements[index]!,
             req.maxRows,
@@ -149,6 +172,37 @@ export class QueryRunner {
       throw error;
     } finally {
       entry.running = null;
+    }
+  }
+
+  /**
+   * Plan de una sentencia (specs/12 §4). Explicar y ejecutar va siempre
+   * dentro de una transacción que se revierte: `BEGIN` … `ROLLBACK` en
+   * auto-commit, o un punto de guardado si la pestaña está en modo manual.
+   */
+  private async explain(
+    entry: SessionEntry,
+    connectionId: string,
+    sql: string,
+    options: ExplainOptions,
+    sink: StatementSink,
+  ): Promise<ExecutionPlan> {
+    const s = entry.session;
+    const engine = this.driverOf(connectionId).engine;
+    // SQLite no tiene plan real: la sesión lo rechaza sin abrir una transacción.
+    if (!options.analyze || engine === 'sqlite') return s.explain(sql, options, sink);
+    const tx = TRANSACTION_SQL[engine];
+    const manual = !entry.autoCommit;
+    await s.run(manual ? tx.savepoint : tx.begin);
+    try {
+      return await s.explain(sql, options, sink);
+    } finally {
+      if (manual) {
+        await s.run(tx.rollbackToSavepoint).catch(() => undefined);
+        if (tx.releaseSavepoint) await s.run(tx.releaseSavepoint).catch(() => undefined);
+      } else {
+        await s.run(tx.rollback).catch(() => undefined);
+      }
     }
   }
 

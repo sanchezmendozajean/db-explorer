@@ -51,6 +51,9 @@ export class HistoryService {
       );
       CREATE INDEX IF NOT EXISTS history_at ON history (at DESC);
     `);
+    // Columna agregada en M8: historiales anteriores no la tienen.
+    const columns = this.db.prepare('PRAGMA table_info(history)').all() as { name: string }[];
+    if (!columns.some((c) => c.name === 'plan')) this.db.exec('ALTER TABLE history ADD COLUMN plan TEXT');
   }
 
   /** Se va a ejecutar: se recuerda el texto de cada sentencia para registrarla al terminar. */
@@ -103,7 +106,7 @@ export class HistoryService {
     params.push(Math.min(query.limit ?? 1000, 5000));
     const rows = this.db
       .prepare(
-        `SELECT id, at, connection_id, connection_name, engine, database_name, sql, duration_ms, rows, ok, error
+        `SELECT id, at, connection_id, connection_name, engine, database_name, sql, duration_ms, rows, ok, error, plan
            FROM history ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
           ORDER BY id DESC LIMIT ?`,
       )
@@ -120,6 +123,7 @@ export class HistoryService {
       rows: r['rows'] === null ? undefined : Number(r['rows']),
       ok: Number(r['ok']) === 1,
       error: r['error'] === null ? undefined : String(r['error']),
+      plan: r['plan'] === 'estimated' || r['plan'] === 'analyzed' ? r['plan'] : undefined,
     }));
   }
 
@@ -146,8 +150,8 @@ export class HistoryService {
     const conn = this.options.connection(request.connectionId);
     this.db
       .prepare(
-        `INSERT INTO history (at, connection_id, connection_name, engine, database_name, sql, duration_ms, rows, ok, error)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO history (at, connection_id, connection_name, engine, database_name, sql, duration_ms, rows, ok, error, plan)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         pending.startedAt.get(index) ?? Date.now(),
@@ -157,9 +161,10 @@ export class HistoryService {
         request.database ?? null,
         sql,
         Math.round(result.durationMs),
-        result.rows ?? null,
+        request.explain ? null : (result.rows ?? null),
         result.ok ? 1 : 0,
         result.error ?? null,
+        request.explain ? (request.explain.analyze ? 'analyzed' : 'estimated') : null,
       );
     if (++this.inserts % PRUNE_EVERY === 1) this.prune();
   }

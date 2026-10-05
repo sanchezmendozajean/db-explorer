@@ -7,6 +7,7 @@ import type {
   IndexInfo,
   ObjectKind,
 } from '@shared/metadata';
+import type { ExecutionPlan } from '@shared/plan';
 import type { CellValue, LogicalType, MessageSeverity, ResultColumn } from '@shared/query';
 
 export interface Scope {
@@ -68,6 +69,18 @@ export interface DbSession {
    * motor (`$1`, `?` o `@p1`). Devuelve las filas afectadas.
    */
   run(sql: string, params?: CellValue[], types?: LogicalType[]): Promise<number>;
+  /**
+   * Plan de ejecución de una sentencia (specs/12 §2). Con `analyze` la
+   * ejecuta: el QueryRunner la envuelve en una transacción que siempre se
+   * revierte. `write` indica que la sentencia modifica datos (MariaDB
+   * comprueba antes que sus tablas admitan transacciones).
+   */
+  explain(sql: string, options: ExplainOptions, sink: StatementSink): Promise<ExecutionPlan>;
+}
+
+export interface ExplainOptions {
+  analyze: boolean;
+  write: boolean;
 }
 
 /**

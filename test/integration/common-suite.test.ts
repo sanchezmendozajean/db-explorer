@@ -6,6 +6,7 @@ import type { EditTable } from '@shared/data-edit';
 import { buildStatements } from '@shared/data-edit';
 import type { QueryEvent } from '@shared/query';
 import type { TreeNodeRef } from '@shared/metadata';
+import { walkPlan } from '@shared/plan';
 import { ConnectionManager, defaultDriverFactory } from '../../src/db-host/connection-manager';
 import type { EngineCase, TableRef } from './engines';
 import { engineCases, runner } from './engines';
@@ -369,6 +370,109 @@ describe.each(cases)('$label', (c: EngineCase) => {
       });
       expect(summary).toEqual({ rows: 3, cancelled: false });
       expect(readFileSync(path, 'utf8')).toBe('nombre;id\r\nAna;1\r\nBeto;2\r\nÑandú 🦆;3\r\n');
+    });
+
+    describe.runIf(c.writable)('plan de ejecución (specs/12)', () => {
+      const p = c.plan.prefix;
+      const joinSql = `SELECT plan_clientes.nombre, sum(plan_pedidos.total) AS total
+        FROM ${p}plan_pedidos JOIN ${p}plan_clientes ON plan_clientes.id = plan_pedidos.cliente_id
+        WHERE plan_pedidos.total > 10 GROUP BY plan_clientes.nombre`;
+
+      beforeAll(async () => {
+        await exec(c.plan.setup, null);
+      });
+
+      async function explain(
+        sql: string,
+        analyze: boolean,
+        options: { write?: boolean; autoCommit?: boolean } = {},
+      ) {
+        const queryId = `${id}-${n++}`;
+        const summary = await manager.execute({
+          queryId,
+          sessionId: `tab-${id}`,
+          connectionId: id,
+          database: table.database,
+          schema: table.schema,
+          statements: [sql],
+          maxRows: 500,
+          autoCommit: options.autoCommit,
+          explain: { analyze, write: options.write ?? false },
+        });
+        const error = of(queryId, 'statement-error')[0];
+        return { summary, plan: of(queryId, 'plan')[0]?.plan, error };
+      }
+
+      async function pedidos(): Promise<number> {
+        const { queryId } = await exec([`SELECT count(*) FROM ${p}plan_pedidos`]);
+        return Number(rowsOf(queryId)[0]![0]);
+      }
+
+      it('explica un JOIN: árbol con la tabla de cada lado, costos y aviso de recorrido completo', async () => {
+        const { plan, error } = await explain(joinSql, false);
+        expect(error?.message).toBeUndefined();
+        expect(plan).toBeDefined();
+        const nodes = [...walkPlan(plan!.roots)];
+        const objects = nodes.map((node) => node.object ?? node.operation).join(' | ');
+        expect(objects).toMatch(/plan_pedidos/);
+        expect(objects).toMatch(/plan_clientes/);
+        expect(plan!.analyzed).toBe(false);
+        if (c.engine === 'sqlite') {
+          expect(plan!.totalCost).toBeUndefined();
+          return;
+        }
+        expect(plan!.totalCost).toBeGreaterThan(0);
+        const fullScans = nodes.flatMap((node) => node.warnings).filter((w) => w.kind === 'fullScan');
+        expect(fullScans.length).toBeGreaterThan(0);
+        expect(fullScans.every((w) => w.kind === 'fullScan' && w.rows >= 10_000)).toBe(true);
+      });
+
+      it('explicar y ejecutar un DELETE muestra filas reales y la tabla conserva sus filas', async () => {
+        const { plan, error, summary } = await explain(`DELETE FROM ${p}plan_pedidos WHERE id <= 500`, true, {
+          write: true,
+        });
+        if (c.engine === 'sqlite') {
+          expect(summary.failed).toBe(true);
+          expect(error?.message).toMatch(/SQLite no informa filas ni tiempos reales/);
+          return;
+        }
+        expect(error?.message).toBeUndefined();
+        expect(plan!.analyzed).toBe(true);
+        const nodes = [...walkPlan(plan!.roots)];
+        expect(nodes.some((node) => (node.actualRows ?? 0) >= 500)).toBe(true);
+        expect(await pedidos()).toBe(20_000);
+      });
+
+      it.runIf(c.engine !== 'sqlite')(
+        'en modo manual mide dentro de un punto de guardado y la transacción sigue abierta',
+        async () => {
+          await execManual([`DELETE FROM ${p}plan_pedidos WHERE id = 20000`]);
+          const { error } = await explain(`DELETE FROM ${p}plan_pedidos WHERE id <= 100`, true, {
+            write: true,
+            autoCommit: false,
+          });
+          expect(error?.message).toBeUndefined();
+          // El DELETE previo sigue pendiente y Rollback lo revierte.
+          await manager.queries.endTransaction(`tab-${id}`, false);
+          await exec(['SELECT 1']);
+          expect(await pedidos()).toBe(20_000);
+        },
+      );
+
+      it.runIf(c.engine === 'mariadb')(
+        'no mide escrituras sobre tablas que no admiten transacciones',
+        async () => {
+          await exec(['DROP TABLE IF EXISTS plan_myisam', 'CREATE TABLE plan_myisam (id int) ENGINE=MyISAM']);
+          await exec(['INSERT INTO plan_myisam VALUES (1), (2)']);
+          const { error } = await explain('DELETE FROM plan_myisam WHERE id = 1', true, { write: true });
+          expect(error?.message).toBe(
+            'La tabla plan_myisam no admite transacciones; no se puede ejecutar y revertir',
+          );
+          const { queryId } = await exec(['SELECT count(*) FROM plan_myisam']);
+          expect(Number(rowsOf(queryId)[0]![0])).toBe(2);
+          await exec(['DROP TABLE plan_myisam']);
+        },
+      );
     });
   });
 });

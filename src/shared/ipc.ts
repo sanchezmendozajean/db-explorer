@@ -120,6 +120,7 @@ export const ExecuteRequestSchema = z.object({
   maxRows: z.number().int().positive().nullable(),
   autoCommit: z.boolean().optional(),
   history: z.boolean().optional(),
+  explain: z.object({ analyze: z.boolean(), write: z.boolean() }).optional(),
 });
 
 const SessionId = z.string().min(1).max(4200);

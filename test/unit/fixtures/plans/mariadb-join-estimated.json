@@ -1,0 +1,39 @@
+{
+  "query_block": {
+    "select_id": 1,
+    "cost": 21.10929736,
+    "filesort": {
+      "sort_key": "sum(p.total) desc",
+      "temporary_table": {
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "p",
+              "access_type": "ALL",
+              "loops": 1,
+              "rows": 19874,
+              "cost": 3.3323776,
+              "filtered": 100,
+              "attached_condition": "p.total > 10 and p.cliente_id is not null"
+            }
+          },
+          {
+            "table": {
+              "table_name": "c",
+              "access_type": "eq_ref",
+              "possible_keys": ["PRIMARY"],
+              "key": "PRIMARY",
+              "key_length": "4",
+              "used_key_parts": ["id"],
+              "ref": ["dbx_test.p.cliente_id"],
+              "loops": 19874,
+              "rows": 1,
+              "cost": 17.77691976,
+              "filtered": 100
+            }
+          }
+        ]
+      }
+    }
+  }
+}

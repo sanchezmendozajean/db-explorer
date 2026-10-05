@@ -3,11 +3,16 @@ import { Request, TYPES } from 'tedious';
 import type { ColumnMetadata } from 'tedious/lib/token/colmetadata-token-parser';
 import type { CellValue, LogicalType, ResultColumn } from '@shared/query';
 import { ROW_BATCH_SIZE } from '@shared/query';
-import type { DbSession, StatementOutcome, StatementSink } from '../types';
+import type { ExecutionPlan } from '@shared/plan';
+import type { DbSession, ExplainOptions, StatementOutcome, StatementSink } from '../types';
 import { DriverError } from '../types';
 import { commandOf, isDml, paramValue } from '../common';
 import { toSqlServerError } from './errors';
+import { parseSqlServerPlan } from './plan';
 import { logicalTypeOf, nativeTypeOf, toCell } from './sqlserver-types';
+
+/** Nombre de la columna con el XML del plan en los resultados de `SHOWPLAN_XML` y `STATISTICS XML`. */
+const SHOWPLAN_COLUMN = 'Microsoft SQL Server 2005 XML Showplan';
 
 /** Descripción de una columna de resultado obtenida de `sys.dm_exec_describe_first_result_set`. */
 export interface DescribedColumn {
@@ -61,6 +66,9 @@ export class SqlServerSession implements DbSession {
   private cancelling = false;
   private closed = false;
   private manual = false;
+  /** Petición de un `explain` en curso y su receptor de mensajes. */
+  private explaining: Request | null = null;
+  private explainSink: StatementSink | null = null;
 
   constructor(
     private readonly connection: Connection,
@@ -70,7 +78,7 @@ export class SqlServerSession implements DbSession {
     connection.on('infoMessage', (info) => {
       // 5701/5703: cambio de base o idioma (ruido de USE y del inicio de sesión).
       if (info.number === 5701 || info.number === 5703) return;
-      this.running?.sink.message(info.class > 10 ? 'warning' : 'notice', info.message);
+      (this.running?.sink ?? this.explainSink)?.message(info.class > 10 ? 'warning' : 'notice', info.message);
     });
     connection.on('end', () => {
       this.closed = true;
@@ -166,7 +174,8 @@ export class SqlServerSession implements DbSession {
   }
 
   async cancel(): Promise<void> {
-    if (!this.running || this.running.completed) return;
+    const busy = (this.running && !this.running.completed) || this.explaining;
+    if (!busy) return;
     this.cancelling = true;
     this.connection.cancel();
   }
@@ -225,6 +234,54 @@ export class SqlServerSession implements DbSession {
         request.addParameter(`p${i + 1}`, type, value);
       });
       this.connection.execSql(request);
+    });
+  }
+
+  /**
+   * `SET SHOWPLAN_XML` (estimado, no ejecuta) o `SET STATISTICS XML` (real):
+   * cada uno va en su propio lote, como exige SQL Server. Del lote de la
+   * sentencia solo se guardan los resultados con el XML del plan; las filas
+   * de la consulta se descartan a medida que llegan.
+   */
+  async explain(sql: string, options: ExplainOptions, sink: StatementSink): Promise<ExecutionPlan> {
+    await this.closeCursor();
+    if (this.closed) throw new DriverError('Se perdió la conexión con el servidor', 'disconnected');
+    const setting = options.analyze ? 'STATISTICS XML' : 'SHOWPLAN_XML';
+    await this.batch(`SET ${setting} ON`);
+    let xmls: string[];
+    try {
+      xmls = await this.collectPlans(sql, sink);
+    } finally {
+      await this.batch(`SET ${setting} OFF`).catch(() => undefined);
+    }
+    if (xmls.length === 0) throw new DriverError('El motor no devolvió un plan para la sentencia');
+    return parseSqlServerPlan(xmls, sql, options.analyze);
+  }
+
+  private collectPlans(sql: string, sink: StatementSink): Promise<string[]> {
+    const xmls: string[] = [];
+    this.cancelling = false;
+    return new Promise<string[]>((resolve, reject) => {
+      let planColumn = false;
+      const request = new Request(sql, (err) => {
+        this.explainSink = null;
+        this.explaining = null;
+        if (!err) resolve(xmls);
+        else
+          reject(
+            this.cancelling ? new DriverError('Consulta cancelada', 'cancelled') : toSqlServerError(err, sql),
+          );
+      });
+      request.on('columnMetadata', (columns) => {
+        const metas = (Array.isArray(columns) ? columns : Object.values(columns)) as ColumnMetadata[];
+        planColumn = metas.length === 1 && metas[0]!.colName === SHOWPLAN_COLUMN;
+      });
+      request.on('row', (columns: { value: unknown }[]) => {
+        if (planColumn) xmls.push(String(columns[0]?.value ?? ''));
+      });
+      this.explainSink = sink;
+      this.explaining = request;
+      this.connection.execSqlBatch(request);
     });
   }
 

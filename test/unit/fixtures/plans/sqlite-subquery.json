@@ -1,0 +1,1 @@
+[["1","0","0","COMPOUND QUERY"],["2","1","0","LEFT-MOST SUBQUERY"],["4","2","91","SEARCH plan_clientes USING INTEGER PRIMARY KEY (rowid=?)"],["8","2","0","LIST SUBQUERY 1"],["10","8","216","SCAN plan_pedidos"],["28","1","0","UNION ALL"],["30","28","216","SCAN plan_clientes"]]
