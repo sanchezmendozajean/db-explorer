@@ -414,6 +414,8 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 - **Detalle**: se abre con clic en un nodo o Enter; moverse con las flechas no lo vuelve a abrir si se cerró con Esc. El costo de la barra es el **propio**; el tooltip muestra también el del subárbol.
 - Los fixtures de planes (`test/unit/fixtures/plans/`) se guardan tal como los devolvió cada motor y quedan fuera de Prettier.
 - Se quitó el CSS de la grilla de maqueta que había quedado de M7.
+- **Corregido de paso**: un `settings:changed` atrasado podía devolver por un instante un control de Preferencias a su valor anterior justo después de cambiarlo (el store ahora conserva los valores que se están guardando).
+- **Pruebas e2e más estables**: la edición en grilla de `data.spec.ts` repite la edición si el editor de Glide confirmó el valor anterior (pasa con la máquina cargada, no a velocidad humana; la grilla expone `data-undo-depth`), y su `afterAll` termina el árbol de procesos en Windows: una app que quedaba viva tras un fallo cargaba la máquina y hacía fallar otras pruebas. Tres corridas completas seguidas en verde.
 
 ### Pendientes / avisos
 - **MySQL 8 sin servidor de pruebas**: el parser del árbol de texto (`EXPLAIN FORMAT=TREE` / `EXPLAIN ANALYZE`) se probó con fixtures escritos según el formato documentado, no con planes capturados de un servidor real.
