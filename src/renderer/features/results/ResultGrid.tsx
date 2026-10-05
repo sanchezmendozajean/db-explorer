@@ -574,6 +574,7 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
       data-column-widths={gridColumns.map((c) => Math.round('width' in c ? c.width : 0)).join(',')}
       data-editable={editable ? 'true' : 'false'}
       data-result-id={result.id}
+      data-undo-depth={pending.undo.length}
       onFocusCapture={() => setActiveGrid(handle)}
       onMouseDownCapture={() => setActiveGrid(handle)}
       onKeyDownCapture={(e) => {

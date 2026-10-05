@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { launchApp, tempUserData } from './helpers';
@@ -38,17 +39,28 @@ async function cell(col: number, row: number): Promise<{ x: number; y: number }>
 
 async function editCell(col: number, row: number, text: string): Promise<void> {
   const p = await cell(col, row);
-  // Doble clic abre el editor de celda de Glide.
-  await page.mouse.dblclick(p.x, p.y);
   const input = page.locator('.gdg-growing-entry textarea, textarea.gdg-input');
-  await input.waitFor();
-  // El editor de Glide es controlado y pierde teclas simuladas: se llena de una vez.
-  await input.fill(text);
-  // Glide guarda el texto del editor en el siguiente cuadro: Enter inmediato confirmaría el valor anterior.
-  await expect(input).toHaveValue(text);
-  await page.waitForTimeout(50);
-  await page.keyboard.press('Enter');
-  await expect(input).toHaveCount(0);
+  // Cada edición registrada agrega un paso de deshacer.
+  const depth = Number(await grid().getAttribute('data-undo-depth'));
+  for (let attempt = 0; attempt < 3; attempt++) {
+    // Doble clic abre el editor de celda de Glide.
+    await page.mouse.dblclick(p.x, p.y);
+    await input.waitFor();
+    // El editor de Glide es controlado y pierde teclas simuladas: se llena de una vez.
+    await input.fill(text);
+    await expect(input).toHaveValue(text);
+    await page.waitForTimeout(50);
+    await page.keyboard.press('Enter');
+    await expect(input).toHaveCount(0);
+    // Glide guarda el texto del editor en un cuadro posterior: con la máquina cargada, Enter a veces
+    // confirma el valor anterior (a velocidad humana no pasa). Si la edición no se registró, se repite.
+    const registered = await expect(grid())
+      .toHaveAttribute('data-undo-depth', String(depth + 1), { timeout: 1000 })
+      .then(() => true)
+      .catch(() => false);
+    if (registered) return;
+  }
+  throw new Error(`La edición de la celda (${col}, ${row}) no se registró`);
 }
 
 /** Copia la tabla cargada (menú Exportar) y devuelve el TSV del portapapeles. */
@@ -72,12 +84,19 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  // Si una prueba deja cambios sin guardar, la app pregunta antes de cerrar: se termina el proceso.
-  await Promise.race([app?.close(), new Promise((r) => setTimeout(r, 5000))]);
-  try {
-    app?.process().kill();
-  } catch {
-    // Ya cerró.
+  const pid = app?.process().pid;
+  // Si una prueba deja cambios sin guardar, la app pregunta antes de cerrar: se termina el árbol de procesos.
+  await Promise.race([app?.close().catch(() => undefined), new Promise((r) => setTimeout(r, 5000))]);
+  if (pid === undefined) return;
+  // En Windows `kill` no alcanza: la app quedaba viva y cargaba la máquina en las pruebas siguientes.
+  if (process.platform === 'win32')
+    spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' });
+  else {
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch {
+      // Ya cerró.
+    }
   }
 });
 
