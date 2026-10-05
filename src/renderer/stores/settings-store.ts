@@ -9,14 +9,27 @@ interface SettingsStore {
   update: <K extends SettingKey>(key: K, value: Settings[K]) => Promise<boolean>;
 }
 
+/**
+ * Valores que se están guardando. Un `settings:changed` de un guardado anterior
+ * puede llegar después del cambio optimista: no debe volver al valor viejo
+ * (el control parpadeaba y un clic parecía no hacer nada).
+ */
+const inFlight = new Map<SettingKey, unknown>();
+
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   settings: DEFAULT_SETTINGS,
-  hydrate: (settings) => set({ settings }),
+  hydrate: (settings) => set({ settings: { ...settings, ...Object.fromEntries(inFlight) } }),
   update: async (key, value) => {
     const previous = get().settings;
+    inFlight.set(key, value);
     set({ settings: { ...previous, [key]: value } });
     const r = await window.api.settings.update({ key, value });
-    set({ settings: r.ok ? r.data : previous });
+    if (inFlight.get(key) === value) inFlight.delete(key);
+    set({
+      settings: r.ok
+        ? { ...r.data, ...Object.fromEntries(inFlight) }
+        : { ...previous, ...Object.fromEntries(inFlight) },
+    });
     return r.ok;
   },
 }));
