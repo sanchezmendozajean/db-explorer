@@ -47,6 +47,7 @@
 - Nombres por dominio: `conn:*`, `meta:*`, `query:*`, `data:*` (guardar ediciones de la grilla y exportar), `fs:*`, `settings:*`, `app:*`.
 - Resultados grandes: el DB Host envía filas en **lotes** (p. ej. 500 filas) por evento `query:rows` con `queryId`; el renderer acumula. Nunca serializar 100 000 filas en un solo mensaje.
 - Cancelación: `query:cancel(queryId)` → el driver ejecuta su mecanismo nativo (ver `03`).
+- Plan de ejecución (`12`): `query:execute` con `explain: { analyze, write }` y una sola sentencia; el DB Host responde con el evento `plan` (modelo común) antes de `statement-done`. Así reutiliza el cronómetro, la cancelación, los mensajes y el historial de una ejecución.
 
 ## Estructura de carpetas
 ```
@@ -87,7 +88,7 @@ Los scripts `.sql` **no** viven aquí: viven en el espacio de trabajo (ver `11`)
 | `keybindings.json` | Atajos personalizados (opcional, formato similar a VS Code). |
 | `ui-state.json` | Estado global de la UI: tamaños de paneles, vista activa de la side bar, carpetas recientes. |
 | `workspaces/<hash>.json` | Estado de cada espacio de trabajo: pestañas, orden, pestaña activa, viewState, conexión por archivo (ver `11`). |
-| `history.sqlite` | Historial de consultas (texto, conexión, fecha, duración, filas, error). |
+| `history.sqlite` | Historial de consultas (texto, conexión, fecha, duración, filas, error y si fue un plan estimado o real). |
 
 ## Rendimiento
 - Árbol: carga perezosa por nodo; metadatos cacheados por conexión con "Refrescar" (F5 en el árbol).

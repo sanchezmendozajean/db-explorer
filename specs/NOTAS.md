@@ -381,3 +381,41 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 - Pulsar Commit/Rollback mientras la pestaña ejecuta da "La pestaña ya está ejecutando una consulta".
 - El editor de celda de Glide pierde teclas con la escritura instantánea de Playwright (no a velocidad humana): las pruebas llenan el editor con `fill`.
 - El formato por conexión (nivel 2 de specs/06) llega con las Preferencias de M9.
+
+## M8 — Plan de ejecución (2026-10-05)
+
+### Criterios de aceptación
+
+| Criterio | Estado |
+|---|---|
+| Ctrl+Alt+E sobre un `JOIN` muestra el árbol con costos (salvo SQLite) y el detalle de cada nodo, en los 4 motores | ✅ integración (`common-suite.test.ts`: el árbol tiene la tabla de cada lado y costo total en PostgreSQL, MariaDB y SQL Server; en SQLite, sin costos); e2e en PostgreSQL (`plan.spec.ts`: árbol, detalle al seleccionar un nodo, Esc lo cierra, Ver original con el JSON) |
+| *Explicar y ejecutar* muestra filas y tiempos reales en PostgreSQL, MariaDB/MySQL y SQL Server | ✅ integración en los tres (MySQL 8 solo con fixtures, ver avisos) |
+| Un `DELETE` explicado y ejecutado no borra filas | ✅ integración en PostgreSQL, MariaDB y SQL Server, en auto-commit y dentro de una transacción manual (punto de guardado; la transacción sigue abierta y un Rollback posterior revierte lo anterior) |
+| Un recorrido completo de una tabla de 10 000+ filas aparece con aviso | ✅ integración (tabla de 20 000 filas) en PostgreSQL, MariaDB y SQL Server; e2e en PostgreSQL ("1 aviso" y el texto en el detalle). SQLite no entrega estimaciones: sin aviso |
+| En Producción, *Explicar y ejecutar* de una escritura pide confirmación | ✅ e2e (`UPDATE`: modal de Producción con "La sentencia se ejecutará para medir el plan y luego se revertirá"; después, los datos no cambiaron) |
+| Pruebas | ✅ 185 unitarias (parsers con planes reales de los 4 motores), 94 de integración (4 motores), 89 e2e; lint, tipos y Prettier limpios |
+
+### Qué se construyó
+- **db-host**: `DbSession.explain` en los cuatro drivers y un parser por formato junto a cada driver (`drivers/<motor>/plan.ts`): JSON de PostgreSQL (con `VERBOSE` y, en real, `BUFFERS`), JSON de MariaDB (`EXPLAIN`/`ANALYZE FORMAT=JSON`), árbol de texto de MySQL 8, `EXPLAIN QUERY PLAN` de SQLite y showplan XML de SQL Server (`fast-xml-parser`). `plan-builder.ts` calcula costo y tiempo propios y los avisos comunes.
+- **Pestaña Plan** del panel de resultados (antes de Mensajes; "Plan (real)" si se ejecutó; se cierra con su ✕): barra con chip Estimado/Real, resumen, contador de avisos (salta al siguiente nodo con avisos), Expandir/Contraer todo, Ver original (Monaco de solo lectura; el XML de SQL Server se muestra con sangría), Copiar original y Volver a explicar. Árbol-tabla virtualizado con íconos por familia, condición en segunda línea, barras de costo y tiempo, columnas que se ocultan si no hay datos y anchos redimensionables. Panel de detalle de 300 px por grupos (General, Estimado, Real, Avisos). Teclado: flechas, Enter abre el detalle, Esc lo cierra, Ctrl+C copia la fila.
+- **Comandos** *Explicar plan* (Ctrl+Alt+E) y *Explicar y ejecutar* (Ctrl+Alt+Shift+E) en el menú Consulta, el menú contextual del editor, la paleta y el botón de la barra del editor. En SQLite *Explicar y ejecutar* queda deshabilitado con el motivo en el tooltip del menú (nuevo `disabledReason` de los comandos).
+- **Historial**: las entradas de plan se marcan "Plan" o "Plan (real)" (columna nueva `plan` en `history.sqlite`, agregada al abrir historiales anteriores).
+
+### Decisiones
+- **El plan viaja por `query:execute`** con el campo `explain` y el evento `plan` (specs/02), no por un canal nuevo: reutiliza cronómetro, barra de progreso, cancelación, mensajes del motor e historial.
+- **Explicar y ejecutar siempre va dentro de una transacción que se revierte**, también para lecturas (más simple y sin riesgo). En modo manual usa siempre un punto de guardado; si la pestaña no tenía transacción abierta, queda una abierta y vacía (la que el modo manual abre con cada sentencia).
+- **Modelo común**: las propiedades del nodo llevan su grupo del panel de detalle (`general`, `estimated`, `actual`) y el alias va aparte para mostrarlo en `fg.muted` (specs/12 §3 actualizado).
+- **Recorrido completo**: se usan las filas que el motor lee, no las que devuelve tras el filtro: en PostgreSQL `reltuples` del catálogo (si la tabla nunca se analizó, las estimadas o, en real, las devueltas más las descartadas por el filtro); MariaDB y MySQL, `rows` del recorrido; SQL Server, `TableCardinality` de *Table Scan* y *Clustered Index Scan*. No cuentan las tablas temporales (`pg_temp`, `#tabla`, `<derived>`).
+- **Estimación errada**: se compara por ejecución del nodo (filas reales ÷ bucles contra las estimadas), porque los motores estiman las filas de una ejecución.
+- **Avisos de MariaDB/MySQL** "Using filesort" y "Using temporary" cuando alguna tabla debajo tiene 10 000 filas estimadas o más (mismo umbral del recorrido completo). Uso de disco en MariaDB: `filesort` con `r_used_priority_queue: false` y `r_sort_passes > 0`.
+- **Tablas sin transacciones** (MyISAM, Aria): antes de medir una escritura en MariaDB/MySQL se comprueban las tablas del plan estimado y cualquier palabra de la sentencia que coincida con una tabla no transaccional de la base actual (o de una base nombrada en la sentencia). Puede bloquear de más, nunca de menos.
+- **Sentencias de estructura**: además de `CREATE`, `ALTER` y `DROP`, también `TRUNCATE`, `RENAME`, `GRANT`, `REVOKE` y `COMMENT` (varios motores las confirman o no las pueden revertir).
+- **Explicar no toca los resultados**: no descarta los result sets ni pregunta por cambios de grilla pendientes, no guarda el archivo antes (guardado automático) y "Re-ejecutar" sigue repitiendo la última consulta. "Volver a explicar" repite la última sentencia explicada de la pestaña con su modo, aunque el editor haya cambiado.
+- **Detalle**: se abre con clic en un nodo o Enter; moverse con las flechas no lo vuelve a abrir si se cerró con Esc. El costo de la barra es el **propio**; el tooltip muestra también el del subárbol.
+- Los fixtures de planes (`test/unit/fixtures/plans/`) se guardan tal como los devolvió cada motor y quedan fuera de Prettier.
+- Se quitó el CSS de la grilla de maqueta que había quedado de M7.
+
+### Pendientes / avisos
+- **MySQL 8 sin servidor de pruebas**: el parser del árbol de texto (`EXPLAIN FORMAT=TREE` / `EXPLAIN ANALYZE`) se probó con fixtures escritos según el formato documentado, no con planes capturados de un servidor real.
+- Los anchos de columna de la pestaña Plan no se recuerdan entre planes; si no entran todas, las últimas quedan recortadas (sin desplazamiento horizontal).
+- SQL Server: los planes con cientos de nodos se virtualizan, pero solo se probaron planes reales pequeños.

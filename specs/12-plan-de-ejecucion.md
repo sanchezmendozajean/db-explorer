@@ -49,7 +49,8 @@ interface ExecutionPlan {
 interface PlanNode {
   id: string;
   operation: string;          // "Seq Scan", "Hash Join", "Clustered Index Seek"…
-  object?: string;            // tabla o índice, con alias si lo hay
+  object?: string;            // tabla o índice
+  alias?: string;             // alias en la consulta, si difiere del nombre (en fg.muted)
   condition?: string;         // filtro, condición de join o de índice (una línea)
   totalCost?: number;         // costo acumulado del subárbol
   selfCost?: number;          // costo propio = total − suma de hijos (calculado)
@@ -58,7 +59,7 @@ interface PlanNode {
   loops?: number;
   actualTimeMs?: number;      // tiempo propio (se resta el de los hijos)
   warnings: PlanWarning[];
-  properties: [label: string, value: string][];  // todo lo demás, para el panel de detalle
+  properties: { group: 'general' | 'estimated' | 'actual'; label: string; value: string }[];  // todo lo demás, para el panel de detalle
   children: PlanNode[];
 }
 
