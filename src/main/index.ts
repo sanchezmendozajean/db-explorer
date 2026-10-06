@@ -22,9 +22,10 @@ function broadcast<C extends IpcEventChannel>(channel: C, payload: IpcEventPaylo
   for (const win of BrowserWindow.getAllWindows()) win.webContents.send(channel, payload);
 }
 
-// Solo desarrollo/pruebas: aislar `userData` (las pruebas e2e no tocan los datos reales del usuario).
+// Pruebas: aislar `userData` (las e2e no tocan los datos reales del usuario), también en el build
+// empaquetado. No agrega riesgo: quien puede fijar el entorno del proceso ya puede ejecutar código.
 const userDataOverride = process.env['DBX_USER_DATA_DIR'];
-if (userDataOverride && !app.isPackaged) {
+if (userDataOverride) {
   app.setPath('userData', userDataOverride);
   // El espacio de trabajo por defecto (DocumentosDB Explorer) también queda aislado.
   app.setPath('documents', join(userDataOverride, 'Documents'));

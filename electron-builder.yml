@@ -1,17 +1,41 @@
-# Configuración mínima de empaquetado. Se completa en el hito M8 (fuses, iconos, nombre final).
+# Empaquetado para Windows (specs/00 D12, specs/09 M9): instalador NSIS y versión portable.
 appId: com.dbexplorer.app
 productName: DB Explorer
 directories:
   output: dist
   buildResources: resources
+# Solo el build y las dependencias de main y del db-host (el renderer ya viene empaquetado por Vite).
 files:
   - out/**
   - package.json
+  # Variante para navegadores de la autenticación de Azure que trae tedious (Node usa msal-node).
+  - "!node_modules/@azure/msal-browser/**"
+  - "!node_modules/**/*.{map,d.ts,d.cts,d.mts}"
 asar: true
+# Electron del proyecto (node_modules): sin descargas ni extracciones durante el empaquetado.
+electronDist: node_modules/electron/dist
+# Todo es JavaScript: no hay módulos nativos que recompilar.
+npmRebuild: false
+# Fuses de Electron (specs/08 §Seguridad del proceso).
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableCookieEncryption: true
+  onlyLoadAppFromAsar: true
 win:
+  icon: resources/icon.ico
   target:
     - nsis
     - portable
 nsis:
   oneClick: false
+  perMachine: false
   allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: DB Explorer
+  artifactName: DB-Explorer-${version}-instalador.${ext}
+  uninstallDisplayName: DB Explorer
+portable:
+  artifactName: DB-Explorer-${version}-portable.${ext}

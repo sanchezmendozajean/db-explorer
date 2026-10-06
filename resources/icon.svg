@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Ícono de DB Explorer: un cilindro de base de datos sobre el azul de acento de la interfaz. -->
+  <rect width="256" height="256" rx="52" fill="#0078d4"/>
+  <path d="M52 78 V178 A76 26 0 0 0 204 178 V78 Z" fill="#ffffff"/>
+  <path d="M52 112 A76 26 0 0 0 204 112" fill="none" stroke="#0078d4" stroke-width="10"/>
+  <path d="M52 146 A76 26 0 0 0 204 146" fill="none" stroke="#0078d4" stroke-width="10"/>
+  <ellipse cx="128" cy="78" rx="76" ry="26" fill="#cfe5f8"/>
+</svg>

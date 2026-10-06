@@ -86,6 +86,8 @@ export default defineConfig({
     plugins: [react(), cspPlugin()],
     define: { __APP_VERSION__: JSON.stringify(appVersion) },
     build: {
+      // Menos JavaScript que leer al arrancar (electron-vite no minifica por defecto).
+      minify: true,
       rollupOptions: {
         input: { index: resolve('src/renderer/index.html') },
       },

@@ -109,6 +109,8 @@ async function bootstrap(): Promise<void> {
       <App />
     </StrictMode>,
   );
+  // Interfaz lista tras el primer cuadro pintado: la usa la medición de arranque (M9).
+  requestAnimationFrame(() => setTimeout(() => performance.mark('dbx-listo'), 0));
 }
 
 void bootstrap();
