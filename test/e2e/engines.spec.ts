@@ -7,7 +7,7 @@ import { launchApp, tempUserData } from './helpers';
 
 /**
  * Flujo de M3 (conectar, script, ejecutar, varios resultados, error con
- * posición y cancelar) en SQLite, SQL Server y MariaDB (M4). Los motores sin
+ * posición y cancelar) en SQLite, SQL Server, MariaDB (M4) y MySQL. Los motores sin
  * servidor alcanzable se saltan; en servidores de solo lectura no se escribe.
  */
 
@@ -29,6 +29,8 @@ function reachable(host: string, port: number): Promise<boolean> {
 
 interface Flow {
   engine: string;
+  /** Tarjeta del motor en el diálogo de conexión (por defecto, `engine`). */
+  card?: string;
   name: string;
   fill(dialog: ReturnType<Page['getByRole']>): Promise<void>;
   /** Script con dos sentencias que devuelven resultados (la segunda con columnas `texto,importe`). */
@@ -82,7 +84,8 @@ const flows: Flow[] = [
     },
   },
   {
-    engine: 'MariaDB / MySQL',
+    engine: 'MariaDB',
+    card: 'MariaDB / MySQL',
     name: 'MariaDB Pruebas',
     async fill(dialog) {
       await dialog.getByLabel('Host').fill(env('MARIADB_HOST', '127.0.0.1')!);
@@ -98,6 +101,27 @@ const flows: Flow[] = [
     available: async () => {
       const host = env('MARIADB_HOST', '127.0.0.1')!;
       const port = Number(env('MARIADB_PORT', '53306'));
+      return (await reachable(host, port)) ? null : `sin servidor en ${host}:${port}`;
+    },
+  },
+  {
+    // Mismo driver y tarjeta que MariaDB; el producto se detecta al conectar.
+    engine: 'MySQL',
+    card: 'MariaDB / MySQL',
+    name: 'MySQL Pruebas',
+    async fill(dialog) {
+      await dialog.getByLabel('Host').fill(env('MYSQL_HOST', '127.0.0.1')!);
+      await dialog.getByLabel('Puerto').fill(env('MYSQL_PORT', '53307')!);
+      await dialog.getByLabel('Usuario').fill(env('MYSQL_USER', 'dbx')!);
+      await dialog.getByLabel('Contraseña', { exact: true }).fill(env('MYSQL_PASSWORD', '')!);
+    },
+    script:
+      "select 1 as id;\nselect 'ñandú' as texto, cast(12345678901234.123456 as decimal(20,6)) as importe;",
+    scriptShortcut: 'Alt+X',
+    sleep: 'select sleep(30)',
+    available: async () => {
+      const host = env('MYSQL_HOST', '127.0.0.1')!;
+      const port = Number(env('MYSQL_PORT', '53307'));
       return (await reachable(host, port)) ? null : `sin servidor en ${host}:${port}`;
     },
   },
@@ -135,7 +159,7 @@ for (const flow of flows) {
       test.skip(!!skip, skip ?? '');
       const dialog = page.getByRole('dialog');
       await page.getByRole('button', { name: 'Nueva conexión' }).first().click();
-      await dialog.getByRole('button', { name: flow.engine }).click();
+      await dialog.getByRole('button', { name: flow.card ?? flow.engine }).click();
       await dialog.getByLabel('Nombre', { exact: true }).fill(flow.name);
       await flow.fill(dialog);
       await dialog.getByRole('button', { name: 'Guardar' }).click();
@@ -143,7 +167,7 @@ for (const flow of flows) {
       await expect(page.getByTestId('connection-dot')).toHaveClass(/is-hollow/);
       if (SHOTS)
         await page.screenshot({
-          path: join(SHOTS, `dot-off-${flow.engine.replace(/W+/g, '-')}.png`),
+          path: join(SHOTS, `dot-off-${flow.engine.replace(/\W+/g, '-')}.png`),
           clip: { x: 0, y: 0, width: 700, height: 140 },
         });
       await page
@@ -170,7 +194,7 @@ for (const flow of flows) {
       await expect(page.locator('.quick-input-item .codicon-circle-filled')).toHaveCount(1);
       if (SHOTS)
         await page.screenshot({
-          path: join(SHOTS, `dot-${flow.engine.replace(/W+/g, '-')}.png`),
+          path: join(SHOTS, `dot-${flow.engine.replace(/\W+/g, '-')}.png`),
           clip: { x: 0, y: 0, width: 900, height: 200 },
         });
       await page.keyboard.press('Escape');
@@ -184,7 +208,7 @@ for (const flow of flows) {
         await expand(0);
         await expand(1);
         if (flow.engine === 'SQL Server') await expand(2);
-        await page.screenshot({ path: join(SHOTS, `m4-${flow.engine.replace(/W+/g, '-')}.png`) });
+        await page.screenshot({ path: join(SHOTS, `m4-${flow.engine.replace(/\W+/g, '-')}.png`) });
       }
     });
 

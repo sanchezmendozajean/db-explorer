@@ -31,6 +31,21 @@ services:
       timeout: 5s
       retries: 20
 
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_USER: ${MYSQL_USER:-dbx}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-dbx_test_pw}
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-dbx_root_pw}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-dbx_test}
+    ports:
+      - '${MYSQL_PORT:-53307}:3306'
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:

@@ -393,5 +393,74 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
     },
   };
 
-  return [postgres, sqlite, sqlserver, mariadb];
+  // MySQL usa el mismo driver que MariaDB (motor `mariadb`), que detecta el producto al conectar.
+  const mysqlHost = env('MYSQL_HOST', '127.0.0.1')!;
+  const mysqlPort = Number(env('MYSQL_PORT', '53307'));
+  const mysqlDb = env('MYSQL_DATABASE', 'dbx_test')!;
+  // MySQL corta los CTE recursivos en 1000 niveles (`cte_max_recursion_depth`): se sube con una pista.
+  const mysqlSeries = (n: number): string =>
+    `WITH RECURSIVE s(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM s WHERE n < ${n}) ` +
+    `SELECT /*+ SET_VAR(cte_max_recursion_depth = 1000000) */ n FROM s`;
+  const mysql: EngineCase = {
+    engine: 'mariadb',
+    label: 'MySQL',
+    skip: (await reachable(mysqlHost, mysqlPort)) ? null : `sin servidor en ${mysqlHost}:${mysqlPort}`,
+    writable: true,
+    config: {
+      ...newConnectionDefaults('mariadb', 'common-mysql'),
+      name: 'MySQL',
+      host: mysqlHost,
+      port: mysqlPort,
+      user: env('MYSQL_USER', 'dbx'),
+    },
+    password: env('MYSQL_PASSWORD'),
+    async prepare(run) {
+      await run([
+        `CREATE DATABASE IF NOT EXISTS \`${mysqlDb}\``,
+        `DROP TABLE IF EXISTS \`${mysqlDb}\`.clientes`,
+        `CREATE TABLE \`${mysqlDb}\`.clientes (id int PRIMARY KEY, nombre varchar(100) NOT NULL, importe decimal(12,2), INDEX idx_clientes_nombre (nombre))`,
+        `INSERT INTO \`${mysqlDb}\`.clientes VALUES ${FIXTURE_ROWS.map(([id, n, i]) => `(${id}, '${n}', ${i ?? 'NULL'})`).join(', ')}`,
+        `DROP PROCEDURE IF EXISTS \`${mysqlDb}\`.dos_resultados`,
+        `CREATE PROCEDURE \`${mysqlDb}\`.dos_resultados() BEGIN SELECT 1 AS a; SELECT 2 AS b, 3 AS c; END`,
+      ]);
+      return { database: mysqlDb, schema: mysqlDb, name: 'clientes', pk: 'id' };
+    },
+    sql: {
+      rows: mysqlSeries,
+      sleep: 'SELECT SLEEP(30)',
+      literals: `SELECT CAST(12345678901234.123456 AS DECIMAL(20,6)) AS dec_, DATE '2026-02-28' AS dia,
+        CAST('2026-09-30 08:42:52.658' AS DATETIME(3)) AS ts, X'89504E47' AS bin, NULL AS nada,
+        'ñandú 🦆' AS uni, CAST(9223372036854775807 AS UNSIGNED) AS grande`,
+      expected: {
+        values: [
+          '12345678901234.123456',
+          '2026-02-28',
+          '2026-09-30 08:42:52.658',
+          '0x89504E47',
+          null,
+          'ñandú 🦆',
+          '9223372036854775807',
+        ],
+        types: ['decimal', 'date', 'datetime', 'binary', 'other', 'text', 'integer'],
+      },
+      message: { sql: 'DO 1 / 0', text: /Division by 0/i },
+      multipleResults: 'CALL dos_resultados()',
+      begin: 'BEGIN',
+      rollback: 'ROLLBACK',
+    },
+    plan: {
+      prefix: '',
+      setup: [
+        'SET SESSION cte_max_recursion_depth = 100000',
+        'DROP TABLE IF EXISTS plan_pedidos, plan_clientes',
+        'CREATE TABLE plan_clientes (id int PRIMARY KEY, nombre varchar(50)) ENGINE=InnoDB',
+        'CREATE TABLE plan_pedidos (id int PRIMARY KEY, cliente_id int, total decimal(12,2)) ENGINE=InnoDB',
+        "INSERT INTO plan_clientes WITH RECURSIVE s(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM s WHERE i < 100) SELECT i, concat('c', i) FROM s",
+        'INSERT INTO plan_pedidos WITH RECURSIVE s(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM s WHERE i < 20000) SELECT i, i % 100 + 1, i % 1000 FROM s',
+        'ANALYZE TABLE plan_clientes, plan_pedidos',
+      ],
+    },
+  };
+
+  return [postgres, sqlite, sqlserver, mariadb, mysql];
 }

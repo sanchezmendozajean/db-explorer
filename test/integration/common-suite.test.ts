@@ -29,6 +29,9 @@ describe.each(cases)('$label', (c: EngineCase) => {
   const of = <T extends QueryEvent['type']>(queryId: string, type: T): Extract<QueryEvent, { type: T }>[] =>
     events.filter((e): e is Extract<QueryEvent, { type: T }> => e.type === type && e.queryId === queryId);
   const rowsOf = (queryId: string): unknown[][] => of(queryId, 'rows').flatMap((e) => e.rows);
+  // MySQL declara BIGINT los literales enteros (`SELECT 1`), y los BIGINT llegan como texto (sin pérdida).
+  const ints = (queryId: string): unknown[][] =>
+    rowsOf(queryId).map((r) => r.map((v) => (typeof v === 'string' && /^-?\d+$/.test(v) ? Number(v) : v)));
 
   async function exec(statements: string[], maxRows: number | null = 500, database?: string) {
     const queryId = `${id}-${n++}`;
@@ -126,7 +129,7 @@ describe.each(cases)('$label', (c: EngineCase) => {
       expect(all[1199]).toBe(1200);
       // La sesión sigue usable después del cursor.
       const after = await exec(['SELECT 1 AS x']);
-      expect(rowsOf(after.queryId)).toEqual([[1]]);
+      expect(ints(after.queryId)).toEqual([[1]]);
     });
 
     it('informa errores con su posición dentro de la sentencia', async () => {
@@ -154,7 +157,7 @@ describe.each(cases)('$label', (c: EngineCase) => {
       expect(summary).toMatchObject({ cancelled: true, failed: true });
       expect(Date.now() - started).toBeLessThan(10_000);
       const after = await exec(['SELECT 2 AS x']);
-      expect(rowsOf(after.queryId)).toEqual([[2]]);
+      expect(ints(after.queryId)).toEqual([[2]]);
     });
 
     it.runIf(!!c.sql.message)('entrega los mensajes del servidor', async () => {
@@ -167,7 +170,7 @@ describe.each(cases)('$label', (c: EngineCase) => {
       const { queryId } = await exec([c.sql.multipleResults!]);
       const sets = of(queryId, 'columns');
       expect(sets.map((s) => s.columns.map((col) => col.name))).toEqual([['a'], ['b', 'c']]);
-      expect(rowsOf(queryId)).toEqual([[1], [2, 3]]);
+      expect(ints(queryId)).toEqual([[1], [2, 3]]);
     });
 
     it.runIf(c.writable)('DML informa filas afectadas y la sesión conserva la transacción', async () => {
@@ -201,6 +204,36 @@ describe.each(cases)('$label', (c: EngineCase) => {
         expect(ddl).toMatch(/clientes/);
         expect(ddl).toMatch(/idx_clientes_nombre/);
       }
+    });
+
+    it.runIf(c.writable)('describe claves foráneas y restricciones CHECK', async () => {
+      const p = c.plan.prefix;
+      await exec(
+        [
+          `DROP TABLE IF EXISTS ${p}restr_hijo`,
+          `DROP TABLE IF EXISTS ${p}restr_padre`,
+          `CREATE TABLE ${p}restr_padre (id int PRIMARY KEY)`,
+          `CREATE TABLE ${p}restr_hijo (id int PRIMARY KEY, padre_id int, n int,
+             CONSTRAINT fk_restr_padre FOREIGN KEY (padre_id) REFERENCES ${p}restr_padre (id),
+             CONSTRAINT ck_restr_n CHECK (n > 0))`,
+        ],
+        null,
+      );
+      const details = await manager.tableDetails(
+        id,
+        { database: table.database, schema: table.schema, name: 'restr_hijo' },
+        'table',
+      );
+      const fk = details.constraints.find((k) => k.type === 'foreignKey');
+      expect(fk?.columns).toEqual(['padre_id']);
+      expect(fk?.definition).toMatch(/restr_padre/);
+      // SQLite no informa las CHECK por separado (se ven en el DDL).
+      if (c.engine !== 'sqlite') {
+        const check = details.constraints.find((k) => k.type === 'check');
+        expect(check?.name.toLowerCase()).toBe('ck_restr_n');
+        expect(check?.definition).toMatch(/n.*>.*0/);
+      }
+      await exec([`DROP TABLE ${p}restr_hijo`, `DROP TABLE ${p}restr_padre`], null);
     });
 
     /** Filas de `clientes` vistas desde otra sesión (lo confirmado). */
@@ -237,6 +270,26 @@ describe.each(cases)('$label', (c: EngineCase) => {
       expect(of(queryId, 'statement-error').map((e) => e.message)).toEqual([]);
       return summary;
     }
+
+    it.runIf(c.engine === 'mariadb')('respeta el tiempo límite de consulta de la conexión', async () => {
+      // MariaDB usa `max_statement_time`; MySQL, `max_execution_time` (en ms, solo SELECT).
+      const limited = { ...c.config, id: `${id}-limite`, queryTimeoutSec: 1 };
+      await manager.connect(limited, c.password);
+      try {
+        const summary = await manager.execute({
+          queryId: `${id}-limite`,
+          sessionId: `tab-${id}-limite`,
+          connectionId: limited.id,
+          database: table.database,
+          statements: ['SELECT SLEEP(3)'],
+          maxRows: 500,
+        });
+        // Cortada por el límite: con error o, en MySQL, con SLEEP devolviendo 1 antes de tiempo.
+        expect(summary.durationMs).toBeLessThan(2500);
+      } finally {
+        await manager.disconnect(limited.id);
+      }
+    });
 
     it.runIf(c.writable)('modo manual: Rollback descarta y Commit confirma', async () => {
       const t = quoted(c, table);
@@ -377,6 +430,12 @@ describe.each(cases)('$label', (c: EngineCase) => {
       const joinSql = `SELECT plan_clientes.nombre, sum(plan_pedidos.total) AS total
         FROM ${p}plan_pedidos JOIN ${p}plan_clientes ON plan_clientes.id = plan_pedidos.cliente_id
         WHERE plan_pedidos.total > 10 GROUP BY plan_clientes.nombre`;
+      // MySQL no mide UPDATE/DELETE de una sola tabla (solo de varias): se usa un DELETE con JOIN.
+      const isMySql = c.label === 'MySQL';
+      const deleteUpTo = (max: number): string =>
+        isMySql
+          ? `DELETE plan_pedidos FROM plan_pedidos JOIN plan_clientes ON plan_clientes.id = plan_pedidos.cliente_id WHERE plan_pedidos.id <= ${max}`
+          : `DELETE FROM ${p}plan_pedidos WHERE id <= ${max}`;
 
       beforeAll(async () => {
         await exec(c.plan.setup, null);
@@ -428,7 +487,7 @@ describe.each(cases)('$label', (c: EngineCase) => {
       });
 
       it('explicar y ejecutar un DELETE muestra filas reales y la tabla conserva sus filas', async () => {
-        const { plan, error, summary } = await explain(`DELETE FROM ${p}plan_pedidos WHERE id <= 500`, true, {
+        const { plan, error, summary } = await explain(deleteUpTo(500), true, {
           write: true,
         });
         if (c.engine === 'sqlite') {
@@ -444,10 +503,33 @@ describe.each(cases)('$label', (c: EngineCase) => {
       });
 
       it.runIf(c.engine !== 'sqlite')(
+        'explicar y ejecutar un JOIN muestra filas y tiempos reales',
+        async () => {
+          const { plan, error } = await explain(joinSql, true);
+          expect(error?.message).toBeUndefined();
+          expect(plan!.analyzed).toBe(true);
+          const nodes = [...walkPlan(plan!.roots)];
+          expect(nodes.some((node) => (node.actualRows ?? 0) >= 19_000)).toBe(true);
+          expect(nodes.some((node) => node.actualTimeMs !== undefined)).toBe(true);
+        },
+      );
+
+      it.runIf(isMySql)('MySQL: un DELETE de una tabla se explica en JSON y no se puede medir', async () => {
+        const estimated = await explain(`DELETE FROM plan_pedidos WHERE id <= 500`, false);
+        expect(estimated.error?.message).toBeUndefined();
+        expect(estimated.plan!.rawLanguage).toBe('json');
+        const nodes = [...walkPlan(estimated.plan!.roots)];
+        expect(nodes.find((node) => node.object === 'plan_pedidos')?.estimatedRows).toBe(500);
+        const analyzed = await explain(`DELETE FROM plan_pedidos WHERE id <= 500`, true, { write: true });
+        expect(analyzed.error?.message).toMatch(/MySQL no puede medir esta sentencia/);
+        expect(await pedidos()).toBe(20_000);
+      });
+
+      it.runIf(c.engine !== 'sqlite')(
         'en modo manual mide dentro de un punto de guardado y la transacción sigue abierta',
         async () => {
           await execManual([`DELETE FROM ${p}plan_pedidos WHERE id = 20000`]);
-          const { error } = await explain(`DELETE FROM ${p}plan_pedidos WHERE id <= 100`, true, {
+          const { error } = await explain(deleteUpTo(100), true, {
             write: true,
             autoCommit: false,
           });
