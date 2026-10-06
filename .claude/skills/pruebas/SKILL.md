@@ -9,7 +9,7 @@ description: Cómo correr y escribir las pruebas de DB Explorer (unitarias, inte
 | Qué | Comando | Notas |
 |---|---|---|
 | Unitarias | `npx vitest run` | `test/unit`, sin servidores. |
-| Integración | `npx vitest run --config vitest.integration.config.ts` | `globalSetup` levanta un PostgreSQL local temporal; MariaDB y SQL Server según `test/integration/.env`. Un motor sin servidor se salta con el motivo. |
+| Integración | `npx vitest run --config vitest.integration.config.ts` | `globalSetup` levanta un PostgreSQL local temporal; MariaDB, MySQL y SQL Server según `test/integration/.env`. Un motor sin servidor se salta con el motivo. |
 | e2e | `npm run test:e2e` (build + Playwright) o, con el build ya hecho, `npx playwright test [archivo]` | Lanza el build de `out/` con un `userData` temporal. **Rehacer el build** (`npx electron-vite build`) después de cambiar código: Playwright no recompila. |
 | Lint y tipos | `npm run lint` | ESLint + los cuatro `tsc`. |
 | Formato | `npx prettier --check src test` | `test/unit/fixtures/` está excluido a propósito. |
@@ -20,6 +20,7 @@ Una corrida e2e completa sana tarda ~1,2 min con un solo worker.
 Credenciales solo en `test/integration/.env` (ignorado; plantilla en `.env.example`). Nunca escribirlas en commits, skills ni logs.
 - **PostgreSQL**: clúster temporal local creado por `test/integration/pg-server.ts` (o Docker). Libre.
 - **MariaDB local** (instalada por el usuario en su equipo, servicio `MariaDB`, usuario root): se puede escribir **solo en la base `dbx_test`**.
+- **MySQL local** (instalado por el usuario en su equipo, puerto 3307, usuario root): se puede escribir **solo en la base `dbx_test`**. Variables `MYSQL_*` en `.env`; sin servidor, `docker compose` levanta MySQL 8.4 en el 53307.
 - **MariaDB/MySQL de desarrollo en RDS**: **solo lectura**. Prohibido `UPDATE`, `DELETE`, `CREATE` o cualquier sentencia que cambie datos o estructura; si hiciera falta, pedírselo al usuario. Con `MARIADB_READONLY=1` la suite salta las pruebas que escriben. Normalmente no responde desde el equipo de desarrollo y queda comentado en `.env`.
 - **SQL Server** de la empresa (2019 Developer): escribir **solo en la base `dbx_test`**, creada para las pruebas (con `ALLOW_SNAPSHOT_ISOLATION` activado para leer desde otra sesión sin bloquearse). Nunca tocar las bases existentes (son de SAP Business One).
 - Antes de cualquier escritura en un servidor remoto, verificar el destino.
@@ -34,7 +35,7 @@ Credenciales solo en `test/integration/.env` (ignorado; plantilla en `.env.examp
 ## Fixtures de planes de ejecución
 - `test/unit/fixtures/plans/` guarda planes **reales** tal como los devolvió cada motor (no formatear). Para capturar nuevos: una prueba temporal de integración que ejecute el `EXPLAIN` del motor con `manager.execute` y escriba la primera celda a un archivo; borrarla después (no se commitea).
 - SQL Server: `SET SHOWPLAN_XML ON` / `SET STATISTICS XML ON` deben ir en su propio lote (sentencias separadas).
-- MySQL 8 no tiene servidor de pruebas: sus fixtures están escritos según el formato documentado.
+- Los fixtures de MySQL (`mysql-*`) son planes reales de MySQL 26.7.
 
 ## e2e (Playwright + Electron): intermitencias conocidas
 - **Apps de prueba que quedan vivas**: si varias pruebas que antes pasaban empiezan a fallar y la corrida tarda más (~1,7 min), buscar `electron.exe` sueltos de corridas anteriores (PowerShell: `Get-CimInstance Win32_Process -Filter "Name='electron.exe'"`) y terminarlos con `taskkill /PID <pid> /T /F`. En Windows `app.process().kill()` no siempre cierra la app (por ejemplo, si pregunta por cambios sin guardar). Un `afterAll` que pueda dejar la app con cambios debe terminar el árbol con `taskkill /T` (ver `data.spec.ts`).

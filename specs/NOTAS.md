@@ -264,7 +264,7 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 - SQLite: no se muestran las bases adjuntas (`ATTACH`).
 
 ### Pendientes / avisos
-- MySQL (no MariaDB) no se ha probado: el driver distingue ambos (secuencias, tiempo límite), pero solo hay un servidor MariaDB disponible.
+- ~~MySQL (no MariaDB) no se ha probado: el driver distingue ambos (secuencias, tiempo límite), pero solo hay un servidor MariaDB disponible.~~ Resuelto el 2026-10-06 (ver §MySQL).
 
 ## Ajuste solicitado (2026-10-01): selectores de la barra del editor
 
@@ -418,18 +418,27 @@ Marcados ✅ los verificados por pruebas automáticas; el resto conviene probarl
 - **Pruebas e2e más estables**: la edición en grilla de `data.spec.ts` repite la edición si el editor de Glide confirmó el valor anterior (pasa con la máquina cargada, no a velocidad humana; la grilla expone `data-undo-depth`), y su `afterAll` termina el árbol de procesos en Windows: una app que quedaba viva tras un fallo cargaba la máquina y hacía fallar otras pruebas. Tres corridas completas seguidas en verde.
 
 ### Pendientes / avisos
-- **MySQL 8 sin servidor de pruebas**: el parser del árbol de texto (`EXPLAIN FORMAT=TREE` / `EXPLAIN ANALYZE`) se probó con fixtures escritos según el formato documentado, no con planes capturados de un servidor real.
+- ~~**MySQL 8 sin servidor de pruebas**: el parser del árbol de texto se probó con fixtures escritos según el formato documentado.~~ Resuelto el 2026-10-06 con planes reales (ver §MySQL).
 - Los anchos de columna de la pestaña Plan no se recuerdan entre planes; si no entran todas, las últimas quedan recortadas (sin desplazamiento horizontal).
 - SQL Server: los planes con cientos de nodos se virtualizan, pero solo se probaron planes reales pequeños.
 
-## MySQL — por completar (2026-10-05)
+## MySQL (2026-10-06)
 
-Decisión del usuario: **MySQL queda fuera del alcance por ahora**; se completará en un futuro próximo. MariaDB sigue soportado y probado. No se borró nada: el driver de MariaDB detecta MySQL al conectar (`VERSION()` sin "MariaDB") y tiene ramas propias, todas marcadas en el código con `POR COMPLETAR`.
+El 2026-10-05 MySQL quedó "por completar" por no tener servidor de pruebas. El 2026-10-06 el usuario instaló MySQL 26.7 en su equipo y se completaron las pruebas: MySQL vuelve al alcance (specs/01).
 
-Lo que está a medias:
-- **Plan de ejecución** (`drivers/mariadb/plan.ts`, `parseMySqlTreePlan`, y la rama de `MariaDbSession.explain`): `EXPLAIN FORMAT=TREE` / `EXPLAIN ANALYZE`. Probado solo con fixtures escritos según el formato documentado (`test/unit/fixtures/plans/mysql-*.txt`), no con planes de un servidor real. Falta: capturar planes reales y verificar *Explicar y ejecutar* de UPDATE/DELETE (MySQL 8 solo admite `EXPLAIN ANALYZE` de algunas escrituras).
-- **Tiempo límite de consulta**: `SET SESSION max_execution_time` (solo limita `SELECT`); sin probar.
-- **Restricciones CHECK** (`information_schema.check_constraints`, MySQL 8.0.16+): sin verificar.
-- **Secuencias**: se desactivan al detectar MySQL; sin probar.
-- **Interfaz**: la tarjeta del diálogo de conexión sigue diciendo "MariaDB / MySQL" y el resaltado usa el lenguaje `mysql` de Monaco (sirve para ambos).
-- **Pruebas**: no hay servidor MySQL de pruebas. Para completarlo: agregar un `EngineCase` de MySQL en `test/integration/engines.ts` (Docker con `mysql:8`) y correr la suite común.
+### Qué se probó
+- **Suite común de integración** completa con un caso MySQL (mismo driver que MariaDB, detectado al conectar): conexión, árbol, tipos sin pérdida, límite y "Cargar más", errores con posición, cancelar, mensajes, varios resultados, DML, estructura, modo manual, guardado de ediciones, exportación y plan de ejecución.
+- **Nuevas pruebas para todos los motores**: claves foráneas y CHECK en `tableDetails` (en SQLite solo la foránea), tiempo límite de consulta de la conexión (MariaDB y MySQL) y *Explicar y ejecutar* de un JOIN con filas y tiempos reales.
+- **e2e por motor** (`engines.spec.ts`) con MySQL: conectar, script con varios resultados, error en su línea y cancelar.
+- Los fixtures del plan de MySQL ahora son planes reales capturados del servidor (antes, escritos según la documentación).
+
+### Corregido y decisiones
+- **Plan de `UPDATE`/`DELETE` de una tabla en MySQL**: el formato de árbol (y `EXPLAIN ANALYZE`) responde `<not executable by iterator executor>`. El plan estimado se pide entonces con `EXPLAIN FORMAT=JSON` en la versión 1 del formato (con `query_block`; desde MySQL 8.3 la predeterminada puede ser la 2, que tampoco describe esas sentencias), restaurando la versión de la sesión. *Explicar y ejecutar* informa "MySQL no puede medir esta sentencia…": MySQL solo mide consultas y `UPDATE`/`DELETE` de varias tablas. El parser JSON de MariaDB interpreta también el de MySQL (`rows_examined_per_scan`, `cost_info`).
+- **Literales enteros**: MySQL declara `BIGINT` los enteros de `SELECT 1`, `count(*)` o un CTE recursivo, y el driver deja los `BIGINT` como texto (sin pérdida). Se mantiene: en la grilla se ven igual (tipo lógico entero). El ancho declarado no sirve para decidir (un CTE recursivo informa ancho 2 aunque sus valores crezcan).
+- **CTE recursivos**: MySQL los corta en 1000 niveles (`cte_max_recursion_depth`); las pruebas suben el límite con la pista `SET_VAR`.
+- La status bar muestra "SQL (MariaDB/MySQL)" para ambos.
+- `test/integration/docker-compose.yml` incluye MySQL 8.4 para equipos sin MySQL instalado.
+- Corregido de paso en `engines.spec.ts`: la regex de los nombres de captura había perdido su barra invertida (`/W+/` en lugar de `/\W+/`).
+
+### Pendientes / avisos
+- MySQL de versiones anteriores a 8.0.16 no informa CHECK; anteriores a 8.0.18 no tienen `EXPLAIN ANALYZE` (no se probaron).

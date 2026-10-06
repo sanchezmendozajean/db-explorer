@@ -85,7 +85,7 @@ interface ResultSink {
 - `decimalNumbers: false`, `dateStrings: true`, `supportBigNumbers: true`, `bigNumberStrings: true`; `typeCast`: enteros de hasta 32 bits como número, `BIT(1)` como booleano, binarios como `0x…`, el resto como texto crudo.
 - Avisos del servidor: cuando una respuesta OK informa avisos se lee `SHOW WARNINGS` y se muestran en Mensajes (`mysql2` no informa la cantidad de avisos de un `SELECT`).
 - Tiempo límite de consulta: `max_statement_time` (MariaDB) o `max_execution_time` (MySQL, solo `SELECT`).
-- MySQL queda **por completar** (fuera del alcance por ahora): el driver tiene ramas para MySQL que no se probaron contra un servidor (ver `NOTAS.md` §MySQL).
+- MySQL usa el mismo driver; se detecta al conectar (`VERSION()` sin "MariaDB"). Diferencias: sin secuencias, `max_execution_time`, y los literales enteros llegan como `BIGINT` (texto, como todo BIGINT). Ver `NOTAS.md` §MySQL.
 
 ### SQLite — `node:sqlite` (D14, ver `NOTAS.md`, M4)
 - "Conexión" = ruta a archivo (+ opción "solo lectura" y "crear si no existe").

@@ -21,14 +21,16 @@ Arquitectura en `specs/02` y `specs/03`; decisiones por hito en `specs/NOTAS.md`
 - Planes: `EXPLAIN (FORMAT JSON, VERBOSE[, ANALYZE, BUFFERS])`. `Plan Rows` es por bucle y **después** del filtro; para "filas leídas" usar `pg_class.reltuples` (−1 si nunca se analizó). PG 18 devuelve `Actual Rows` con decimales.
 
 ## MariaDB / MySQL (`mysql2`)
-- **MySQL está por completar** (fuera del alcance por ahora, decisión del usuario): las ramas de MySQL del driver están marcadas con `POR COMPLETAR` y listadas en `specs/NOTAS.md` §MySQL. No invertir en MySQL sin que el usuario lo pida.
+- MySQL usa el mismo driver (motor `mariadb`); se detecta con `VERSION()` al conectar. Probado con MySQL 26.7 (numeración nueva de versiones).
+- MySQL declara `BIGINT` los literales enteros (`SELECT 1`, `count(*)`, CTE recursivos) y los BIGINT llegan como texto: no convertirlos según el ancho declarado (un CTE recursivo informa ancho 2 aunque sus valores crezcan).
+- MySQL corta los CTE recursivos en 1000 niveles (`cte_max_recursion_depth`): pista `/*+ SET_VAR(cte_max_recursion_depth = N) */` tras el SELECT principal, o `SET SESSION`.
 - El mismo driver sirve a ambos; `isMariaDb` se detecta con `VERSION()` al conectar (secuencias, `max_statement_time` vs `max_execution_time`, formato de plan).
 - Las filas se leen en flujo; al llegar al límite se pausa el socket y la consulta queda como cursor (las filas del bloque ya recibido van a `overflow`). Mientras el cursor está abierto la conexión está ocupada.
 - Avisos: `mysql2` solo informa su cantidad en respuestas OK, no en SELECT.
 - Cancelar: `KILL QUERY <thread>` desde la conexión de metadatos. `KILL QUERY` sobre `SLEEP()` no da error (devuelve 1): informar igual como cancelada.
 - `affectedRows` cuenta filas **encontradas** (`mysql2` activa `FOUND_ROWS` por defecto): un UPDATE al mismo valor cuenta 1 (importante para "afecta exactamente una fila").
 - CTE recursivos cortados en silencio a 1000 iteraciones (`max_recursive_iterations`); usar `seq_1_to_N`.
-- Planes: MariaDB `EXPLAIN`/`ANALYZE FORMAT=JSON` (en `ANALYZE` el `r_total_time_ms` del `query_block` incluye todo, el de `filesort` es propio; los costos de tabla son propios). En el plan, `table_name` es el **alias** si la consulta lo usa. MySQL 8: `EXPLAIN FORMAT=TREE` / `EXPLAIN ANALYZE` (texto, costo acumulado, `actual time=a..b` por bucle).
+- Planes: MariaDB `EXPLAIN`/`ANALYZE FORMAT=JSON` (en `ANALYZE` el `r_total_time_ms` del `query_block` incluye todo, el de `filesort` es propio; los costos de tabla son propios). En el plan, `table_name` es el **alias** si la consulta lo usa. MySQL: `EXPLAIN FORMAT=TREE` / `EXPLAIN ANALYZE` (texto, costo acumulado, `actual time=a..b` por bucle). Con `UPDATE`/`DELETE` de una sola tabla ambos responden `<not executable by iterator executor>`: el estimado sale de `EXPLAIN FORMAT=JSON` con `explain_json_format_version = 1` (la versión 2, predeterminada desde 8.3, tampoco los describe) y el real no existe. En el JSON v1 las filas son `rows_examined_per_scan` y el costo propio `cost_info.read_cost + eval_cost` (`prefix_cost` acumula el orden del join).
 - Tablas MyISAM/Aria no se pueden revertir: antes de medir una escritura se consulta `information_schema.ENGINES.TRANSACTIONS`.
 
 ## SQLite (`node:sqlite`)
