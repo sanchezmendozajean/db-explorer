@@ -34,7 +34,7 @@ export const UiStateSchema = z.object({
     .catch({ visible: true, maximized: false }),
   layout: z
     .object({
-      /** Barra lateral | área de edición. */
+      /** Ya no se usa: el ancho de la barra lateral vive en settings.json (`workbench.sideBar.width`). */
       main: PanelLayoutSchema.nullable().catch(null),
       /** Editor / panel de resultados. */
       editor: PanelLayoutSchema.nullable().catch(null),

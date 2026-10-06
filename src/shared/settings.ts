@@ -36,6 +36,8 @@ export const ColumnFormatSchema = z
 export type ColumnFormat = z.infer<typeof ColumnFormatSchema>;
 
 export const SETTINGS_SCHEMA = {
+  /** Ancho en píxeles de la barra lateral; se guarda al soltar su borde. */
+  'workbench.sideBar.width': z.number().int().min(170).max(4000),
   'workspace.path': z.string().min(1).max(4096).nullable(),
   'files.autoSave': Bool,
   'files.autoSaveDelay': z.number().int().min(1000).max(60_000),
@@ -88,6 +90,7 @@ export type Settings = { [K in SettingKey]: z.infer<(typeof SETTINGS_SCHEMA)[K]>
 };
 
 export const DEFAULT_SETTINGS: Settings = {
+  'workbench.sideBar.width': 280,
   'workspace.path': null,
   'files.autoSave': true,
   'files.autoSaveDelay': 5000,

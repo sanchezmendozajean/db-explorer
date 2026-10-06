@@ -44,7 +44,7 @@ Esta spec **prevalece** sobre cualquier mención anterior a "carpeta abierta", "
 - Se escribe (atómicamente: temporal + renombrar) al cambiar pestañas, con un retraso de 1 s, y al cerrar el programa.
 - **Al abrir el programa**: se abre el espacio de `workspace.path`, se reabren sus pestañas en el mismo orden, la activa queda enfocada y cada editor recupera cursor y scroll. Las pestañas de objeto se restauran sin conectar; se conectan al enfocarlas.
 - Si un archivo de la lista ya no existe, se omite y se muestra un toast: "No se encontraron 2 archivos del espacio de trabajo" con acción "Ver detalles".
-- Los tamaños de paneles, el tema y la vista activa de la barra lateral son **globales** (en `userData/ui-state.json`), no por espacio.
+- Los tamaños de paneles, el tema y la vista activa de la barra lateral son **globales** (en `userData/ui-state.json`; el ancho de la barra lateral, en `settings.json` como `workbench.sideBar.width`), no por espacio.
 
 ## 4. Guardado automático
 Configurable en Preferencias › Archivos:

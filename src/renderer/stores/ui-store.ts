@@ -13,7 +13,6 @@ interface UiStore extends UiState {
   showView: (view: SideBarView, toggleIfActive?: boolean) => void;
   togglePanel: () => void;
   toggleMaximizePanel: () => void;
-  setMainLayout: (layout: PanelLayout) => void;
   setEditorLayout: (layout: PanelLayout) => void;
 }
 
@@ -52,8 +51,6 @@ export const useUiStore = create<UiStore>((set, get) => ({
     })),
 
   toggleMaximizePanel: () => set((s) => ({ panel: { visible: true, maximized: !s.panel.maximized } })),
-
-  setMainLayout: (layout) => set((s) => ({ layout: { ...s.layout, main: layout } })),
 
   setEditorLayout: (layout) => set((s) => ({ layout: { ...s.layout, editor: layout } })),
 }));

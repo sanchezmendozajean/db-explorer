@@ -86,7 +86,7 @@ Los scripts `.sql` **no** viven aquí: viven en el espacio de trabajo (ver `11`)
 | `secrets.bin` | Contraseñas cifradas con `safeStorage`, indexadas por id de conexión. |
 | `settings.json` | Preferencias del usuario, incluida la ruta del espacio de trabajo (`workspace.path`) y el guardado automático (editable en Monaco con esquema JSON y autocompletado). |
 | `keybindings.json` | Atajos personalizados (opcional, formato similar a VS Code). |
-| `ui-state.json` | Estado global de la UI: tamaños de paneles, vista activa de la side bar, carpetas recientes. |
+| `ui-state.json` | Estado global de la UI: tamaño del panel de resultados, vista activa de la side bar, carpetas recientes. El ancho de la barra lateral va en `settings.json` (`workbench.sideBar.width`). |
 | `workspaces/<hash>.json` | Estado de cada espacio de trabajo: pestañas, orden, pestaña activa, viewState, conexión por archivo (ver `11`). |
 | `history.sqlite` | Historial de consultas (texto, conexión, fecha, duración, filas, error y si fue un plan estimado o real). |
 

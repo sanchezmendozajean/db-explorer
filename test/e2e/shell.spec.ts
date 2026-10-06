@@ -1,10 +1,18 @@
 import { expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { launchApp, tempUserData } from './helpers';
 
 let app: ElectronApplication;
 let page: Page;
 const userData = tempUserData();
+
+function sideBarWidthSetting(): number | undefined {
+  const file = join(userData, 'settings.json');
+  if (!existsSync(file)) return undefined;
+  return (JSON.parse(readFileSync(file, 'utf8')) as Record<string, number>)['workbench.sideBar.width'];
+}
 
 test.describe.configure({ mode: 'serial' });
 
@@ -96,6 +104,9 @@ test('los tamaños de paneles y el tema se recuerdan al reiniciar', async () => 
   await page.mouse.up();
   const resized = (await sidebar.boundingBox())!.width;
   expect(resized).toBeGreaterThan(before + 80);
+  // Al soltar, el ancho queda en settings.json.
+  await expect.poll(sideBarWidthSetting).toBeGreaterThan(before + 80);
+  expect(Math.abs(sideBarWidthSetting()! - resized)).toBeLessThanOrEqual(2);
 
   await page.keyboard.press('Control+Shift+P');
   await page.getByTestId('quick-input').fill('>tema: claro');

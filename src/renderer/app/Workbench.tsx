@@ -1,14 +1,14 @@
-import { Group, Panel, Separator } from 'react-resizable-panels';
+import { useEffect } from 'react';
+import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels';
 import { ConnectionsView } from '../features/connections/ConnectionsView';
 import { FilesView } from '../features/files/FilesView';
 import { HistoryView } from '../features/history/HistoryView';
 import { EditorGroup } from '../features/editor/EditorGroup';
+import { useSettingsStore } from '../stores/settings-store';
 import { useUiStore } from '../stores/ui-store';
 import { ActivityBar } from './ActivityBar';
 import { StatusBar } from './StatusBar';
 import { TitleBar } from './TitleBar';
-
-const MAIN_IDS = ['sidebar', 'editor-area'];
 
 function SideBar(): React.JSX.Element {
   const view = useUiStore((s) => s.sideBar.view);
@@ -24,9 +24,15 @@ function SideBar(): React.JSX.Element {
 /** Distribución general (specs/04 §1). */
 export function Workbench(): React.JSX.Element {
   const sideBarVisible = useUiStore((s) => s.sideBar.visible);
-  const savedLayout = useUiStore((s) => s.layout.main);
-  const setMainLayout = useUiStore((s) => s.setMainLayout);
-  const fits = !!savedLayout && MAIN_IDS.every((id) => id in savedLayout);
+  const width = useSettingsStore((s) => s.settings['workbench.sideBar.width']);
+  const update = useSettingsStore((s) => s.update);
+  const sideBarRef = usePanelRef();
+
+  // Un ancho cambiado en settings.json se aplica sin reiniciar.
+  useEffect(() => {
+    const panel = sideBarRef.current;
+    if (panel && Math.abs(panel.getSize().inPixels - width) > 1) panel.resize(width);
+  }, [sideBarRef, width]);
 
   return (
     <div className="workbench">
@@ -38,12 +44,18 @@ export function Workbench(): React.JSX.Element {
             id="main-split"
             orientation="horizontal"
             className="split"
-            defaultLayout={fits ? savedLayout : undefined}
-            onLayoutChanged={(layout) => setMainLayout(layout)}
+            onLayoutChanged={(_layout, meta) => {
+              // Al soltar el borde (o moverlo con el teclado) se guarda el ancho en settings.json.
+              const size = sideBarRef.current?.getSize().inPixels;
+              if (!meta.isUserInteraction || size === undefined) return;
+              const px = Math.max(170, Math.round(size));
+              if (px !== width) void update('workbench.sideBar.width', px);
+            }}
           >
             <Panel
               id="sidebar"
-              defaultSize={280}
+              panelRef={sideBarRef}
+              defaultSize={width}
               minSize={170}
               maxSize="60%"
               groupResizeBehavior="preserve-pixel-size"
