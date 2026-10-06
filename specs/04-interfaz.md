@@ -114,7 +114,7 @@ Título "CONEXIONES" a la izquierda. Acciones a la derecha (visibles siempre, 16
 `codicon-add` Nueva conexión · `codicon-new-folder` Nueva carpeta · `codicon-refresh` Refrescar · `codicon-collapse-all` Colapsar todo · `codicon-ellipsis` Más (filtrar por entorno, mostrar objetos del sistema).
 
 ### Filtro
-Input de 24 px bajo la cabecera, placeholder "Filtrar (tablas, vistas…)", icono `codicon-filter`. Filtra nodos ya cargados y resalta coincidencias en `accent`. `Esc` limpia.
+Input de 24 px bajo la cabecera, placeholder "Filtrar (tablas, vistas…)", icono `codicon-filter`. Filtra por nombre solo los objetos ya cargados (tablas, vistas, funciones, procedimientos, secuencias…); carpetas y conexiones siempre se muestran, y bases, esquemas y carpetas de objetos quedan si contienen coincidencias o aún no se cargaron. Un objeto que coincide conserva sus columnas e índices. Resalta coincidencias en `accent`. `Esc` limpia.
 
 ### Árbol
 Indentación 8 px por nivel + chevron (`codicon-chevron-right/down`). Guías de indentación verticales de 1 px en `border` visibles al hover del árbol (como VS Code).

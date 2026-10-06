@@ -486,3 +486,7 @@ El 2026-10-05 MySQL quedó "por completar" por no tener servidor de pruebas. El 
 - Los ejecutables no están firmados: SmartScreen puede advertir al abrirlos la primera vez.
 - No se probó en una máquina Windows limpia ni el arranque en frío tras reiniciar.
 - El JSON de `format.json: pretty` no cambia la celda (siempre en una línea); por eso no está en Preferencias.
+
+## Ajustes tras M9
+
+- **Filtro del explorador** (pedido del usuario): filtraba cualquier nodo, incluidas conexiones y columnas, y con un texto sin coincidencias ocultaba todas las conexiones. Ahora solo compara el nombre de los objetos (tablas, vistas, funciones, procedimientos, secuencias…). Carpetas y conexiones siempre quedan; bases, esquemas y carpetas de objetos, si contienen coincidencias o aún no se cargaron (para poder expandirlos). Un objeto que coincide conserva sus columnas e índices. Actualizado en `04` §Filtro.

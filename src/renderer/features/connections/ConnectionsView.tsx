@@ -95,16 +95,30 @@ function nodeLabel(node: UiNode): string {
   return metaLabel(node.data);
 }
 
-/** Poda el árbol dejando coincidencias y sus ancestros (que quedan expandidos). */
-function filterNodes(nodes: UiNode[], query: string, forced: Set<string>): UiNode[] {
+/**
+ * Filtra solo los objetos (tablas, vistas, rutinas, secuencias…) por nombre.
+ * Carpetas y conexiones siempre se muestran; bases, esquemas y carpetas de
+ * objetos quedan si tienen coincidencias o si aún no se cargaron. Los
+ * ancestros de una coincidencia quedan expandidos; el objeto conserva sus hijos.
+ */
+function filterNodes(
+  nodes: UiNode[],
+  query: string,
+  forced: Set<string>,
+  isLoaded: (id: string) => boolean,
+): UiNode[] {
   const q = query.toLowerCase();
   const out: UiNode[] = [];
   for (const node of nodes) {
-    const children = filterNodes(node.children, query, forced);
+    if (node.type === 'meta' && node.data.ref.kind === 'object') {
+      if (nodeLabel(node).toLowerCase().includes(q)) out.push(node);
+      continue;
+    }
+    const children = filterNodes(node.children, query, forced, isLoaded);
     if (children.length > 0) {
       forced.add(node.id);
       out.push({ ...node, children });
-    } else if (nodeLabel(node).toLowerCase().includes(q)) {
+    } else if (node.type !== 'meta' || !isLoaded(node.id)) {
       out.push({ ...node, children: [] });
     }
   }
@@ -158,7 +172,7 @@ export function ConnectionsView(): React.JSX.Element {
 
   const rows = useMemo(() => {
     const forced = new Set<string>();
-    const nodes = query ? filterNodes(tree, query, forced) : tree;
+    const nodes = query ? filterNodes(tree, query, forced, (id) => id in children) : tree;
     const out: Row[] = [];
     const walk = (list: UiNode[], depth: number): void => {
       for (const node of list) {
@@ -175,7 +189,7 @@ export function ConnectionsView(): React.JSX.Element {
     };
     walk(nodes, 0);
     return out;
-  }, [tree, query, expanded, loading, status]);
+  }, [tree, query, expanded, loading, status, children]);
 
   // Carga perezosa: todo nodo expandido de una conexión abierta carga sus hijos si aún no los tiene.
   useEffect(() => {

@@ -81,12 +81,20 @@ test('conecta y navega bases → esquemas → tablas → columnas', async () => 
   await expect(node(/^Índices/)).toContainText('(2)');
 });
 
-test('el filtro muestra coincidencias con sus ancestros', async () => {
-  await page.getByPlaceholder('Filtrar (tablas, vistas…)').fill('Importe');
-  await expect(node(/ImporteLimite/)).toBeVisible();
-  await expect(node(/^Nombre/)).toHaveCount(0);
+test('el filtro solo se aplica a los objetos y deja ver sus ancestros', async () => {
+  const filter = page.getByPlaceholder('Filtrar (tablas, vistas…)');
+  await filter.fill('client');
+  await expect(node(/^clientes/)).toBeVisible();
+  await expect(node(/CRendiciones_Conf_Generales/)).toHaveCount(0);
   await expect(node(/PG Pruebas/)).toBeVisible();
-  await page.getByPlaceholder('Filtrar (tablas, vistas…)').press('Escape');
+  // Una tabla que coincide conserva sus columnas.
+  await filter.fill('conf');
+  await expect(node(/^Nombre/)).toBeVisible();
+  // Las conexiones no se filtran por su nombre ni desaparecen.
+  await filter.fill('PG Pruebas');
+  await expect(node(/PG Pruebas/)).toBeVisible();
+  await expect(node(/CRendiciones_Conf_Generales/)).toHaveCount(0);
+  await filter.press('Escape');
   await expect(node(/^Nombre/)).toBeVisible();
 });
 
