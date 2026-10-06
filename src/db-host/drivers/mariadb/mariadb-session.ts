@@ -10,6 +10,9 @@ import { toMariaDbError } from './errors';
 import { createTypeCast, describeFields, toCell } from './mariadb-types';
 import { parseMariaDbPlan, parseMySqlTreePlan, planTables } from './plan';
 
+/** Respuesta de MySQL cuando el formato de árbol no admite la sentencia. */
+const NOT_ITERATOR = /not executable by iterator executor/i;
+
 interface Waiter {
   resolve: (truncated: boolean) => void;
   reject: (err: Error) => void;
@@ -269,12 +272,13 @@ export class MariaDbSession implements DbSession {
   }
 
   /**
-   * MariaDB: `EXPLAIN|ANALYZE FORMAT=JSON`; MySQL 8: `EXPLAIN FORMAT=TREE` o
+   * MariaDB: `EXPLAIN|ANALYZE FORMAT=JSON`; MySQL 8+: `EXPLAIN FORMAT=TREE` o
    * `EXPLAIN ANALYZE`. Una escritura medida sobre tablas que no admiten
    * transacciones (MyISAM, Aria) no se ejecuta: no se podría revertir.
    *
-   * POR COMPLETAR (MySQL queda fuera del alcance por ahora; ver specs/NOTAS.md): la rama MySQL
-   * (formato de árbol) no se probó contra un servidor real.
+   * MySQL no admite el formato de árbol (ni `EXPLAIN ANALYZE`) en
+   * `UPDATE`/`DELETE` de una sola tabla: el plan estimado se pide entonces en
+   * JSON y el real no se puede obtener.
    */
   async explain(sql: string, options: ExplainOptions, sink: StatementSink): Promise<ExecutionPlan> {
     await this.closeCursor();
@@ -283,26 +287,59 @@ export class MariaDbSession implements DbSession {
     this.explaining = true;
     try {
       if (options.analyze && options.write) await this.requireTransactional(sql);
-      const prefix = this.isMariaDb
-        ? `${options.analyze ? 'ANALYZE' : 'EXPLAIN'} FORMAT=JSON `
-        : options.analyze
-          ? 'EXPLAIN ANALYZE '
-          : 'EXPLAIN FORMAT=TREE ';
-      const raw = await this.firstCell(prefix + sql, sql);
+      let plan: ExecutionPlan;
+      if (this.isMariaDb) {
+        const raw = await this.firstCell(
+          `${options.analyze ? 'ANALYZE' : 'EXPLAIN'} FORMAT=JSON ${sql}`,
+          sql,
+        );
+        plan = parseMariaDbPlan(raw, sql, options.analyze);
+      } else {
+        const tree = await this.firstCell(
+          `${options.analyze ? 'EXPLAIN ANALYZE' : 'EXPLAIN FORMAT=TREE'} ${sql}`,
+          sql,
+        );
+        if (!NOT_ITERATOR.test(tree)) plan = parseMySqlTreePlan(tree, sql, options.analyze);
+        else if (options.analyze) {
+          throw new DriverError(
+            'MySQL no puede medir esta sentencia: EXPLAIN ANALYZE solo admite consultas y UPDATE o DELETE de varias tablas. Usa Explicar plan.',
+            'unsupported',
+          );
+        } else plan = parseMariaDbPlan(await this.mysqlJsonPlan(sql), sql, false);
+      }
       if (this.cancelling) throw new DriverError('Consulta cancelada', 'cancelled');
       const warnings = await this.warningCount();
       if (warnings > 0) await this.showWarnings(sink);
-      return this.isMariaDb
-        ? parseMariaDbPlan(raw, sql, options.analyze)
-        : parseMySqlTreePlan(raw, sql, options.analyze);
+      return plan;
     } finally {
       this.explaining = false;
     }
   }
 
+  /**
+   * `EXPLAIN FORMAT=JSON` de MySQL en la versión 1 del formato (con
+   * `query_block`): desde MySQL 8.3 la predeterminada puede ser la 2, que no
+   * describe `UPDATE`/`DELETE` de una tabla. Se restaura la de la sesión.
+   */
+  private async mysqlJsonPlan(sql: string): Promise<string> {
+    const previous = await this.firstCell('SELECT @@explain_json_format_version', '').catch(() => null);
+    if (previous !== null) await this.simple('SET SESSION explain_json_format_version = 1');
+    try {
+      return await this.firstCell(`EXPLAIN FORMAT=JSON ${sql}`, sql);
+    } finally {
+      if (previous !== null) {
+        await this.simple(`SET SESSION explain_json_format_version = ${Number(previous) || 1}`).catch(
+          () => undefined,
+        );
+      }
+    }
+  }
+
   /** Bloquea la medición si alguna tabla de la sentencia no admite transacciones. */
   private async requireTransactional(sql: string): Promise<void> {
-    const plan = await this.firstCell(`EXPLAIN FORMAT=JSON ${sql}`, sql);
+    const plan = this.isMariaDb
+      ? await this.firstCell(`EXPLAIN FORMAT=JSON ${sql}`, sql)
+      : await this.mysqlJsonPlan(sql);
     // Nombres del plan (tablas de vistas incluidas) y palabras de la sentencia: comprobar de más es inofensivo.
     const words = sql.match(/[\p{L}_][\p{L}\p{N}_$]*/gu) ?? [];
     const names = [...new Set([...planTables(plan), ...words].map((w) => w.toLowerCase()))];

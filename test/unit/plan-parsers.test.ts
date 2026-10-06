@@ -130,7 +130,7 @@ describe('plan de MariaDB y MySQL', () => {
     expect(planTables(fixture('mariadb-join-estimated.json'))).toEqual(['p', 'c']);
   });
 
-  it('MySQL 8 (por completar: fixtures sin servidor real): árbol de texto estimado y real', () => {
+  it('MySQL: árbol de texto estimado y real', () => {
     const est = parseMySqlTreePlan(fixture('mysql-join-estimated.txt'), 'SELECT …', false);
     expect(est.rawLanguage).toBe('plaintext');
     expect(nodes(est).map((n) => n.operation)).toEqual([
@@ -143,20 +143,27 @@ describe('plan de MariaDB y MySQL', () => {
       'Single-row index lookup',
     ]);
     const scan = nodes(est).find((n) => n.object === 'p')!;
-    expect(scan.warnings).toEqual([{ kind: 'fullScan', rows: 19880 }]);
+    expect(scan.warnings).toEqual([{ kind: 'fullScan', rows: 19874 }]);
     expect(nodes(est).find((n) => n.object === '<temporary>')!.warnings).toEqual([]);
     expect(find(est, 'Single-row index lookup')).toMatchObject({
       object: 'c',
-      condition: 'using PRIMARY (id=p.cliente_id)',
+      condition: 'using PRIMARY (id = p.cliente_id)',
     });
     expect(find(est, 'Filter').condition).toBe('((p.total > 10.00) and (p.cliente_id is not null))');
 
     const real = parseMySqlTreePlan(fixture('mysql-join-analyzed.txt'), 'SELECT …', true);
     const lookup = find(real, 'Single-row index lookup');
     expect(lookup).toMatchObject({ actualRows: 19780, loops: 19780 });
-    expect(lookup.actualTimeMs).toBeCloseTo(0.000356 * 19780, 3);
+    expect(lookup.actualTimeMs).toBeCloseTo(0.00224 * 19780, 3);
     const loop = find(real, 'Nested loop inner join');
-    expect(loop.actualTimeMs).toBeCloseTo(14.3 - 5.68 - lookup.actualTimeMs!, 3);
+    expect(loop.actualTimeMs).toBeCloseTo(70 - 17.2 - lookup.actualTimeMs!, 3);
+  });
+
+  it('MySQL: el JSON (versión 1) de un DELETE de una tabla', () => {
+    const del = parseMariaDbPlan(fixture('mysql-delete-estimated.json'), 'DELETE …', false);
+    expect(nodes(del).map((n) => n.operation)).toEqual(['Query block #1', 'Index range scan']);
+    expect(find(del, 'Index range scan')).toMatchObject({ object: 'plan_pedidos', estimatedRows: 500 });
+    expect(find(del, 'Index range scan').condition).toContain('<= 500');
   });
 });
 

@@ -41,7 +41,24 @@ const LABELS: Record<string, string> = {
 };
 
 /** Objetos que son estadísticas del nodo, no operaciones hijas. */
-const STATS = new Set(['r_engine_stats', 'query_optimization']);
+const STATS = new Set(['r_engine_stats', 'query_optimization', 'cost_info']);
+
+/**
+ * Costo propio de una tabla: `cost` en MariaDB; en el JSON (versión 1) de
+ * MySQL, lectura + evaluación de `cost_info` (`prefix_cost` acumula el orden
+ * del join, no el subárbol).
+ */
+function tableCost(t: Json): number | undefined {
+  const own = num(t['cost']);
+  if (own !== undefined) return own;
+  const info = isObject(t['cost_info']) ? t['cost_info'] : undefined;
+  const read = num(info?.['read_cost']);
+  const evaluate = num(info?.['eval_cost']);
+  return read === undefined && evaluate === undefined ? undefined : (read ?? 0) + (evaluate ?? 0);
+}
+
+/** Filas que lee la tabla por bucle: `rows` en MariaDB, `rows_examined_per_scan` en MySQL. */
+const tableRows = (t: Json): number | undefined => num(t['rows']) ?? num(t['rows_examined_per_scan']);
 
 const ESTIMATED_KEYS = new Set(['rows', 'cost', 'filtered', 'loops', 'select_id']);
 
@@ -98,13 +115,13 @@ function tableNode(key: string, t: Json): DraftNode {
         : keyName
           ? `${keyName}${ref ? ` = ${ref}` : ''}`
           : undefined,
-    totalCost: num(t['cost']),
-    estimatedRows: num(t['rows']),
+    totalCost: tableCost(t),
+    estimatedRows: tableRows(t),
     actualRows: perLoop !== undefined ? perLoop * (loops ?? 1) : undefined,
     loops,
     selfTimeMs:
       tableTime !== undefined || otherTime !== undefined ? (tableTime ?? 0) + (otherTime ?? 0) : undefined,
-    fullScanRows: access === 'ALL' && name && !name.startsWith('<') ? num(t['rows']) : undefined,
+    fullScanRows: access === 'ALL' && name && !name.startsWith('<') ? tableRows(t) : undefined,
     properties: propertiesOf(t, new Set(['table_name'])),
     children: childrenOf(t),
   };
@@ -116,7 +133,9 @@ function nodeFor(key: string, value: Json): DraftNode {
   const node: DraftNode = {
     operation:
       key === 'query_block' ? `Query block #${String(value['select_id'] ?? '')}` : (LABELS[key] ?? key),
-    totalCost: num(value['cost']),
+    totalCost:
+      num(value['cost']) ??
+      (isObject(value['cost_info']) ? num(value['cost_info']['query_cost']) : undefined),
     loops: num(value['r_loops']),
     properties: propertiesOf(value, new Set()),
     children,
@@ -136,7 +155,11 @@ function nodeFor(key: string, value: Json): DraftNode {
   return node;
 }
 
-/** `EXPLAIN FORMAT=JSON` / `ANALYZE FORMAT=JSON` de MariaDB → modelo común. */
+/**
+ * `EXPLAIN FORMAT=JSON` / `ANALYZE FORMAT=JSON` de MariaDB → modelo común.
+ * También interpreta el JSON (versión 1) de MySQL, que se usa cuando el
+ * formato de árbol no admite la sentencia (`UPDATE`/`DELETE` de una tabla).
+ */
 export function parseMariaDbPlan(raw: string, statement: string, analyzed: boolean): ExecutionPlan {
   const doc = JSON.parse(raw) as Json;
   const block = isObject(doc['query_block']) ? doc['query_block'] : undefined;
@@ -190,9 +213,6 @@ function describeTreeLine(text: string): Pick<DraftNode, 'operation' | 'object' 
 
 /**
  * `EXPLAIN FORMAT=TREE` / `EXPLAIN ANALYZE` de MySQL 8 (texto en árbol) → modelo común.
- *
- * POR COMPLETAR (MySQL queda fuera del alcance por ahora; ver specs/NOTAS.md): probado solo con
- * fixtures escritos según el formato documentado, no con planes de un servidor real.
  */
 export function parseMySqlTreePlan(raw: string, statement: string, analyzed: boolean): ExecutionPlan {
   const roots: DraftNode[] = [];

@@ -14,7 +14,7 @@ import { useTransaction } from '../features/execution/transactions';
 
 const ENGINE_LANGUAGE: Record<string, string> = {
   postgres: 'SQL (PostgreSQL)',
-  mariadb: 'SQL (MariaDB)',
+  mariadb: 'SQL (MariaDB/MySQL)',
   sqlite: 'SQL (SQLite)',
   sqlserver: 'SQL (T-SQL)',
 };
