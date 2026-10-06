@@ -4,7 +4,7 @@ import type { ColumnFormat } from '@shared/settings';
 import { Button } from '../../components/Button';
 import { Checkbox, Select, TextInput } from '../../components/Inputs';
 import { es } from '../../i18n/es';
-import { useSettingsStore } from '../../stores/settings-store';
+import type { FormatSettings } from './format';
 import { formatCell, withColumnFormat } from './format';
 
 /**
@@ -16,6 +16,8 @@ import { formatCell, withColumnFormat } from './format';
 const t = es.results.format;
 
 interface Props {
+  /** Formato sobre el que se aplica el de la columna (global y de la conexión). */
+  base: FormatSettings;
   column: ResultColumn;
   /** Valor de ejemplo (la celda seleccionada). */
   sample: CellValue;
@@ -37,6 +39,7 @@ function opts<T extends string>(
 }
 
 export function ColumnFormatPopover({
+  base: settings,
   column,
   sample,
   initial,
@@ -47,7 +50,6 @@ export function ColumnFormatPopover({
   onApply,
   onClose,
 }: Props): React.JSX.Element {
-  const settings = useSettingsStore((s) => s.settings);
   const [draft, setDraft] = useState<ColumnFormat>(initial ?? {});
   const [remember, setRemember] = useState(remembered);
   const ref = useRef<HTMLDivElement>(null);

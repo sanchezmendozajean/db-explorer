@@ -6,8 +6,8 @@ import { z } from 'zod';
  * clave inválida no hace perder las demás. Las claves `editor.*` se pasan tal
  * cual a Monaco (specs/05).
  *
- * En M3 se usan las de archivos, resultados y formatos básicos; la UI de
- * Preferencias llega en M9 y la edición con esquema JSON en M6.
+ * La UI de Preferencias (specs/04 §15) edita las más comunes; el resto, en
+ * settings.json con esquema y autocompletado.
  */
 
 const Bool = z.boolean();
@@ -76,6 +76,8 @@ export const SETTINGS_SCHEMA = {
   'format.text.maxLength': z.number().int().min(10).max(1_000_000),
   /** Formatos recordados por columna: `conexión/base/esquema/tabla/columna` → formato. */
   'format.columns': z.record(z.string().max(4000), ColumnFormatSchema),
+  /** Formato por conexión (specs/06, nivel 2): id de conexión → claves que cambian sobre el global. */
+  'format.connections': z.record(z.string().max(64), ColumnFormatSchema),
 } as const;
 
 export type SettingKey = keyof typeof SETTINGS_SCHEMA;
@@ -120,6 +122,7 @@ export const DEFAULT_SETTINGS: Settings = {
   'format.json': 'compact',
   'format.text.maxLength': 500,
   'format.columns': {},
+  'format.connections': {},
   editor: {},
 };
 

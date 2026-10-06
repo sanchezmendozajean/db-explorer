@@ -31,6 +31,7 @@ import { SEPARATOR } from '../../components/menu-types';
 import { es } from '../../i18n/es';
 import { setting, useSettingsStore } from '../../stores/settings-store';
 import { useUiStore } from '../../stores/ui-store';
+import { useWorkbenchStore } from '../../stores/workbench-store';
 import type { CopySelection, CopySource } from './copy';
 import { selectionBounds, tsvField } from './copy';
 import type { RowRef } from './edit-state';
@@ -47,7 +48,7 @@ import {
 } from './grid-commands';
 import type { ResultSet } from './results-store';
 import { useResultsStore } from './results-store';
-import { formatCell, isNumericType, withColumnFormat } from './format';
+import { formatCell, isNumericType, withColumnFormat, withConnectionFormat } from './format';
 import type { FormatSettings } from './format';
 import { canvasMeasure, contentWidth, MIN_COLUMN_WIDTH } from './column-width';
 import { columnFormatKey, columnFormats, setColumnFormat } from './column-format';
@@ -175,7 +176,13 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
   { tabId, result, engine, onCopy, onCopyText, onViewValue, onSelectionStats },
   ref,
 ) {
-  const settings = useSettingsStore((s) => s.settings);
+  const globalSettings = useSettingsStore((s) => s.settings);
+  const connectionId = useWorkbenchStore((s) => s.tabs.find((t) => t.id === tabId)?.connectionId);
+  // Formato global con el de la conexión encima; el de cada columna se aplica después.
+  const settings = useMemo(
+    () => withConnectionFormat(globalSettings, connectionId),
+    [globalSettings, connectionId],
+  );
   const theme = useUiStore((s) => s.effectiveTheme);
   const updateView = useResultsStore((s) => s.updateView);
   const [selection, setSelection] = useState<GridSelection>(EMPTY_SELECTION);
@@ -679,6 +686,7 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
       )}
       {formatting && formattingColumn && (
         <ColumnFormatPopover
+          base={settings}
           column={formattingColumn}
           sample={focused ? (source.value(focused[1], focused[0]) ?? null) : null}
           initial={formats[formatting.column] as ColumnFormat | undefined}

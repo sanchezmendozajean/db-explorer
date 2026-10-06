@@ -303,3 +303,9 @@ export function withColumnFormat(s: FormatSettings, format: ColumnFormat | undef
   }
   return merged as FormatSettings;
 }
+
+/** Formato global con el de la conexión encima (specs/06, nivel 2). */
+export function withConnectionFormat(s: Settings, connectionId: string | undefined): Settings {
+  const format = connectionId ? s['format.connections'][connectionId] : undefined;
+  return format ? (withColumnFormat(s, format) as Settings) : s;
+}

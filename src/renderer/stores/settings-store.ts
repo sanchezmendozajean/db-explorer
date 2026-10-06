@@ -1,12 +1,17 @@
 import { create } from 'zustand';
 import type { SettingKey, Settings } from '@shared/settings';
 import { DEFAULT_SETTINGS } from '@shared/settings';
+import { withoutKey } from '@shared/records';
 
 interface SettingsStore {
   settings: Settings;
   hydrate: (settings: Settings) => void;
   /** Cambia una preferencia (se guarda en settings.json). Devuelve false si main la rechazó. */
   update: <K extends SettingKey>(key: K, value: Settings[K]) => Promise<boolean>;
+  /** Quita la clave de settings.json: vuelve al valor por defecto. */
+  reset: (key: SettingKey) => Promise<boolean>;
+  /** Cambia una opción de Monaco (`editor.<nombre>`); `undefined` la quita. */
+  updateEditor: (name: string, value: unknown) => Promise<boolean>;
 }
 
 /**
@@ -30,6 +35,22 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         ? { ...r.data, ...Object.fromEntries(inFlight) }
         : { ...previous, ...Object.fromEntries(inFlight) },
     });
+    return r.ok;
+  },
+  reset: async (key) => {
+    const previous = get().settings;
+    set({ settings: { ...previous, [key]: DEFAULT_SETTINGS[key] } });
+    const r = await window.api.settings.update({ key, value: undefined });
+    set({ settings: r.ok ? { ...r.data, ...Object.fromEntries(inFlight) } : previous });
+    return r.ok;
+  },
+  updateEditor: async (name, value) => {
+    const previous = get().settings;
+    const editor =
+      value === undefined ? withoutKey(previous.editor, name) : { ...previous.editor, [name]: value };
+    set({ settings: { ...previous, editor } });
+    const r = await window.api.settings.update({ key: `editor.${name}`, value });
+    set({ settings: r.ok ? { ...r.data, ...Object.fromEntries(inFlight) } : previous });
     return r.ok;
   },
 }));

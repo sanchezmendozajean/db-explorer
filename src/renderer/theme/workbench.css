@@ -952,6 +952,11 @@ kbd {
   outline: none;
 }
 
+.messages:focus-visible {
+  outline: 1px solid var(--border-focus);
+  outline-offset: -1px;
+}
+
 .message {
   display: flex;
   align-items: flex-start;
@@ -1204,6 +1209,126 @@ button.statusbar-item:hover {
 
 .pref-value {
   color: var(--fg);
+}
+
+.pref-search {
+  max-width: 760px;
+  margin-bottom: 12px;
+}
+
+.pref-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.pref-toc {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 150px;
+}
+
+.pref-toc-item {
+  height: 24px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: var(--fg-muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pref-toc-item:hover {
+  color: var(--fg);
+  background: var(--bg-hover);
+}
+
+.pref-groups {
+  flex: 1;
+  min-width: 0;
+}
+
+.pref-title {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Barra a la izquierda de un ajuste distinto del valor por defecto (como VS Code). */
+.pref-modified {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -10px;
+  width: 2px;
+  background: var(--accent);
+}
+
+.pref-reset {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.pref-reset:hover {
+  text-decoration: underline;
+}
+
+.pref-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pref-field > span {
+  color: var(--fg-muted);
+}
+
+.pref-pattern {
+  width: 200px;
+}
+
+.pref-preview {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--bg-input);
+}
+
+.pref-preview-label {
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
+.pref-preview code {
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+
+.pref-preview code + code::before {
+  content: '·';
+  margin-right: 6px;
+  color: var(--fg-muted);
+}
+
+.pref-note {
+  color: var(--fg-muted);
+  font-size: 12px;
+  font-style: italic;
 }
 
 /* Historial de consultas (specs/06) */
