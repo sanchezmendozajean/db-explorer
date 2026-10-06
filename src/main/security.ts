@@ -1,6 +1,6 @@
 import { app, session, shell } from 'electron';
-import { pathToFileURL } from 'node:url';
 import { join } from 'node:path';
+import { isFileUrlOf } from './file-url';
 
 /** URL del servidor de desarrollo de Vite (solo en `npm run dev`). */
 export const devServerUrl: string | undefined = app.isPackaged
@@ -22,7 +22,7 @@ export function isTrustedRendererUrl(url: string): boolean {
       return false;
     }
   }
-  return url.split(/[?#]/)[0] === pathToFileURL(rendererIndexPath).href;
+  return isFileUrlOf(url, rendererIndexPath);
 }
 
 /** Solo se permite abrir enlaces externos con esquema https. */
