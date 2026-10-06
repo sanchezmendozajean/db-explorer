@@ -173,14 +173,18 @@
 }
 
 .checkbox {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   cursor: pointer;
 }
 
+/* Oculto sobre su propia casilla (sin contenedor posicionado quedaba debajo de otro elemento). */
 .checkbox input {
   position: absolute;
+  top: 0;
+  left: 0;
   opacity: 0;
   width: 1px;
   height: 1px;
@@ -912,4 +916,10 @@ button.chip > span:not(.env-dot) {
 .compare-editor {
   height: min(60vh, 520px);
   border: 1px solid var(--border);
+}
+
+/* M9, accesibilidad: un árbol enfocado sin fila seleccionada también muestra el foco. */
+.tree:focus-visible:not(:has(.tree-row.is-selected)) {
+  outline: 1px solid var(--border-focus);
+  outline-offset: -1px;
 }

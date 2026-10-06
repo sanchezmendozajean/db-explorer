@@ -1,6 +1,8 @@
 /*
  * Tokens de color de specs/04 §2 (VS Code Dark Modern / Light Modern).
  * Los tokens marcados "(maqueta)" no están en la tabla de 04 y se tomaron de specs/maqueta.
+ * M9: fg-muted, fg-null, error, warning y border-focus se ajustaron lo mínimo para el contraste
+ * WCAG AA (texto 4,5:1, indicadores 3:1); lo verifica test/unit/contrast.test.ts.
  */
 :root,
 :root[data-theme='dark'] {
@@ -28,16 +30,16 @@
   --border: #2b2b2b;
   --border-input: #3c3c3c; /* (maqueta) */
   --border-menu: #454545; /* (maqueta) */
-  --border-focus: #0078d4;
+  --border-focus: #087cd5;
   --fg: #cccccc;
-  --fg-muted: #9d9d9d;
+  --fg-muted: #a4a4a4;
   --fg-disabled: #6e6e6e;
-  --fg-null: #6e6e6e;
+  --fg-null: #a1a1a1;
   --accent: #0078d4;
   --accent-fg: #ffffff;
   --accent-hover: #026ec1;
   --link: #3794ff; /* (maqueta) */
-  --error: #f85149;
+  --error: #f96b64;
   --warning: #cca700;
   --success: #2ea043;
   --icon-table: #75beff; /* (maqueta) */
@@ -87,15 +89,15 @@
   --border-menu: #cecece;
   --border-focus: #005fb8;
   --fg: #3b3b3b;
-  --fg-muted: #6e6e6e;
+  --fg-muted: #666666;
   --fg-disabled: #a0a0a0;
-  --fg-null: #a0a0a0;
+  --fg-null: #666666;
   --accent: #005fb8;
   --accent-fg: #ffffff;
   --accent-hover: #0258a8;
   --link: #005fb8;
-  --error: #e51400;
-  --warning: #bf8803;
+  --error: #dc1300;
+  --warning: #916702;
   --success: #388a34;
   --icon-table: #007acc;
   --icon-sql: #498ba7;

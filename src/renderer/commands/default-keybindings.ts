@@ -68,6 +68,8 @@ export const DEFAULT_KEYBINDINGS: readonly KeybindingRule[] = [
   { key: 'ctrl+shift+j', command: 'db.maximizePanel' },
   { key: 'ctrl+1', command: 'db.focusEditor' },
   { key: 'ctrl+2', command: 'db.focusPanel' },
+  { key: 'f6', command: 'db.focusNextPart' },
+  { key: 'shift+f6', command: 'db.focusPreviousPart' },
   { key: 'ctrl+shift+d', command: 'db.view.connections' },
   { key: 'ctrl+shift+e', command: 'db.view.files' },
   { key: 'ctrl+,', command: 'db.preferences' },

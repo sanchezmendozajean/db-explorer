@@ -66,6 +66,58 @@ function focusArea(selector: string): void {
   el?.focus();
 }
 
+const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), select, textarea, [tabindex="0"]';
+
+/**
+ * Partes del workbench que recorre F6 / Shift+F6 (como VS Code), en orden:
+ * activity bar, side bar, editor, panel de resultados y status bar. Cada una
+ * devuelve el elemento al que se lleva el foco, o `null` si no está visible.
+ */
+const PARTS: { container: string; target: () => HTMLElement | null }[] = [
+  {
+    container: '.activitybar',
+    target: () =>
+      document.querySelector<HTMLElement>('.activitybar-item.is-active') ??
+      document.querySelector<HTMLElement>('.activitybar-item'),
+  },
+  {
+    container: '.sidebar',
+    target: () =>
+      document.querySelector<HTMLElement>('.sidebar [data-focus-context]') ??
+      document.querySelector<HTMLElement>(`.sidebar :is(${FOCUSABLE})`),
+  },
+  {
+    container: '.editor-group',
+    target: () => document.querySelector<HTMLElement>('.editor-group [data-focus-context~="editorFocus"]'),
+  },
+  {
+    container: '[data-focus-context~="resultsFocus"]',
+    target: () => document.querySelector<HTMLElement>('[data-focus-context~="resultsFocus"]'),
+  },
+  {
+    container: '.statusbar',
+    target: () => document.querySelector<HTMLElement>(`.statusbar :is(${FOCUSABLE})`),
+  },
+];
+
+/** F6 / Shift+F6: lleva el foco a la parte siguiente o anterior que esté visible. */
+function focusPart(delta: 1 | -1): void {
+  const active = document.activeElement;
+  // El panel de resultados está dentro del área del editor: cuenta la parte más específica.
+  const current = PARTS.findLastIndex((p) => !!active?.closest(p.container));
+  const n = PARTS.length;
+  const start = current >= 0 ? current : delta > 0 ? n - 1 : 0;
+  for (let step = 1; step <= n; step++) {
+    const index = (start + delta * step + n * step) % n;
+    const target = PARTS[index]!.target();
+    if (!target) continue;
+    const editor = index === 2 ? activeEditor() : undefined;
+    if (editor) editor.focus();
+    else target.focus();
+    return;
+  }
+}
+
 /** Registra los comandos disponibles en el hito actual. */
 export function registerAppCommands(): () => void {
   const ui = useUiStore.getState;
@@ -133,6 +185,8 @@ export function registerAppCommands(): () => void {
         else focusArea('[data-focus-context~="editorFocus"]');
       },
     },
+    { id: 'db.focusNextPart', category: cat.view, run: () => focusPart(1) },
+    { id: 'db.focusPreviousPart', category: cat.view, run: () => focusPart(-1) },
     {
       id: 'db.focusPanel',
       category: cat.view,
