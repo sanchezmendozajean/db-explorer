@@ -27,7 +27,7 @@ interface ResultSetState {
 Principio: **un lugar, pocos ajustes, vista previa inmediata**. Tres niveles, del más general al más específico:
 
 1. **Global por tipo lógico** — en Preferencias › Formatos de datos.
-2. **Por conexión** — opcional, sobrescribe el global (p. ej. una BD en otra zona horaria).
+2. **Por conexión** — opcional, sobrescribe el global (p. ej. una BD en otra zona horaria). Se elige en Preferencias › Formatos de datos › "Aplicar a" y se guarda en `format.connections` (id de conexión → claves que cambian).
 3. **Por columna, en el resultado actual** — clic derecho › Formato de columna, sin salir de la grilla. Checkbox "Recordar para `tabla.columna`" guarda la regla.
 
 ### Ajustes globales (settings.json)

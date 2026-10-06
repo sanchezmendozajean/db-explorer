@@ -14,6 +14,11 @@ Complementa `CLAUDE.md` (que sigue siendo la fuente de las reglas). Aquí va lo 
 - `specs/NOTAS.md` lleva una sección por hito con: tabla de criterios, qué se construyó, decisiones y pendientes/avisos. Toda desviación de la spec o definición faltante se anota ahí (opción más simple). Si la spec describe un modelo o contrato que cambió, se actualiza también la spec (p. ej. `specs/02`, `specs/12 §3`).
 - No agregar funcionalidades fuera de `specs/01` sin preguntar. Arreglar bugs encontrados de paso sí, y anotarlos en NOTAS ("Corregido de paso").
 
+## Empaquetado
+- `npm run package` genera el instalador NSIS (por usuario) y el portable en `dist/`; `npm run package:dir`, solo `dist/win-unpacked`. Ícono: editar `resources/icon.svg` y correr `npm run icon`.
+- Las dependencias que necesitan main o el db-host en tiempo de ejecución van en `dependencies`; todo lo del renderer, en `devDependencies` (Vite lo empaqueta y así no entra en `app.asar`).
+- El nombre "DB Explorer" sigue provisional (D1): cambiarlo es tocar `productName`/`appId` en `electron-builder.yml` y los textos de `es.ts`.
+
 ## Commits
 - Identidad del repositorio: `sanchezmendozajean <jp.sanchez.6383@gmail.com>`, configurada en `.git/config` local. **Nunca** el correo corporativo del equipo y **nunca** cambiar la configuración global de git. Verificar con `git config user.email` antes de commitear en un equipo nuevo.
 - Mensajes en español, en imperativo, pequeños por tema (p. ej. db-host / renderer / pruebas / documentación por separado). Terminan con la línea de coautoría que indique el sistema.

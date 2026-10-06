@@ -442,3 +442,47 @@ El 2026-10-05 MySQL quedó "por completar" por no tener servidor de pruebas. El 
 
 ### Pendientes / avisos
 - MySQL de versiones anteriores a 8.0.16 no informa CHECK; anteriores a 8.0.18 no tienen `EXPLAIN ANALYZE` (no se probaron).
+
+## M9 — Pulido y empaquetado (2026-10-06)
+
+### Criterios de aceptación
+
+| Criterio | Estado |
+|---|---|
+| El instalador funciona en un Windows limpio sin Node instalado | ✅ con una salvedad: no hay una máquina limpia, así que se instaló en silencio (`/S /D=…`, por usuario) en este equipo y se recorrió la checklist sobre el programa instalado con un PATH solo de Windows (sin Node); desinstalación sin restos (carpeta, entrada de Windows y accesos directos). El portable pasa la misma checklist |
+| Arranque < 2 s | ✅ mediana de 0,66 s instalado y 0,75 s desde `dist/win-unpacked` (5 arranques, `npm run measure`), incluido el primer uso con `userData` nuevo. Excepción: la primera ejecución de un binario recién compilado tardó 3,5 s (el antivirus lo analiza y la caché de disco está vacía); no se pudo medir tras reiniciar el equipo |
+| Checklist e2e de flujo completo sobre el build empaquetado | ✅ `npm run test:packaged`: 10 pasos (arranque, PostgreSQL con árbol y script, plan, pestaña de objeto, SQLite, SQL Server, MariaDB y MySQL cargados desde `app.asar`, Archivos, Preferencias, cierre que guarda y reapertura que restaura). Pasa sobre `win-unpacked`, el programa instalado y el portable |
+| Pruebas | ✅ 210 unitarias, 124 de integración (5 servidores), 99 e2e y 10 sobre el empaquetado; lint, tipos y Prettier limpios |
+
+### Mediciones (Windows 11, este equipo)
+- **Arranque** hasta la interfaz pintada (marca `dbx-listo`): 0,66 s de mediana instalado (0,66–0,71 s); 0,72–0,80 s desde `win-unpacked`.
+- **Memoria en reposo** (10 s tras arrancar, sin pestañas): 477–489 MB de conjunto de trabajo y 275–282 MB privados entre los 5 procesos (main, renderer, GPU, red y db-host). Casi todo es la base de Chromium/Electron.
+- **Tamaños**: instalador y portable de ~116 MB (Electron es casi todo); `app.asar` de 34,5 MB. JavaScript del renderer minificado: 1,3 MB al arrancar y 4,1 MB de Monaco, que se carga al abrir el primer script.
+
+### Qué se construyó
+- **Preferencias** completas (specs/04 §15): buscador (sin tildes ni mayúsculas), índice lateral y los grupos Editor, Archivos, Resultados, Formatos de datos, Conexiones y Apariencia. Cada ajuste distinto del valor por defecto lleva una barra azul y "Restablecer". Los campos de texto y número guardan al confirmar (Enter o al salir), no en cada tecla.
+- **Formatos de datos** con vista previa en vivo por tipo y "Restablecer" por fila. **Formato por conexión** (nivel 2 de specs/06): "Aplicar a" elige una conexión; sus cambios se guardan en `format.connections` y la grilla los aplica entre el global y el de la columna (también el popover de formato de columna y "TSV con formato").
+- **Accesibilidad**: contraste AA de los tokens verificado con una prueba; F6 / Shift+F6 recorren las partes del workbench; foco visible en un árbol sin selección y en Mensajes.
+- **Empaquetado**: ícono propio (`resources/icon.svg` → `.ico` y `.png` con `npm run icon`), fuses, instalador NSIS por usuario con carpeta elegible y accesos directos, y versión portable.
+
+### Decisiones
+- **Nombre (D1)**: se mantiene "DB Explorer"; el usuario no eligió otro. Cambiarlo es tocar `productName`/`appId` en `electron-builder.yml` y los textos de `es.ts`.
+- **Fuses** (specs/08): RunAsNode, NODE_OPTIONS e inspector de Node desactivados; cifrado de cookies y carga solo desde `app.asar` activados. `GrantFileProtocolExtraPrivileges` queda como viene (el renderer y los workers de Monaco se cargan desde `file://`). No se activó la validación de integridad del asar (no la pide la spec).
+- **Dependencias**: solo las de main y del db-host quedan en `dependencies` (pg, pg-cursor, mysql2, tedious, zod, jsonc-parser, fast-xml-parser); las del renderer pasan a `devDependencies` porque Vite ya las empaqueta. Se excluyen del asar la variante de navegador de MSAL (que trae tedious para Azure AD), los mapas de código y los `.d.ts`.
+- **Electron del proyecto** (`electronDist: node_modules/electron/dist`): el empaquetado no descarga Electron ni lo extrae (la extracción fallaba con EPERM).
+- **Antivirus**: el Kaspersky del equipo bloquea que electron-builder lance PowerShell (para listar dependencias) cuando corre dentro de `npm run`; `scripts/electron-builder.mjs` lo lanza como proceso directo de Node y así no se bloquea.
+- **Pruebas sobre el empaquetado por CDP** (`--remote-debugging-port`): el lanzador de Electron de Playwright necesita el inspector de Node, que el fuse desactiva. Sin acceso al proceso main, la checklist verifica todo desde la interfaz y los archivos de `userData`.
+- **`DBX_USER_DATA_DIR`** también funciona en el build empaquetado (antes solo en desarrollo), para aislar las pruebas de los datos reales. No agrega riesgo: quien fija el entorno del proceso ya puede ejecutar código con los permisos del usuario.
+- **Medición**: marca `performance.mark('dbx-listo')` en el renderer tras el primer cuadro pintado; `scripts/measure-startup.mjs` mide desde el lanzamiento del proceso hasta esa marca.
+- **Contraste**: se ajustaron lo mínimo `fg-muted`, `fg-null`, `error` (ambos temas), `warning` (claro, se usa como texto en los avisos del plan) y `border-focus` (oscuro). Excepción: los bordes de los campos conservan el aspecto de VS Code (contraste menor a 3:1); el campo se reconoce por su fondo, su etiqueta y el borde azul al enfocarlo.
+- **Conexiones** en Preferencias no tiene ajustes propios (specs/04 no los define): explica que cada conexión se configura en su diálogo y que su formato propio está en Formatos de datos, con un botón "Nueva conexión".
+- **Editor** en Preferencias edita `editor.fontSize`, `editor.tabSize`, `editor.wordWrap` y `editor.lineNumbers`; el resto de las opciones de Monaco sigue en settings.json.
+
+### Corregido de paso
+- **Origen del renderer con "~" en la ruta**: Chromium deja el "~" en la URL del archivo y Node lo codifica como `%7E`; instalado en una ruta con "~" (como un nombre corto 8.3 de Windows) todo el IPC se rechazaba con "Origen no autorizado". Ahora se comparan rutas.
+- **Checkbox**: su input oculto no tenía contenedor posicionado y podía quedar debajo de otro elemento, que recibía el clic. Probablemente explica la intermitencia del checkbox de Preferencias vista en M8.
+
+### Pendientes / avisos
+- Los ejecutables no están firmados: SmartScreen puede advertir al abrirlos la primera vez.
+- No se probó en una máquina Windows limpia ni el arranque en frío tras reiniciar.
+- El JSON de `format.json: pretty` no cambia la celda (siempre en una línea); por eso no está en Preferencias.

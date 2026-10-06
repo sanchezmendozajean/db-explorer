@@ -23,3 +23,12 @@ description: Particularidades del entorno de desarrollo Windows de DB Explorer (
 
 ## PostgreSQL local para pruebas
 - `pg_ctl start` lanzado con `execFile` nunca resuelve (el servidor hereda los pipes): usar `spawn` con `stdio: 'ignore'` (ver `test/integration/pg-server.ts`). Se busca la instalación local o `PG_BIN`; si no hay, Docker con `test/integration/docker-compose.yml`.
+
+## Antivirus (Kaspersky) y empaquetado
+- El antivirus del equipo bloquea, como "inicio de PowerShell desde un script", que `node.exe` lance PowerShell dentro de la cadena de `npm run`. electron-builder lo hace para listar dependencias y falla con `spawn EPERM`. `npm run package` usa `scripts/electron-builder.mjs`, que lo lanza como proceso directo de Node, y así no se bloquea. No hace falta tocar el antivirus.
+- La primera ejecución de un binario recién compilado tarda varios segundos (análisis del antivirus): no la tomes como medida de arranque.
+- Extraer el zip de Electron en `dist/` fallaba con EPERM al renombrar (archivos recién escritos bloqueados): el empaquetado usa `electronDist: node_modules/electron/dist`.
+
+## Rutas cortas 8.3
+- `%TEMP%` es `C:\Users\JEAN~1.SAN\…` (nombre corto). Chromium deja el `~` tal cual en las URL `file://` y `pathToFileURL` de Node lo codifica como `%7E`: nunca compares URL de archivo como texto; compara rutas (`src/main/file-url.ts`).
+- En los heredocs de Bash, `\\` llega como `\` (este mismo texto se rompió así al escribirlo): para scripts de Node con rutas de Windows usa `path.join` o la herramienta Write, no barras invertidas escritas a mano.

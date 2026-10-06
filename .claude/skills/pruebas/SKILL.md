@@ -45,3 +45,12 @@ Credenciales solo en `test/integration/.env` (ignorado; plantilla en `.env.examp
 - `react-resizable-panels` pone `data-testid` igual al `id` del `Panel`: no reutilizar como id un valor que ya se usa como `data-testid`.
 - Diálogo "Guardar como": se reemplaza `dialog.showSaveDialog` con `app.evaluate`.
 - Capturas para revisar a ojo: `DBX_SHOTS=<carpeta> npx playwright test …` (las pruebas llaman a `shot(...)`).
+
+## Programa empaquetado (M9)
+- `npm run test:packaged` empaqueta en `dist/win-unpacked` y corre `test/e2e-packaged` (configuración `playwright.packaged.config.ts`). Para probar el instalado o el portable: `DBX_PACKAGED_EXE=<ruta del .exe> npx playwright test --config playwright.packaged.config.ts`.
+- El build tiene el fuse del inspector de Node desactivado: el lanzador de Electron de Playwright no funciona. Las pruebas lanzan el exe con `--remote-debugging-port` y se conectan con `chromium.connectOverCDP`. No hay `app.evaluate` (proceso main): se verifica por la interfaz y por los archivos de `userData`.
+- El lanzador le pasa al programa un PATH solo de Windows: así cada corrida comprueba que no necesita Node instalado.
+- Cerrar como el usuario: botón "Cerrar" de `.titlebar` (guarda antes de salir). `window.close()` desde el renderer no sigue ese camino.
+- Instalación de prueba: `Start-Process <instalador> -ArgumentList '/S', "/D=$env:TEMP\dbx-instalado" -Wait` (por usuario). Desinstalar siempre al terminar: `"<carpeta>\Uninstall DB Explorer.exe" /S /currentuser`, y verificar que no queden la carpeta, la entrada en `HKCU:\…\Uninstall` ni los accesos directos.
+- Arranque y memoria: `npm run measure [exe] [repeticiones]` mide hasta la marca `dbx-listo` del renderer y suma la memoria de los 5 procesos tras 10 s.
+- Preferencias: los campos guardan al confirmar (Enter o al salir), así que en las pruebas va `fill` + `press('Enter')`.

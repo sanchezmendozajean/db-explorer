@@ -21,7 +21,11 @@ Las especificaciones están en [`specs/`](specs/README.md) y el registro de deci
 | `npm run test:e2e`         | Construye y ejecuta las pruebas de extremo a extremo (Playwright + Electron). |
 | `npm run lint`             | ESLint y chequeo de tipos.                                                    |
 | `npm run format`           | Formatea con Prettier.                                                        |
-| `npm run package`          | Genera el instalador de Windows (NSIS + portable) en `dist/`.                 |
+| `npm run package`          | Genera el instalador de Windows (NSIS) y la versión portable en `dist/`.      |
+| `npm run package:dir`      | Genera solo la carpeta `dist/win-unpacked` (más rápido, para probar).         |
+| `npm run test:packaged`    | Empaqueta y recorre la checklist e2e de flujo completo sobre el `.exe`.       |
+| `npm run measure`          | Mide el arranque y la memoria en reposo del programa empaquetado.             |
+| `npm run icon`             | Regenera `resources/icon.ico` e `icon.png` desde `resources/icon.svg`.        |
 
 ### Pruebas de integración y e2e
 
@@ -35,6 +39,12 @@ docker compose -f test/integration/docker-compose.yml --env-file test/integratio
 npm run test:integration
 ```
 
+## Empaquetado
+
+`npm run package` deja en `dist/` el instalador (`DB-Explorer-<versión>-instalador.exe`, por usuario y con carpeta elegible) y la versión portable (`DB-Explorer-<versión>-portable.exe`). Ninguno necesita Node instalado. El build aplica los fuses de Electron de `specs/08`, por eso `test:packaged` controla el programa por CDP (`--remote-debugging-port`) y no con el lanzador de Electron de Playwright. Los ejecutables no están firmados: Windows SmartScreen puede pedir confirmación al abrirlos.
+
+`test:packaged` usa `dist/win-unpacked`; para probar el programa instalado o el portable, indica su ruta en `DBX_PACKAGED_EXE`.
+
 ## Estructura
 
 ```
@@ -45,5 +55,7 @@ src/
   renderer/  interfaz React
   shared/    contrato IPC y tipos compartidos
 test/
-  unit/ integration/ e2e/
+  unit/ integration/ e2e/ e2e-packaged/
+resources/  ícono de la aplicación
+scripts/    lanzadores, generación del ícono y medición de arranque
 ```

@@ -87,6 +87,7 @@ Todas las opciones de `IEditorOptions` de Monaco se aceptan tal cual (se pasan d
 | Panel de resultados | Ctrl+J | |
 | Maximizar resultados | Ctrl+Shift+J | |
 | Foco: editor / resultados / árbol | Ctrl+1 / Ctrl+2 / Ctrl+Shift+D | |
+| Foco en la parte siguiente / anterior | F6 / Shift+F6 | Recorre activity bar, side bar, editor, resultados y status bar (como VS Code). Agregado en M9 (accesibilidad). |
 | Vista Archivos | Ctrl+Shift+E | |
 | Preferencias | Ctrl+, | |
 | Zoom | Ctrl+= / Ctrl+- / Ctrl+NumPad0 | Zoom de toda la UI (webContents). |

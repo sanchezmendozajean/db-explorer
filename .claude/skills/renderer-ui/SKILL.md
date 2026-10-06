@@ -35,3 +35,11 @@ description: Lecciones del renderer de DB Explorer (React 19, zustand, Monaco 0.
 - `VirtualTree` (TanStack Virtual): filas ya aplanadas; con alto variable (`rowSize`) hay que llamar a `virtualizer.measure()` cuando cambian las filas, porque TanStack no recalcula las estimaciones solo. El árbol tiene `overflow-x: hidden` (sin desplazamiento horizontal).
 - Columnas alineadas en un árbol-tabla: restar la sangría (margen 8 + chevron 18 + nivel × sangría) al ancho de la primera columna; `scrollbar-gutter: stable` en cabecera y cuerpo.
 - Textos de UI solo en `i18n/es.ts`; estilos con los tokens de `theme/tokens.css` (claro y oscuro).
+
+## Preferencias y accesibilidad (M9)
+- Preferencias se arma con datos (`PrefEntry`: título, descripción, palabras clave, `modified`, `onReset`, `render`): el buscador filtra las entradas sin tildes (`pref-search.ts`) y oculta los grupos vacíos. Agrega un ajuste nuevo como otra entrada del grupo.
+- Los tokens de color deben pasar `test/unit/contrast.test.ts` (texto 4,5:1, indicadores 3:1) en ambos temas. Si un token cambia, corre esa prueba.
+- F6 / Shift+F6 recorren las partes del workbench (`PARTS` en `app-commands.ts`). El panel de resultados está dentro de `.editor-group`: para saber dónde está el foco se toma la parte más específica (`findLastIndex`).
+- Un input visualmente oculto (checkbox) necesita un contenedor `position: relative`; si no, queda debajo de otro elemento posicionado, que se lleva los clics.
+- Ctrl+1 / Ctrl+2 enfocan en el cuadro siguiente (`requestAnimationFrame`): en las pruebas, espera ese foco antes de mover el foco a mano.
+- El renderer se minifica (`minify: true` en `electron.vite.config.ts`); Monaco se carga recién con el primer script (chunk `setup`).
