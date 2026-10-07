@@ -233,7 +233,7 @@ export function closeTrashed(paths: readonly string[]): void {
  * forma asíncrona). Si mientras tanto el usuario movió el foco (p. ej. abrió
  * la paleta), no se lo quita.
  */
-function focusEditorWhenReady(
+export function focusEditorWhenReady(
   tabId: string,
   attempts = 40,
   origin: Element | null = document.activeElement,

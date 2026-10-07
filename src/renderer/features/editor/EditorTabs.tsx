@@ -15,7 +15,7 @@ import { useWorkspaceStore } from '../../stores/workspace-store';
 import { startRename } from '../files/file-actions';
 import { useConnectionsStore } from '../../stores/connections-store';
 import { showToast } from '../../stores/toast-store';
-import { closeTabs } from './scripts';
+import { closeTabs, focusEditorWhenReady } from './scripts';
 import type { EditorTab } from '../../stores/workbench-store';
 import { useWorkbenchStore } from '../../stores/workbench-store';
 
@@ -148,6 +148,8 @@ export function EditorTabs(): React.JSX.Element {
                 if (e.button === 0) activate(tab.id);
                 if (e.button === 1) e.preventDefault();
               }}
+              // Al hacer clic en la pestaña de un script, el foco pasa a su editor.
+              onClick={() => tab.kind === 'script' && focusEditorWhenReady(tab.id)}
               onAuxClick={(e) => e.button === 1 && close(tab.id)}
               onDoubleClick={() => pin(tab.id)}
               onContextMenu={(e) => showContextMenu(e, tabMenu(tab))}
@@ -180,7 +182,10 @@ export function EditorTabs(): React.JSX.Element {
                 aria-label={es.editor.tabs.close}
                 title={tab.dirty ? es.editor.tabs.unsaved : es.editor.tabs.close}
                 onMouseDown={(e) => e.stopPropagation()}
-                onClick={() => close(tab.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  close(tab.id);
+                }}
               >
                 <Codicon name="close" className="icon-close" />
                 <Codicon name="circle-filled" size={10} className="icon-dirty" />

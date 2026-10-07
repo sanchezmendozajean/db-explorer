@@ -92,6 +92,19 @@ test('cerrar todas las pestañas muestra la marca de agua y Ctrl+Shift+T reabre'
   await expect(page.getByTestId('sql-editor')).toContainText('select 1;');
 });
 
+test('un clic en la pestaña de un script enfoca su editor', async () => {
+  await page.keyboard.press('Control+N');
+  await expect(page.getByRole('tab', { name: /Script-2/ })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('tab', { name: /Script-1/ }).click();
+  await expect
+    .poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-testid="sql-editor"]')))
+    .toBe(true);
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type(' -- x');
+  await expect(page.getByTestId('sql-editor')).toContainText('select 1; -- x');
+  await page.keyboard.press('Control+Z');
+});
+
 test('los tamaños de paneles y el tema se recuerdan al reiniciar', async () => {
   const sidebar = page.getByTestId('side-bar');
   const before = (await sidebar.boundingBox())!.width;
