@@ -54,3 +54,6 @@ Credenciales solo en `test/integration/.env` (ignorado; plantilla en `.env.examp
 - Instalación de prueba: `Start-Process <instalador> -ArgumentList '/S', "/D=$env:TEMP\dbx-instalado" -Wait` (por usuario). Desinstalar siempre al terminar: `"<carpeta>\Uninstall DB Explorer.exe" /S /currentuser`, y verificar que no queden la carpeta, la entrada en `HKCU:\…\Uninstall` ni los accesos directos.
 - Arranque y memoria: `npm run measure [exe] [repeticiones]` mide hasta la marca `dbx-listo` del renderer y suma la memoria de los 5 procesos tras 10 s.
 - Preferencias: los campos guardan al confirmar (Enter o al salir), así que en las pruebas va `fill` + `press('Enter')`.
+
+## Enlaces externos en e2e
+- Un enlace `https` que abre la app va a `shell.openExternal` y abre el navegador real del equipo. En las pruebas, reemplaza `shell.openExternal` con `app.evaluate` (como en `app.spec.ts`) y verifica la URL recibida.

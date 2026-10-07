@@ -32,8 +32,19 @@ test('el renderer no tiene acceso a Node', async () => {
 
 test('se bloquea window.open y la navegación externa', async () => {
   const page = await app.firstWindow();
+  // Un enlace https se entrega al navegador del sistema: se intercepta para no abrirlo de verdad.
+  await app.evaluate(({ shell }) => {
+    const opened: string[] = [];
+    (globalThis as Record<string, unknown>)['__dbxOpened'] = opened;
+    shell.openExternal = async (url: string) => {
+      opened.push(url);
+    };
+  });
   const opened = await page.evaluate(() => window.open('https://example.com') === null);
   expect(opened).toBe(true);
+  await expect
+    .poll(() => app.evaluate(() => (globalThis as Record<string, unknown>)['__dbxOpened']))
+    .toEqual(['https://example.com/']);
   const urlBefore = page.url();
   await page.evaluate(() => {
     window.location.href = 'https://example.com';
