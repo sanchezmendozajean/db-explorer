@@ -60,6 +60,13 @@ describe('chordFromEvent', () => {
     expect(chordFromEvent(ev('F5', 'F5'))?.key).toBe('f5');
   });
 
+  it('trata el Enter del teclado numérico como Enter', () => {
+    expect(chordFromEvent(ev('Enter', 'NumpadEnter', { ctrlKey: true }))).toMatchObject({
+      key: 'enter',
+      ctrl: true,
+    });
+  });
+
   it('ignora las teclas modificadoras solas', () => {
     expect(chordFromEvent(ev('Control', 'ControlLeft', { ctrlKey: true }))).toBeNull();
     expect(chordFromEvent(ev('Shift', 'ShiftLeft', { shiftKey: true }))).toBeNull();

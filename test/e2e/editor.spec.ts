@@ -143,7 +143,8 @@ test('"Copiar tabla (con cabeceras)" copia todas las filas aunque haya una sola 
 });
 
 test('respeta el límite y "Cargar más" trae el siguiente lote', async () => {
-  await run('select g from generate_series(1, 1200) g;');
+  // También con el Enter del teclado numérico.
+  await run('select g from generate_series(1, 1200) g;', 'Control+NumpadEnter');
   await expect(page.getByTestId('results-grid')).toHaveAttribute('data-columns', 'g');
   const footer = page.getByTestId('results-footer');
   await expect(footer).toContainText('500 filas (truncado');

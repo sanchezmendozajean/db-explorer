@@ -87,6 +87,8 @@ export function chordFromEvent(e: KeyEventLike): KeyChord | null {
   let key: string;
   if (/^Key[A-Z]$/.test(e.code)) key = e.code.slice(3).toLowerCase();
   else if (/^Digit\d$/.test(e.code)) key = e.code.slice(5);
+  // El Enter del teclado numérico vale como Enter (Ctrl+Enter ejecuta con cualquiera de los dos).
+  else if (e.code === 'NumpadEnter') key = 'enter';
   else if (/^Numpad/.test(e.code)) key = e.code.toLowerCase();
   else if (/^F\d{1,2}$/.test(e.code)) key = e.code.toLowerCase();
   else if (e.key === 'Dead' || e.key === 'Unidentified') key = e.code.toLowerCase();

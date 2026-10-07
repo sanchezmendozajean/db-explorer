@@ -1,0 +1,1 @@
+* Has que las sentencias se puedan ejecutar con Ctrl + Enter del teclado numérico. Ahorita sólo está aceptando el Enter principal.
