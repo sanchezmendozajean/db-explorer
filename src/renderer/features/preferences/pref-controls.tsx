@@ -4,6 +4,8 @@ import { TextInput } from '../../components/Inputs';
 /** Una preferencia de la lista (specs/04 §15): el buscador filtra por sus textos. */
 export interface PrefEntry {
   id: string;
+  /** Codicon junto al título. */
+  icon: string;
   title: string;
   description?: string;
   /** Otras palabras por las que se puede encontrar. */

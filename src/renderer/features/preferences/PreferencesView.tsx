@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS } from '@shared/settings';
 import type { SettingKey } from '@shared/settings';
 import type { ThemePreference } from '@shared/ui-state';
 import { Button } from '../../components/Button';
+import { Codicon } from '../../components/Codicon';
 import { Checkbox, Select, TextInput } from '../../components/Inputs';
 import { es } from '../../i18n/es';
 import { commands } from '../../commands/service';
@@ -19,6 +20,15 @@ import { CommitInput } from './pref-controls';
 import { intInRange, matchesSearch } from './pref-search';
 
 type GroupId = keyof typeof es.preferences.groups;
+
+const GROUP_ICONS: Record<GroupId, string> = {
+  editor: 'edit',
+  files: 'files',
+  results: 'table',
+  formats: 'symbol-ruler',
+  connections: 'database',
+  appearance: 'symbol-color',
+};
 
 /** Opciones de Monaco que se editan desde la UI y su valor por defecto (specs/05). */
 const EDITOR_DEFAULTS = { fontSize: 13, tabSize: 4, wordWrap: 'off', lineNumbers: 'on' } as const;
@@ -65,6 +75,7 @@ export function PreferencesView(): React.JSX.Element {
       entries: [
         editorEntry('fontSize', {
           id: 'editor-font-size',
+          icon: 'text-size',
           title: p.editor.fontSize,
           description: p.editor.fontSizeDescription,
           render: () => (
@@ -85,6 +96,7 @@ export function PreferencesView(): React.JSX.Element {
         }),
         editorEntry('tabSize', {
           id: 'editor-tab-size',
+          icon: 'indent',
           title: p.editor.tabSize,
           description: p.editor.tabSizeDescription,
           render: () => (
@@ -105,6 +117,7 @@ export function PreferencesView(): React.JSX.Element {
         }),
         editorEntry('wordWrap', {
           id: 'editor-word-wrap',
+          icon: 'word-wrap',
           title: p.editor.wordWrap,
           render: () => (
             <Checkbox
@@ -116,6 +129,7 @@ export function PreferencesView(): React.JSX.Element {
         }),
         editorEntry('lineNumbers', {
           id: 'editor-line-numbers',
+          icon: 'list-ordered',
           title: p.editor.lineNumbers,
           render: () => (
             <Checkbox
@@ -127,6 +141,7 @@ export function PreferencesView(): React.JSX.Element {
         }),
         keyed('sql.statementSeparator', {
           id: 'editor-separator',
+          icon: 'split-horizontal',
           title: p.editor.separator,
           description: p.editor.separatorDescription,
           render: () => (
@@ -150,6 +165,7 @@ export function PreferencesView(): React.JSX.Element {
       entries: [
         {
           id: 'files-workspace',
+          icon: 'folder-opened',
           title: p.workspace,
           description: p.workspaceDescription,
           modified: settings['workspace.path'] !== null,
@@ -176,6 +192,7 @@ export function PreferencesView(): React.JSX.Element {
         },
         {
           id: 'files-autosave',
+          icon: 'save',
           title: p.autoSave,
           modified: modified('files.autoSave'),
           onReset: () => void reset('files.autoSave').then((ok) => ok && autoSaveChanged(true)),
@@ -192,6 +209,7 @@ export function PreferencesView(): React.JSX.Element {
         },
         {
           id: 'files-autosave-delay',
+          icon: 'watch',
           title: p.delay,
           description: p.delayDescription,
           modified: modified('files.autoSaveDelay'),
@@ -218,6 +236,7 @@ export function PreferencesView(): React.JSX.Element {
         },
         keyed('scripts.deleteEmptyOnClose', {
           id: 'files-empty-scripts',
+          icon: 'trash',
           title: p.emptyScripts,
           render: () => (
             <Checkbox
@@ -229,12 +248,14 @@ export function PreferencesView(): React.JSX.Element {
         }),
         {
           id: 'files-new-scripts',
+          icon: 'new-file',
           title: p.newScripts,
           description: p.newScriptsDescription,
           render: () => <span className="pref-value">{p.newScriptsValue}</span>,
         },
         keyed('files.confirmDragAndDrop', {
           id: 'files-confirm-drag',
+          icon: 'arrow-swap',
           title: p.confirmDrag,
           render: () => (
             <Checkbox
@@ -246,6 +267,7 @@ export function PreferencesView(): React.JSX.Element {
         }),
         keyed('files.autoReveal', {
           id: 'files-auto-reveal',
+          icon: 'target',
           title: p.autoReveal,
           render: () => (
             <Checkbox
@@ -262,6 +284,7 @@ export function PreferencesView(): React.JSX.Element {
       entries: [
         keyed('results.maxRows', {
           id: 'results-max-rows',
+          icon: 'list-flat',
           title: p.results.maxRows,
           description: p.results.maxRowsDescription,
           render: () => (
@@ -282,6 +305,7 @@ export function PreferencesView(): React.JSX.Element {
         }),
         keyed('results.alternateRows', {
           id: 'results-alternate',
+          icon: 'paintcan',
           title: p.results.alternateRows,
           render: () => (
             <Checkbox
@@ -293,6 +317,7 @@ export function PreferencesView(): React.JSX.Element {
         }),
         keyed('results.fontSize', {
           id: 'results-font-size',
+          icon: 'text-size',
           title: p.results.fontSize,
           render: () => (
             <CommitInput
@@ -312,6 +337,7 @@ export function PreferencesView(): React.JSX.Element {
         }),
         keyed('results.copy.nullAs', {
           id: 'results-copy-null',
+          icon: 'copy',
           title: p.results.copyNull,
           description: p.results.copyNullDescription,
           render: () => (
@@ -325,6 +351,7 @@ export function PreferencesView(): React.JSX.Element {
         }),
         keyed('history.enabled', {
           id: 'results-history',
+          icon: 'history',
           title: p.results.history,
           render: () => (
             <Checkbox
@@ -336,6 +363,7 @@ export function PreferencesView(): React.JSX.Element {
         }),
         keyed('history.maxEntries', {
           id: 'results-history-max',
+          icon: 'archive',
           title: p.results.historyMax,
           render: () => (
             <CommitInput
@@ -362,6 +390,7 @@ export function PreferencesView(): React.JSX.Element {
       entries: [
         {
           id: 'connections-info',
+          icon: 'plug',
           title: p.groups.connections,
           description: p.connections.info,
           render: () => (
@@ -377,6 +406,7 @@ export function PreferencesView(): React.JSX.Element {
       entries: [
         {
           id: 'appearance-theme',
+          icon: 'color-mode',
           title: p.appearance.theme,
           modified: theme !== 'system',
           onReset: () => useUiStore.getState().setTheme('system'),
@@ -394,6 +424,7 @@ export function PreferencesView(): React.JSX.Element {
         },
         {
           id: 'appearance-zoom',
+          icon: 'zoom-in',
           title: p.appearance.zoom,
           description: p.appearance.zoomDescription,
           render: () => (
@@ -453,6 +484,7 @@ export function PreferencesView(): React.JSX.Element {
               className="pref-toc-item"
               onClick={() => document.getElementById(`pref-${g.id}`)?.scrollIntoView({ block: 'start' })}
             >
+              <Codicon name={GROUP_ICONS[g.id]} />
               {p.groups[g.id]}
             </button>
           ))}
@@ -462,12 +494,14 @@ export function PreferencesView(): React.JSX.Element {
           {visible.map((g) => (
             <section key={g.id} className="pref-group" aria-labelledby={`pref-${g.id}`}>
               <h2 id={`pref-${g.id}`} className="pref-group-title">
+                <Codicon name={GROUP_ICONS[g.id]} />
                 {p.groups[g.id]}
               </h2>
               {g.entries.map((e) => (
                 <div key={e.id} className="pref-setting" data-pref={e.id}>
                   <div className="pref-title">
                     {e.modified && <span className="pref-modified" title={p.resetSetting} />}
+                    <Codicon name={e.icon} className="pref-title-icon" />
                     {e.title}
                     {e.modified && e.onReset && (
                       <button type="button" className="pref-reset" onClick={e.onReset}>

@@ -126,6 +126,7 @@ export function formatEntries(
 
   const row = (
     id: string,
+    icon: string,
     title: string,
     keys: FormatSettingKey[],
     controls: React.ReactNode,
@@ -135,6 +136,7 @@ export function formatEntries(
     const globalOnly = scope !== null && keys.every((k) => GLOBAL_ONLY.has(k));
     return {
       id,
+      icon,
       title,
       description,
       keywords: `${t.preview} ${es.preferences.groups.formats}`,
@@ -155,6 +157,7 @@ export function formatEntries(
   return [
     {
       id: 'format-scope',
+      icon: 'plug',
       title: t.scope,
       description: t.scopeDescription,
       render: () => (
@@ -172,6 +175,7 @@ export function formatEntries(
     },
     row(
       'format-numbers',
+      'symbol-number',
       t.numbers,
       ['format.locale', 'format.number.decimalSeparator', 'format.number.thousandsSeparator'],
       <>
@@ -217,6 +221,7 @@ export function formatEntries(
     ),
     row(
       'format-decimal',
+      'symbol-numeric',
       t.decimal,
       ['format.decimal.mode', 'format.decimal.places'],
       <>
@@ -254,6 +259,7 @@ export function formatEntries(
     ),
     row(
       'format-float',
+      'symbol-constant',
       t.float,
       ['format.float.maxDigits'],
       field(
@@ -277,17 +283,19 @@ export function formatEntries(
     ),
     row(
       'format-date',
+      'calendar',
       t.date,
       ['format.date'],
       pattern('format.date', DATE_PRESETS),
       [['2026-09-30', 'date']],
       t.patternHelp,
     ),
-    row('format-time', t.time, ['format.time'], pattern('format.time', TIME_PRESETS), [
+    row('format-time', 'watch', t.time, ['format.time'], pattern('format.time', TIME_PRESETS), [
       ['08:42:52.658', 'time'],
     ]),
     row(
       'format-datetime',
+      'clock',
       t.datetime,
       ['format.datetime', 'format.datetime.showMillis'],
       <>
@@ -311,6 +319,7 @@ export function formatEntries(
     ),
     row(
       'format-datetimetz',
+      'globe',
       t.datetimetz,
       ['format.datetimetz.display'],
       field(
@@ -327,6 +336,7 @@ export function formatEntries(
     ),
     row(
       'format-boolean',
+      'symbol-boolean',
       t.boolean,
       ['format.boolean'],
       field(
@@ -344,6 +354,7 @@ export function formatEntries(
     ),
     row(
       'format-null',
+      'circle-slash',
       t.null,
       ['format.null'],
       field(
@@ -361,6 +372,7 @@ export function formatEntries(
     ),
     row(
       'format-binary',
+      'file-binary',
       t.binary,
       ['format.binary', 'format.binary.maxBytes'],
       <>
@@ -394,6 +406,7 @@ export function formatEntries(
     ),
     row(
       'format-text',
+      'symbol-string',
       t.text,
       ['format.text.maxLength'],
       field(

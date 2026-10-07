@@ -53,6 +53,7 @@ const GRID = ['bg-editor', 'bg-grid-row-alt', 'bg-selection', 'bg-selection-inac
 const RULES: [string, string[], number][] = [
   ['fg', SURFACES, 4.5],
   ['fg-muted', SURFACES, 4.5],
+  ['fg-section', ['bg-editor'], 4.5],
   ['fg-null', GRID, 4.5],
   ['error', MAIN, 4.5],
   ['warning', ['bg-editor', 'bg-panel', 'bg-side-bar'], 3],

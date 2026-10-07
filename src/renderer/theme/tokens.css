@@ -33,6 +33,7 @@
   --border-focus: #087cd5;
   --fg: #cccccc;
   --fg-muted: #a4a4a4;
+  --fg-section: #e8899f; /* títulos de grupo de Preferencias: vino claro */
   --fg-disabled: #6e6e6e;
   --fg-null: #a1a1a1;
   --accent: #0078d4;
@@ -90,6 +91,7 @@
   --border-focus: #005fb8;
   --fg: #3b3b3b;
   --fg-muted: #666666;
+  --fg-section: #8b1e3f; /* títulos de grupo de Preferencias: vino */
   --fg-disabled: #a0a0a0;
   --fg-null: #666666;
   --accent: #005fb8;

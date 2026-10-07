@@ -37,7 +37,7 @@ description: Lecciones del renderer de DB Explorer (React 19, zustand, Monaco 0.
 - Textos de UI solo en `i18n/es.ts`; estilos con los tokens de `theme/tokens.css` (claro y oscuro).
 
 ## Preferencias y accesibilidad (M9)
-- Preferencias se arma con datos (`PrefEntry`: título, descripción, palabras clave, `modified`, `onReset`, `render`): el buscador filtra las entradas sin tildes (`pref-search.ts`) y oculta los grupos vacíos. Agrega un ajuste nuevo como otra entrada del grupo.
+- Preferencias se arma con datos (`PrefEntry`: ícono (codicon, obligatorio), título, descripción, palabras clave, `modified`, `onReset`, `render`): el buscador filtra las entradas sin tildes (`pref-search.ts`) y oculta los grupos vacíos. Agrega un ajuste nuevo como otra entrada del grupo.
 - Los tokens de color deben pasar `test/unit/contrast.test.ts` (texto 4,5:1, indicadores 3:1) en ambos temas. Si un token cambia, corre esa prueba.
 - F6 / Shift+F6 recorren las partes del workbench (`PARTS` en `app-commands.ts`). El panel de resultados está dentro de `.editor-group`: para saber dónde está el foco se toma la parte más específica (`findLastIndex`).
 - Un input visualmente oculto (checkbox) necesita un contenedor `position: relative`; si no, queda debajo de otro elemento posicionado, que se lleva los clics.

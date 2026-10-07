@@ -1164,16 +1164,31 @@ button.statusbar-item:hover {
 }
 
 .pref-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 8px 0 4px;
   padding-bottom: 4px;
   border-bottom: 1px solid var(--border);
-  font-size: 14px;
+  color: var(--fg-section);
+  font-size: 15px;
   font-weight: 600;
 }
 
+/* Las opciones van algo sangradas bajo el título de su grupo. */
 .pref-setting {
   max-width: 760px;
-  padding: 10px 0;
+  padding: 10px 0 10px 16px;
+}
+
+.pref-title-icon {
+  color: var(--fg-muted);
+}
+
+/* Descripción y control alineados con el texto del título (después del ícono). */
+.pref-setting > .pref-description,
+.pref-setting > .pref-control {
+  margin-left: 24px;
 }
 
 .pref-title {
@@ -1232,6 +1247,9 @@ button.statusbar-item:hover {
 }
 
 .pref-toc-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   height: 24px;
   padding: 0 8px;
   border: none;
