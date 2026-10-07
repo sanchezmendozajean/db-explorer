@@ -38,9 +38,9 @@ test.afterAll(async () => {
   await app?.close();
 });
 
-test('muestra los seis grupos y el buscador filtra sin tildes', async () => {
+test('muestra los cinco grupos y el buscador filtra sin tildes', async () => {
   await page.keyboard.press('Control+,');
-  for (const group of ['Editor', 'Archivos', 'Resultados', 'Formatos de datos', 'Conexiones', 'Apariencia']) {
+  for (const group of ['Editor', 'Archivos', 'Resultados', 'Formatos de datos', 'Apariencia']) {
     await expect(prefs().getByRole('heading', { name: group, exact: true })).toBeVisible();
   }
   await prefs().getByRole('textbox', { name: 'Buscar preferencias' }).fill('separador decimal');
@@ -49,7 +49,7 @@ test('muestra los seis grupos y el buscador filtra sin tildes', async () => {
   await prefs().getByRole('textbox', { name: 'Buscar preferencias' }).fill('tabulacion');
   await expect(setting('editor-tab-size')).toBeVisible();
   await prefs().getByRole('textbox', { name: 'Buscar preferencias' }).press('Escape');
-  await expect(prefs().getByRole('heading', { level: 2 })).toHaveCount(6);
+  await expect(prefs().getByRole('heading', { level: 2 })).toHaveCount(5);
 });
 
 test('Formatos de datos: la vista previa cambia al momento y Restablecer vuelve al valor por defecto', async () => {
@@ -61,7 +61,8 @@ test('Formatos de datos: la vista previa cambia al momento y Restablecer vuelve 
   await expect(decimal.getByTestId('pref-preview').locator('code').first()).toHaveText('999,999,999');
   await expect.poll(settingsJson).toContain('"format.decimal.places": 0');
   if (SHOTS) await page.screenshot({ path: join(SHOTS, 'm9-preferencias.png') });
-  await decimal.getByRole('button', { name: 'Restablecer' }).click();
+  // El botón dice a qué vuelve cada clave cambiada.
+  await decimal.getByRole('button', { name: '(Restablecer a Como en la base, 2 decimales)' }).click();
   await expect.poll(settingsJson).not.toContain('format.decimal');
   await expect(decimal.getByTestId('pref-preview')).toContainText('999,999,999.00');
 });
@@ -114,6 +115,8 @@ test('Apariencia cambia el tema', async () => {
   await page.getByRole('tab', { name: /Preferencias/ }).click();
   await prefs().getByRole('combobox', { name: 'Tema' }).selectOption({ label: 'Claro' });
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  await setting('appearance-theme').getByRole('button', { name: 'Restablecer' }).click();
+  await setting('appearance-theme')
+    .getByRole('button', { name: '(Restablecer a Según el sistema)', exact: true })
+    .click();
   await expect(prefs().getByRole('combobox', { name: 'Tema' })).toHaveValue('system');
 });

@@ -13,6 +13,8 @@ export interface PrefEntry {
   /** Distinto del valor por defecto: muestra "Restablecer". */
   modified?: boolean;
   onReset?: () => void;
+  /** Valor al que vuelve, para el botón "(Restablecer a …)". */
+  resetTo?: string;
   render: () => React.ReactNode;
 }
 

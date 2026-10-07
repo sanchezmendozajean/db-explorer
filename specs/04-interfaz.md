@@ -263,7 +263,7 @@ Estilo quick-open de VS Code: caja de 600 px arriba al centro, input + lista de 
 - Notificaciones tipo toast abajo a la derecha (como VS Code): 400 px, icono de severidad, texto, acciones, se apilan y desaparecen a los 8 s salvo errores.
 
 ## 15. Preferencias
-Pestaña de editor con dos modos (como VS Code): **UI** simple con buscador y lista agrupada (Editor, Archivos, Resultados, Formatos de datos, Conexiones, Apariencia) y botón `codicon-go-to-file` "Abrir settings.json". Cada ajuste: título en negrita, descripción en `fg.muted`, control (checkbox, input, select).
+Pestaña de editor con dos modos (como VS Code): **UI** simple con buscador y lista agrupada (Editor, Archivos, Resultados, Formatos de datos, Apariencia; sin grupo Conexiones: cada conexión se configura en su diálogo) y botón `codicon-go-to-file` "Abrir settings.json". Cada ajuste: título en negrita, descripción en `fg.muted`, control (checkbox, input, select).
 
 Grupo **Archivos**: espacio de trabajo y guardado automático (ver `11` §5).
 Grupo **Formatos de datos** con vista previa en vivo de cada formato (ver `06`).

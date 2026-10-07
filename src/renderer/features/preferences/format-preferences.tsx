@@ -8,6 +8,7 @@ import { useSettingsStore } from '../../stores/settings-store';
 import { formatCell, withConnectionFormat } from '../results/format';
 import type { PrefEntry } from './pref-controls';
 import { intInRange } from './pref-search';
+import { describeSetting } from './reset-label';
 import { CommitInput } from './pref-controls';
 
 /**
@@ -75,6 +76,19 @@ export function formatEntries(
     scope === null
       ? keys.some((k) => JSON.stringify(global[k]) !== JSON.stringify(DEFAULT_SETTINGS[k]))
       : keys.some((k) => !GLOBAL_ONLY.has(k) && override[shortKey(k)] !== undefined);
+  /**
+   * A qué vuelve "Restablecer": cada clave cambiada, al valor por defecto (todas
+   * las conexiones) o al formato global (una conexión).
+   */
+  const resetTo = (keys: FormatSettingKey[]): string =>
+    keys
+      .filter((k) =>
+        scope === null
+          ? JSON.stringify(global[k]) !== JSON.stringify(DEFAULT_SETTINGS[k])
+          : !GLOBAL_ONLY.has(k) && override[shortKey(k)] !== undefined,
+      )
+      .map((k) => describeSetting(k, scope === null ? DEFAULT_SETTINGS[k] : global[k]))
+      .join(', ');
   const reset = (keys: FormatSettingKey[]): void => {
     if (scope === null) {
       for (const k of keys) void store.reset(k);
@@ -141,6 +155,7 @@ export function formatEntries(
       description,
       keywords: `${t.preview} ${es.preferences.groups.formats}`,
       modified: isModified(keys),
+      resetTo: resetTo(keys),
       onReset: () => reset(keys),
       render: () => (
         <>

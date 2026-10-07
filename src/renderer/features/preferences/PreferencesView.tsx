@@ -11,13 +11,13 @@ import { useConnectionsStore } from '../../stores/connections-store';
 import { useSettingsStore } from '../../stores/settings-store';
 import { useUiStore } from '../../stores/ui-store';
 import { useWorkspaceStore } from '../../stores/workspace-store';
-import { newConnection } from '../connections/actions';
 import { autoSaveChanged } from '../editor/documents';
 import { changeWorkspace, resetWorkspace, revealWorkspace } from '../files/workspace-actions';
 import { formatEntries } from './format-preferences';
 import type { PrefEntry } from './pref-controls';
 import { CommitInput } from './pref-controls';
 import { intInRange, matchesSearch } from './pref-search';
+import { describeSetting, describeValue } from './reset-label';
 
 type GroupId = keyof typeof es.preferences.groups;
 
@@ -25,17 +25,24 @@ const GROUP_ICONS: Record<GroupId, string> = {
   editor: 'edit',
   files: 'files',
   results: 'table',
-  formats: 'symbol-ruler',
-  connections: 'database',
+  formats: 'symbol-unit',
   appearance: 'symbol-color',
 };
 
 /** Opciones de Monaco que se editan desde la UI y su valor por defecto (specs/05). */
 const EDITOR_DEFAULTS = { fontSize: 13, tabSize: 4, wordWrap: 'off', lineNumbers: 'on' } as const;
 
+/** Valor por defecto de cada opción de Monaco, como se muestra en "(Restablecer a …)". */
+const EDITOR_RESET_TO: Record<keyof typeof EDITOR_DEFAULTS, string> = {
+  fontSize: describeValue(EDITOR_DEFAULTS.fontSize, 'px'),
+  tabSize: describeValue(EDITOR_DEFAULTS.tabSize, 'spaces'),
+  wordWrap: describeValue(false),
+  lineNumbers: describeValue(true),
+};
+
 /**
  * Preferencias (specs/04 §15): buscador y lista agrupada (Editor, Archivos,
- * Resultados, Formatos de datos, Conexiones, Apariencia), con un índice para
+ * Resultados, Formatos de datos, Apariencia), con un índice para
  * saltar a cada grupo. Cada cambio se guarda en settings.json al momento.
  */
 export function PreferencesView(): React.JSX.Element {
@@ -55,6 +62,7 @@ export function PreferencesView(): React.JSX.Element {
   const keyed = (key: SettingKey, entry: Omit<PrefEntry, 'modified' | 'onReset'>): PrefEntry => ({
     ...entry,
     modified: modified(key),
+    resetTo: describeSetting(key, DEFAULT_SETTINGS[key]),
     onReset: () => void reset(key),
   });
   const editorValue = <K extends keyof typeof EDITOR_DEFAULTS>(name: K): unknown =>
@@ -65,6 +73,7 @@ export function PreferencesView(): React.JSX.Element {
   ): PrefEntry => ({
     ...entry,
     modified: settings.editor[name] !== undefined,
+    resetTo: EDITOR_RESET_TO[name],
     onReset: () => void updateEditor(name, undefined),
   });
   const autoSave = settings['files.autoSave'];
@@ -195,6 +204,7 @@ export function PreferencesView(): React.JSX.Element {
           icon: 'save',
           title: p.autoSave,
           modified: modified('files.autoSave'),
+          resetTo: describeSetting('files.autoSave', DEFAULT_SETTINGS['files.autoSave']),
           onReset: () => void reset('files.autoSave').then((ok) => ok && autoSaveChanged(true)),
           render: () => (
             <Checkbox
@@ -213,6 +223,7 @@ export function PreferencesView(): React.JSX.Element {
           title: p.delay,
           description: p.delayDescription,
           modified: modified('files.autoSaveDelay'),
+          resetTo: describeSetting('files.autoSaveDelay', DEFAULT_SETTINGS['files.autoSaveDelay']),
           onReset: () =>
             void reset('files.autoSaveDelay').then(
               (ok) => ok && autoSaveChanged(useSettingsStore.getState().settings['files.autoSave']),
@@ -386,22 +397,6 @@ export function PreferencesView(): React.JSX.Element {
     },
     { id: 'formats', entries: formatEntries(settings, formatScope, setScope, connections) },
     {
-      id: 'connections',
-      entries: [
-        {
-          id: 'connections-info',
-          icon: 'plug',
-          title: p.groups.connections,
-          description: p.connections.info,
-          render: () => (
-            <Button variant="secondary" icon="add" onClick={() => newConnection()}>
-              {p.connections.newConnection}
-            </Button>
-          ),
-        },
-      ],
-    },
-    {
       id: 'appearance',
       entries: [
         {
@@ -409,6 +404,7 @@ export function PreferencesView(): React.JSX.Element {
           icon: 'color-mode',
           title: p.appearance.theme,
           modified: theme !== 'system',
+          resetTo: p.appearance.themes.system,
           onReset: () => useUiStore.getState().setTheme('system'),
           render: () => (
             <Select
@@ -505,7 +501,7 @@ export function PreferencesView(): React.JSX.Element {
                     {e.title}
                     {e.modified && e.onReset && (
                       <button type="button" className="pref-reset" onClick={e.onReset}>
-                        {p.resetSetting}
+                        ({e.resetTo ? p.resetTo(e.resetTo) : p.resetSetting})
                       </button>
                     )}
                   </div>

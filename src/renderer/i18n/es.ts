@@ -712,10 +712,23 @@ export const es = {
       files: 'Archivos',
       results: 'Resultados',
       formats: 'Formatos de datos',
-      connections: 'Conexiones',
       appearance: 'Apariencia',
     },
     resetSetting: 'Restablecer',
+    resetTo: (value: string) => `Restablecer a ${value}`,
+    resetValues: { on: 'activado', off: 'desactivado', empty: 'vacío' },
+    /** Unidades de "(Restablecer a …)": [singular, plural]. */
+    resetUnits: {
+      px: ['px', 'px'],
+      seconds: [' s', ' s'],
+      spaces: [' espacio', ' espacios'],
+      rows: [' fila', ' filas'],
+      entries: [' entrada', ' entradas'],
+      decimals: [' decimal', ' decimales'],
+      digits: [' dígito', ' dígitos'],
+      bytes: [' byte', ' bytes'],
+      characters: [' carácter', ' caracteres'],
+    },
     editor: {
       fontSize: 'Tamaño de fuente',
       fontSizeDescription: 'Del editor SQL, en píxeles.',
@@ -773,10 +786,6 @@ export const es = {
       text: 'Texto',
       maxLength: 'Largo máximo en la celda',
       textDescription: 'Los textos más largos se recortan con "…" (el valor completo se ve en el visor).',
-    },
-    connections: {
-      info: 'Cada conexión se configura en su diálogo: clic derecho sobre ella › Editar conexión. Su formato de datos propio se elige en Formatos de datos › Aplicar a.',
-      newConnection: 'Nueva conexión',
     },
     appearance: {
       theme: 'Tema',

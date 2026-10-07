@@ -1,11 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '@shared/settings';
 import { intInRange, matchesSearch } from '../../src/renderer/features/preferences/pref-search';
+import { describeSetting } from '../../src/renderer/features/preferences/reset-label';
 import {
   formatCell,
   withColumnFormat,
   withConnectionFormat,
 } from '../../src/renderer/features/results/format';
+
+describe('"Restablecer a …" de Preferencias', () => {
+  it('describe el valor por defecto con su unidad o la etiqueta de la opción', () => {
+    expect(describeSetting('results.fontSize', DEFAULT_SETTINGS['results.fontSize'])).toBe('12px');
+    expect(describeSetting('files.autoSaveDelay', 5000)).toBe('5 s');
+    expect(describeSetting('files.autoSave', true)).toBe('activado');
+    expect(describeSetting('history.enabled', false)).toBe('desactivado');
+    expect(describeSetting('sql.statementSeparator', 'semicolon')).toBe('Punto y coma');
+    expect(describeSetting('format.decimal.mode', 'asStored')).toBe('Como en la base');
+    expect(describeSetting('results.copy.nullAs', '')).toBe('vacío');
+    expect(describeSetting('format.date', 'yyyy-MM-dd')).toBe('yyyy-MM-dd');
+    expect(describeSetting('format.decimal.places', 2)).toBe('2 decimales');
+    expect(describeSetting('format.decimal.places', 1)).toBe('1 decimal');
+    expect(describeSetting('results.maxRows', 500)).toBe('500 filas');
+  });
+});
 
 describe('buscador de Preferencias', () => {
   it('busca todas las palabras, sin tildes ni mayúsculas', () => {
