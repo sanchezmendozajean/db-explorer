@@ -672,7 +672,7 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
             cellMenu(cell, clientX, clientY),
           );
         }}
-        rowHeight={24}
+        rowHeight={20}
         headerHeight={26}
         smoothScrollX
         smoothScrollY

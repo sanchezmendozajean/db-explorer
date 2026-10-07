@@ -118,7 +118,7 @@ test('numeric y timestamp se muestran y copian sin pérdida ni cambio de zona', 
   );
   await expect(page.getByTestId('results-grid')).toHaveAttribute('data-columns', 'importe,creado,nada');
   // Fila 1, columna "importe" (después del marcador de fila de 48 px).
-  await clickGrid(await columnCenter(0), 26 + 12);
+  await clickGrid(await columnCenter(0), 26 + 10);
   await page.keyboard.press('Control+A');
   await page.keyboard.press('Control+C');
   await expect.poll(clipboard).toBe('12345678901234.123456\t2026-09-30 08:42:52.658\t\r\n');
@@ -136,7 +136,7 @@ test('Ctrl+Shift+C con dos columnas no contiguas copia solo esas columnas con ca
 });
 
 test('"Copiar tabla (con cabeceras)" copia todas las filas aunque haya una sola celda seleccionada', async () => {
-  await clickGrid(await columnCenter(0), 26 + 12);
+  await clickGrid(await columnCenter(0), 26 + 10);
   await page.getByTestId('export-menu').click();
   await page.getByRole('menuitem', { name: 'Copiar tabla (con cabeceras)' }).click();
   await expect.poll(clipboard).toBe('a\tb\tc\td\r\n1\tx1\t10\ty\r\n2\tx2\t20\ty\r\n3\tx3\t30\ty\r\n');

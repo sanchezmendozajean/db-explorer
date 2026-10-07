@@ -80,7 +80,7 @@ Usar exactamente estos valores (tomados de VS Code *Dark Modern* / *Light Modern
 - UI: `"Segoe UI", system-ui, -apple-system, sans-serif`, **13 px**, line-height 22 px en listas.
 - Código y grilla: `"Cascadia Code", Consolas, "Courier New", monospace`, **13 px** (editor) y **12 px** (grilla), configurable.
 - Encabezados de sección de la side bar: 11 px, MAYÚSCULAS, `fg.muted`, peso 600, letter-spacing 0.5px.
-- Altura de fila: árbol 22 px, grilla 24 px, pestañas 35 px, toolbars 30 px.
+- Altura de fila: árbol 22 px, grilla 20 px, pestañas 35 px, toolbars 30 px.
 - Iconos: Codicons 16 px.
 - Radio de borde: 2 px en inputs y botones, 4 px en menús/diálogos, 0 en paneles.
 

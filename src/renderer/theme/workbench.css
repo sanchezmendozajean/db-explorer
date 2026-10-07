@@ -344,8 +344,11 @@
 }
 
 .tree-secondary {
-  /* Se trunca antes que el nombre (como en VS Code). */
-  flex: 0 1000 auto;
+  /*
+   * Solo usa el espacio que deja el nombre (base 0): se corta entero antes de
+   * que el nombre pierda un carácter. El nombre se corta solo si no cabe solo.
+   */
+  flex: 1 1 0;
   margin-left: 6px;
   color: var(--fg-muted);
   font-style: italic;

@@ -34,7 +34,7 @@ async function cell(col: number, row: number): Promise<{ x: number; y: number }>
   const box = (await grid().boundingBox())!;
   const widths = (await grid().getAttribute('data-column-widths'))!.split(',').map(Number);
   const x = box.x + 48 + widths.slice(0, col).reduce((a, b) => a + b, 0) + widths[col]! / 2;
-  return { x, y: box.y + 26 + row * 24 + 12 };
+  return { x, y: box.y + 26 + row * 20 + 10 };
 }
 
 async function editCell(col: number, row: number, text: string): Promise<void> {
