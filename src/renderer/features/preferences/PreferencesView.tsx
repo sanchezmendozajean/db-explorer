@@ -141,7 +141,7 @@ export function PreferencesView(): React.JSX.Element {
         }),
         keyed('sql.statementSeparator', {
           id: 'editor-separator',
-          icon: 'note',
+          icon: 'list-selection',
           title: p.editor.separator,
           description: p.editor.separatorDescription,
           render: () => (
