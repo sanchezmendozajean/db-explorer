@@ -4,6 +4,8 @@ import type { CellValue, ResultColumn } from '@shared/query';
 export const WIDTH_SAMPLE_ROWS = 100;
 export const MIN_COLUMN_WIDTH = 60;
 export const MAX_COLUMN_WIDTH = 400;
+/** Tope al redimensionar a mano (el ancho inicial automático se limita a `MAX_COLUMN_WIDTH`). */
+export const MAX_RESIZE_WIDTH = 5000;
 /** Relleno de la celda (8 px por lado) más un margen para que no quede justo. */
 const CELL_PADDING = 22;
 /** Cabecera: ícono del tipo (16 + 6) y botón de orden (24) además del relleno. */

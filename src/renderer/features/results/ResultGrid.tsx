@@ -50,7 +50,7 @@ import type { ResultSet } from './results-store';
 import { useResultsStore } from './results-store';
 import { formatCell, isNumericType, withColumnFormat, withConnectionFormat } from './format';
 import type { FormatSettings } from './format';
-import { canvasMeasure, contentWidth, MIN_COLUMN_WIDTH } from './column-width';
+import { canvasMeasure, contentWidth, MAX_RESIZE_WIDTH, MIN_COLUMN_WIDTH } from './column-width';
 import { columnFormatKey, columnFormats, setColumnFormat } from './column-format';
 import { ColumnFormatPopover } from './ColumnFormatPopover';
 import { visibleColumns, visibleRows } from './view';
@@ -638,6 +638,7 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
         }
         headerIcons={icons}
         onHeaderMenuClick={cycleSort}
+        maxColumnWidth={MAX_RESIZE_WIDTH}
         onColumnResize={(_column, size, colIndex) =>
           updateView(tabId, result.id, { widths: { ...view.widths, [cols[colIndex]!]: size } })
         }
