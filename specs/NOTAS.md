@@ -498,3 +498,11 @@ El 2026-10-05 MySQL quedó "por completar" por no tener servidor de pruebas. El 
 - **Nombre de conexión antes que el host** (pedido del usuario): en el árbol, el texto secundario (host, tipo de columna…) solo ocupa el espacio que deja el nombre y se corta entero antes que él; el nombre se corta solo si no cabe por sí mismo.
 - **Filas de la grilla de 20 px** (pedido del usuario, antes 24). Actualizado en `04` §Alturas.
 - **Clic en la pestaña de un script** enfoca su editor (pedido del usuario); antes el foco quedaba en la pestaña.
+
+## Compatibilidad con Linux
+- Claves de ruta del renderer (`pathKey`): distinguen mayúsculas en Linux; en Windows no.
+- `safeStorage` en Linux: si Electron cae en el respaldo `basic_text` (sin llavero), el cifrado se trata como no disponible y no se guardan contraseñas (specs/08).
+- La ruta de un archivo nuevo en la vista Archivos usa el separador de la carpeta (`/` o `\`).
+- Tipografía de la UI con alternativas para Linux; texto "Mostrar en el explorador de archivos".
+- Empaquetado: `npm run package:linux` genera AppImage y .deb (`electron-builder.yml`, sección `linux`).
+- Pendiente: no se pudo ejecutar en Linux desde este equipo (Windows). Hay que probar allí `npm run dev`, el e2e y el paquete. En Ubuntu 24.04+ el AppImage puede requerir `--no-sandbox` por la restricción de AppArmor sobre user namespaces. `shell.trashItem` necesita `gio` (o similar) instalado.

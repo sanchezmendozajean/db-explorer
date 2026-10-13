@@ -62,7 +62,7 @@ function buildNodes(
     nodes.push({
       id: NEW_ID,
       isNew: true,
-      file: { name: '', path: `${dir}\\`, dir: editing.type === 'folder' },
+      file: { name: '', path: `${dir}${dir.includes('/') ? '/' : '\\'}`, dir: editing.type === 'folder' },
       children: editing.type === 'folder' ? [] : undefined,
     });
   }

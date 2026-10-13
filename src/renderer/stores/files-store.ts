@@ -1,9 +1,12 @@
 import { create } from 'zustand';
 import type { FileNode } from '@shared/workspace';
 
-/** Clave de una ruta (Windows no distingue mayúsculas). */
+/** Linux distingue mayúsculas en las rutas; Windows y macOS no. */
+const CASE_SENSITIVE_PATHS = typeof navigator !== 'undefined' && /Linux/.test(navigator.userAgent);
+
+/** Clave de una ruta (en Windows no se distingue mayúsculas; en Linux sí). */
 export function pathKey(path: string): string {
-  return path.toLowerCase();
+  return CASE_SENSITIVE_PATHS ? path : path.toLowerCase();
 }
 
 /** Carpeta que contiene una ruta. */

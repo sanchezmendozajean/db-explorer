@@ -127,7 +127,7 @@
   --env-qa: #cca700;
   --env-prod: #f85149;
 
-  --font-ui: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-ui: 'Segoe UI', system-ui, 'Ubuntu', 'Cantarell', 'Noto Sans', 'DejaVu Sans', -apple-system, sans-serif;
   --font-code: 'Cascadia Code', Consolas, 'Courier New', monospace;
   --font-size: 13px;
   --radius-control: 2px;

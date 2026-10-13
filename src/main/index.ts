@@ -65,7 +65,11 @@ if (!app.requestSingleInstanceLock()) {
     const connections = new ConnectionStore(join(userData, 'connections.json'));
     const { skipped } = await connections.load();
     const secrets = new SecretStore(join(userData, 'secrets.bin'), {
-      isAvailable: () => safeStorage.isEncryptionAvailable(),
+      // En Linux sin llavero (kwallet/gnome-libsecret) Electron cae en `basic_text`, que cifra con una
+      // clave fija: equivale a texto plano (specs/08), así que se trata como no disponible.
+      isAvailable: () =>
+        safeStorage.isEncryptionAvailable() &&
+        !(process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text'),
       encrypt: (plain) => safeStorage.encryptString(plain),
       decrypt: (data) => safeStorage.decryptString(data),
     });

@@ -52,7 +52,7 @@ export const es = {
     'db.files.duplicate': 'Duplicar',
     'db.files.copyPath': 'Copiar ruta',
     'db.files.copyRelativePath': 'Copiar ruta relativa',
-    'db.files.reveal': 'Mostrar en el Explorador de Windows',
+    'db.files.reveal': 'Mostrar en el explorador de archivos',
     'db.files.openExternal': 'Abrir con la aplicación del sistema',
     'db.files.runIn': 'Ejecutar en…',
     'db.files.revealActive': 'Mostrar en Archivos',
