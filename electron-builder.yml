@@ -1,4 +1,4 @@
-# Empaquetado para Windows (specs/00 D12, specs/09 M9): instalador NSIS y versión portable.
+# Empaquetado para Windows y Linux (specs/00 D12, specs/09 M9): instalador NSIS y versión portable.
 appId: com.dbexplorer.app
 productName: DB Explorer
 directories:
@@ -39,3 +39,15 @@ nsis:
   uninstallDisplayName: DB Explorer
 portable:
   artifactName: DB-Explorer-${version}-portable.${ext}
+linux:
+  icon: resources/icon.png
+  category: Development
+  maintainer: sanchezmendozajean <jp.sanchez.6383@gmail.com>
+  synopsis: Cliente de bases de datos
+  target:
+    - AppImage
+    - deb
+appImage:
+  artifactName: DB-Explorer-${version}.${ext}
+deb:
+  artifactName: DB-Explorer-${version}.${ext}
