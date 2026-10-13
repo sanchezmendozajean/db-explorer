@@ -923,3 +923,12 @@ button.chip > span:not(.env-dot) {
   outline: 1px solid var(--border-focus);
   outline-offset: -1px;
 }
+
+/* Editor de celda de la grilla: sin ligaduras de Cascadia Code (`//` y `://` se veían como espacios). */
+.gdg-growing-entry,
+.gdg-input {
+  font-variant-ligatures: none;
+  font-feature-settings:
+    'calt' 0,
+    'liga' 0;
+}
