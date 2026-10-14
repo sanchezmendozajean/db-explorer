@@ -94,6 +94,7 @@ export async function pickDatabase(tabId: string, anchor?: PickAnchor): Promise<
     id: db,
     label: db,
     icon: 'database',
+    iconColor: 'var(--icon-database)',
     current: db === current,
     run: () => setTabTarget(tabId, { database: db, schema: undefined }),
   }));
@@ -143,6 +144,7 @@ export async function pickDatabaseOrSchema(tabId: string): Promise<void> {
       id: `d:${db}`,
       label: db,
       icon: 'database',
+      iconColor: 'var(--icon-database)',
       detail: es.pickers.otherDatabase,
       run: () => setTabTarget(tabId, { database: db, schema: undefined }),
     });

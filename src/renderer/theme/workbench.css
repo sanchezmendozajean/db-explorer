@@ -1048,6 +1048,10 @@ button.statusbar-item:hover {
 }
 
 /* Vista Archivos: archivo abierto en el editor */
+.tree-label.connection-name {
+  font-weight: 600;
+}
+
 .tree-label.is-open {
   color: var(--fg);
   font-weight: 600;

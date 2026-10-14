@@ -59,13 +59,13 @@ function metaIcon(data: TreeNodeData): { name: string; color?: string } {
   const ref = data.ref;
   switch (ref.kind) {
     case 'database':
-      return { name: 'database' };
+      return { name: 'database', color: 'var(--icon-database)' };
     case 'schema':
       return { name: 'symbol-namespace' };
     case 'systemSchemas':
     case 'objectFolder':
     case 'indexFolder':
-      return { name: 'folder' };
+      return { name: 'folder', color: 'var(--icon-folder)' };
     case 'object':
       switch (ref.objectKind) {
         case 'table':
@@ -613,7 +613,7 @@ export function ConnectionsView(): React.JSX.Element {
     if (node.type === 'folder') {
       return (
         <>
-          <Codicon name="folder" className="tree-icon" />
+          <Codicon name="folder" color="var(--icon-folder)" className="tree-icon" />
           <span className="tree-label">
             <Highlight text={node.name} query={query} />
           </span>
@@ -634,7 +634,7 @@ export function ConnectionsView(): React.JSX.Element {
           <span className={['engine-badge', st?.state === 'connected' ? '' : 'is-disconnected'].join(' ')}>
             {ENGINE_BADGE[cfg.engine]}
           </span>
-          <span className="tree-label">
+          <span className="tree-label connection-name">
             <Highlight text={cfg.name} query={query} />
           </span>
           <span className="tree-secondary">{connectionAddress(cfg)}</span>

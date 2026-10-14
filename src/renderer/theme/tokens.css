@@ -45,6 +45,8 @@
   --success: #2ea043;
   --icon-table: #75beff; /* (maqueta) */
   --icon-sql: #519aba; /* (maqueta) */
+  --icon-database: #4aa3ff;
+  --icon-folder: #e8a838;
   --status-prod-bg: #5a1d1d;
   --status-prod-fg: #cccccc;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
@@ -103,6 +105,8 @@
   --success: #388a34;
   --icon-table: #007acc;
   --icon-sql: #498ba7;
+  --icon-database: #0b6fd1;
+  --icon-folder: #c08000;
   --status-prod-bg: #fde7e9;
   --status-prod-fg: #3b3b3b;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.16);

@@ -113,7 +113,7 @@ export function RoutineView({ tab }: { tab: EditorTab }): React.JSX.Element {
           {crumbs.map((c) => (
             <span key={c.icon} className="breadcrumb-item">
               <Codicon name="chevron-right" size={14} className="breadcrumb-sep" />
-              <Codicon name={c.icon} size={14} />
+              <Codicon name={c.icon} size={14} color={c.icon === 'database' ? 'var(--icon-database)' : undefined} />
               {c.label}
             </span>
           ))}
