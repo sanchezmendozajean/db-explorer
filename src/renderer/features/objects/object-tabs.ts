@@ -22,6 +22,7 @@ import {
 } from '../results/results-store';
 import type { ObjectRefData } from './object-details';
 import type { CatalogObject } from '../editor/catalog';
+import { openRoutineTab } from './routine-tabs';
 import { revealObject } from '../editor/catalog';
 
 /**
@@ -172,7 +173,7 @@ export async function fetchDdl(connectionId: string, ref: ObjectRefData): Promis
   return r.data.ddl || es.objects.noDdl;
 }
 
-/** Ctrl+P y F12 sobre un objeto (specs/05): tablas y vistas en su pestaña; el resto, en el árbol. */
+/** Ctrl+P y F12 sobre un objeto (specs/05): tablas y vistas en su pestaña, rutinas en su editor; el resto, en el árbol. */
 export function openCatalogObject(connectionId: string, object: CatalogObject): void {
   if (DATA_KINDS.includes(object.kind)) {
     openObjectTab(
@@ -181,6 +182,13 @@ export function openCatalogObject(connectionId: string, object: CatalogObject): 
       'data',
       { preview: false },
     );
+  } else if (object.kind === 'function' || object.kind === 'procedure') {
+    openRoutineTab(connectionId, {
+      database: object.database,
+      schema: object.schema,
+      name: object.name,
+      kind: object.kind,
+    });
   } else {
     revealObject(connectionId, object);
   }

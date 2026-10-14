@@ -22,6 +22,7 @@ import { useWorkbenchStore } from '../../stores/workbench-store';
 const TAB_ICON: Record<EditorTab['kind'], { icon: string; color: string }> = {
   script: { icon: 'file-code', color: 'var(--fg-muted)' },
   object: { icon: 'table', color: 'var(--icon-table)' },
+  routine: { icon: 'symbol-method', color: 'var(--fg-muted)' },
   preferences: { icon: 'settings-gear', color: 'var(--fg-muted)' },
 };
 

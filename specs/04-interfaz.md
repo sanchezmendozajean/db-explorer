@@ -138,6 +138,7 @@ Estados de la conexión: desconectada (icono de motor al 50% de opacidad), conec
 Interacciones:
 - Doble clic en conexión → conecta y expande.
 - Doble clic en tabla/vista → abre pestaña de **objeto** (sección 9) en la subpestaña "Datos".
+- Doble clic en procedimiento/función → abre una pestaña de **rutina** con su definición editable; Ctrl+S pregunta y la aplica en la base (SQL Server: `ALTER`; PostgreSQL: `CREATE OR REPLACE`; MariaDB/MySQL: `DROP` + `CREATE` con restauración si falla). SQLite no tiene rutinas.
 - Clic central o Ctrl+Enter en tabla → nuevo script con `SELECT * FROM <tabla> LIMIT 500` (sintaxis según motor).
 - Arrastrar tabla o columna al editor → inserta el nombre calificado y entrecomillado según dialecto.
 - Teclado: flechas, ←/→ colapsa/expande, Enter abre, F2 renombra (conexiones y carpetas), Supr elimina conexión (con confirmación), F5 refresca nodo.

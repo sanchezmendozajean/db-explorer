@@ -15,6 +15,7 @@ import { askChoice } from '../dialogs/ask';
 import { forgetTab, tabResults } from '../results/results-store';
 import { confirmDiscardGridChanges } from '../results/grid-edit';
 import { confirmOpenTransactions, forgetTransaction } from '../execution/transactions';
+import { confirmRoutineChanges, disposeRoutineTab } from '../objects/routine-tabs';
 import {
   allDocuments,
   disposeDocument,
@@ -307,6 +308,7 @@ export function discardAllTabs(): void {
     if (running) void window.api.query.cancel({ queryId: running.queryId });
     void window.api.query.closeSession({ sessionId: tab.id });
     forgetTab(tab.id);
+    disposeRoutineTab(tab.id);
     disposeDocument(tab.id);
   }
   wb().restore([], null);
@@ -369,6 +371,7 @@ export async function closeTabs(ids: readonly string[]): Promise<boolean> {
   // Transacciones manuales abiertas y ediciones de grilla sin guardar (specs/03 §Sesiones, specs/06).
   if (!(await confirmOpenTransactions(ids))) return false;
   for (const id of ids) if (!(await confirmDiscardGridChanges(id))) return false;
+  if (!(await confirmRoutineChanges(ids))) return false;
   const tabs = wb().tabs.filter((t) => ids.includes(t.id));
   const closable: string[] = [];
   const autoSave = setting('files.autoSave');
@@ -401,6 +404,7 @@ export async function closeTabs(ids: readonly string[]): Promise<boolean> {
     void window.api.query.closeSession({ sessionId: id });
     forgetTab(id);
     forgetTransaction(id);
+    disposeRoutineTab(id);
     const doc = getDocument(id);
     const empty = doc ? doc.model.getValue().trim() === '' : true;
     if (tab.path && empty && setting('scripts.deleteEmptyOnClose')) {
@@ -428,6 +432,7 @@ export async function handleBeforeClose(): Promise<void> {
   const ids = wb().tabs.map((t) => t.id);
   if (!(await confirmOpenTransactions(ids))) return;
   for (const id of ids) if (!(await confirmDiscardGridChanges(id))) return;
+  if (!(await confirmRoutineChanges(ids))) return;
   if (setting('files.autoSave')) {
     const saved = await Promise.race([
       saveAll()

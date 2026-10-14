@@ -506,3 +506,15 @@ El 2026-10-05 MySQL quedó "por completar" por no tener servidor de pruebas. El 
 - Tipografía de la UI con alternativas para Linux; texto "Mostrar en el explorador de archivos".
 - Empaquetado: `npm run package:linux` genera AppImage y .deb (`electron-builder.yml`, sección `linux`).
 - Pendiente: no se pudo ejecutar en Linux desde este equipo (Windows). Hay que probar allí `npm run dev`, el e2e y el paquete. En Ubuntu 24.04+ el AppImage puede requerir `--no-sandbox` por la restricción de AppArmor sobre user namespaces. `shell.trashItem` necesita `gio` (o similar) instalado.
+
+## Edición de procedimientos y funciones
+Pedida por el usuario (fuera de `01` hasta ahora; se agregó al alcance en `01` y `04` §6).
+- Doble clic o Enter en el árbol, "Editar definición" del menú contextual y Ctrl+P/F12 abren una pestaña `routine` (no es un archivo: Ctrl+S guarda en la base, no en el espacio de trabajo). El texto sale de `getDDL`.
+- Guardar pide confirmación (con aviso extra en conexiones de producción) y llama a `meta:save-routine` → `DbDriver.replaceRoutine`, en una conexión propia (nunca la de metadatos):
+  - **SQL Server**: el primer `CREATE [OR ALTER]` pasa a `ALTER` (`routine-sql.ts`), en un lote.
+  - **PostgreSQL**: se ejecuta el `CREATE OR REPLACE` tal cual. Si se cambia la firma se crea otra sobrecarga.
+  - **MariaDB/MySQL**: `DROP` + `CREATE` con el mismo `sql_mode`; si el `CREATE` falla se recrea la definición anterior (el DDL confirma solo, no hay transacción).
+- Las conexiones de solo lectura no pueden guardar (se valida también en el db-host). SQLite rechaza la operación.
+- Al cerrar una pestaña (o la app) con cambios: Guardar / No guardar / Cancelar. Las pestañas de rutina no se restauran al reabrir el espacio.
+- Límites: no hay autocompletado en este editor; la posición del error del motor no se marca en el texto; en SQL Server el cambio de `CREATE` a `ALTER` usa el primer encabezado que encuentre (un comentario previo con "CREATE PROCEDURE" lo confundiría).
+- Pruebas: unitarias de `toAlterStatement` e integración en los cuatro motores (guardar y fallo con restauración).

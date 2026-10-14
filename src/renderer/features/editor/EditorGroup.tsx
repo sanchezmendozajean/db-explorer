@@ -8,6 +8,7 @@ import { EditorTabs } from './EditorTabs';
 import { EditorToolbar } from './EditorToolbar';
 import { PreferencesView } from '../preferences/PreferencesView';
 import { ObjectView } from '../objects/ObjectView';
+import { RoutineView } from '../objects/RoutineView';
 import { SqlEditor } from './SqlEditor';
 import { Watermark } from './Watermark';
 
@@ -18,17 +19,22 @@ function layoutFits(layout: Layout | null, ids: string[]): layout is Layout {
 }
 
 /**
- * Editor SQL + panel de resultados de la pestaña activa. El editor Monaco es
- * uno solo para el grupo: cambiar de pestaña solo cambia su modelo, y ocultar
- * o maximizar los resultados no lo vuelve a crear (la estructura es fija).
+ * Editor arriba y panel de resultados o mensajes abajo, con el divisor redimensionable.
+ * La estructura es fija: ocultar o maximizar el panel no vuelve a crear el editor.
  */
-function ScriptArea({ tab }: { tab: EditorTab }): React.JSX.Element {
+function SplitArea({
+  tab,
+  showPanel,
+  children,
+}: {
+  tab: EditorTab;
+  showPanel: boolean;
+  children: React.ReactNode;
+}): React.JSX.Element {
   const panel = useUiStore((s) => s.panel);
   const savedLayout = useUiStore((s) => s.layout.editor);
   const setEditorLayout = useUiStore((s) => s.setEditorLayout);
-  // Los archivos de texto que no son SQL se editan sin barra de ejecución ni resultados.
-  const isSql = /\.sql$/i.test(tab.path ?? '');
-  const maximized = isSql && panel.visible && panel.maximized;
+  const maximized = showPanel && panel.visible && panel.maximized;
 
   return (
     <Group
@@ -42,12 +48,9 @@ function ScriptArea({ tab }: { tab: EditorTab }): React.JSX.Element {
       }}
     >
       <Panel id="editor" minSize={80} defaultSize="60%">
-        <div className="editor-pane">
-          {isSql && <EditorToolbar tab={tab} />}
-          <SqlEditor tab={tab} />
-        </div>
+        {children}
       </Panel>
-      {isSql && panel.visible && (
+      {showPanel && panel.visible && (
         <>
           <Separator className="sash sash-horizontal" />
           <Panel id="results" minSize={120} defaultSize="40%">
@@ -56,6 +59,22 @@ function ScriptArea({ tab }: { tab: EditorTab }): React.JSX.Element {
         </>
       )}
     </Group>
+  );
+}
+
+/**
+ * Script: un solo editor Monaco para el grupo (cambiar de pestaña solo cambia su modelo).
+ * Los archivos de texto que no son SQL se editan sin barra de ejecución ni resultados.
+ */
+function ScriptArea({ tab }: { tab: EditorTab }): React.JSX.Element {
+  const isSql = /\.sql$/i.test(tab.path ?? '');
+  return (
+    <SplitArea tab={tab} showPanel={isSql}>
+      <div className="editor-pane">
+        {isSql && <EditorToolbar tab={tab} />}
+        <SqlEditor tab={tab} />
+      </div>
+    </SplitArea>
   );
 }
 
@@ -69,6 +88,10 @@ export function EditorGroup(): React.JSX.Element {
           <Watermark />
         ) : tab.kind === 'object' ? (
           <ObjectView key={tab.id} tab={tab} />
+        ) : tab.kind === 'routine' ? (
+          <SplitArea tab={tab} showPanel>
+            <RoutineView key={tab.id} tab={tab} />
+          </SplitArea>
         ) : tab.kind === 'preferences' ? (
           <PreferencesView />
         ) : (

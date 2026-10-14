@@ -30,6 +30,7 @@ Más un **explorador de archivos** editable para organizar y abrir scripts `.sql
 - Grilla de resultados: orden, filtro rápido, copiar (celdas, filas, con cabeceras, como INSERT), exportar CSV/JSON/XLSX, vista de valor (JSON, texto largo), formatos por tipo configurables.
 - Edición de datos en grilla (según D7).
 - Abrir tabla: ver datos (con filtro WHERE y orden) y ver estructura (columnas, índices, claves, DDL).
+- Editar procedimientos y funciones (SQL Server, PostgreSQL, MariaDB/MySQL): doble clic en el árbol abre su definición en un editor; Ctrl+S la guarda en la base tras confirmar.
 - Historial de consultas ejecutadas.
 - Plan de ejecución estimado y real en una vista de árbol común a los cuatro motores, con avisos y detalle por paso (ver `12`).
 - Scripts como archivos `.sql` en un **espacio de trabajo** (carpeta por defecto del usuario, configurable), con **guardado automático** opcional y restauración de pestañas al abrir (ver `11`).

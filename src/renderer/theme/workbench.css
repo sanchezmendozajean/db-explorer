@@ -1924,3 +1924,19 @@ button.plan-warnings:hover {
   min-width: 0;
   min-height: 0;
 }
+
+/* Pestaña de rutina: acciones en la cabecera y error sobre el editor. */
+.object-header .ddl-actions {
+  gap: 6px;
+  padding: 0;
+  border-bottom: 0;
+}
+
+.routine-error {
+  flex: none;
+  max-width: none;
+  margin: 0;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-editor);
+}

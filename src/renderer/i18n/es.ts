@@ -531,6 +531,30 @@ export const es = {
     statusManual: (n: number) => `Manual (${n})`,
   },
 
+  routines: {
+    edit: 'Editar definición',
+    save: 'Guardar en la base de datos',
+    reload: 'Recargar desde la base de datos',
+    loading: 'Cargando la definición…',
+    saving: 'Guardando…',
+    noDefinition: 'El motor no devolvió la definición (¿faltan permisos?).',
+    readOnly: 'La conexión es de solo lectura: no se puede guardar.',
+    saveTitle: 'Guardar cambios en la base de datos',
+    saveMessage: (name: string, how: string) =>
+      `¿Aplicar los cambios de "${name}" en la base de datos? ${how}`,
+    production: 'Es una conexión de PRODUCCIÓN.',
+    how: {
+      sqlserver: 'Se ejecutará ALTER.',
+      postgres: 'Se ejecutará CREATE OR REPLACE.',
+      mariadb: 'Se eliminará y se volverá a crear; si falla, se restaura la definición anterior.',
+    },
+    apply: 'Guardar',
+    saved: (name: string) => `Se guardó "${name}" en la base de datos.`,
+    unsavedTitle: 'Cambios sin guardar',
+    unsavedMessage: (name: string) => `¿Guardar los cambios de "${name}" en la base de datos?`,
+    dontSave: 'No guardar',
+    reloadConfirm: 'Se perderán los cambios sin guardar. ¿Recargar de todos modos?',
+  },
   objects: {
     unavailable: 'El objeto ya no está disponible (se eliminó la conexión).',
     apply: 'Aplicar filtro (Enter)',

@@ -20,6 +20,7 @@ import * as actions from './actions';
 import { newScript } from '../editor/scripts';
 import { countRows, newDdlScript, newTableScript, objectRef, targetOfRef } from './table-scripts';
 import { openObjectTab } from '../objects/object-tabs';
+import { openRoutineTab } from '../objects/routine-tabs';
 import { invalidateDetails } from '../objects/object-details';
 import { dotStyle } from '../../components/env-dot';
 
@@ -126,6 +127,11 @@ function filterNodes(
 }
 
 const HAS_DATA = ['table', 'view', 'materializedView'];
+const ROUTINES = ['function', 'procedure'];
+
+function isRoutine(ref: TreeNodeRef): ref is Extract<TreeNodeRef, { kind: 'object' }> {
+  return ref.kind === 'object' && ROUTINES.includes(ref.objectKind);
+}
 
 function isDataObject(ref: TreeNodeRef): ref is Extract<TreeNodeRef, { kind: 'object' }> {
   return ref.kind === 'object' && HAS_DATA.includes(ref.objectKind);
@@ -146,6 +152,11 @@ export function ConnectionsView(): React.JSX.Element {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  // Nodos que el usuario contrajo aunque el filtro los expanda; valen solo para el texto del filtro actual.
+  const [collapsedBy, setCollapsedBy] = useState<{ query: string; ids: Set<string> }>({
+    query: '',
+    ids: new Set(),
+  });
   const [envFilter, setEnvFilter] = useState<Set<Environment>>(() => new Set(ENVIRONMENTS));
   const filterRef = useRef<HTMLInputElement>(null);
 
@@ -159,7 +170,10 @@ export function ConnectionsView(): React.JSX.Element {
       const id = connectionKey(config.id);
       return { type: 'connection', id, config, children: metaChildren(config.id, id) };
     };
-    const visible = connections.filter((c) => envFilter.has(c.environment));
+    // Las conexiones se ordenan por nombre (sin distinguir mayúsculas ni tildes; los números, por valor).
+    const visible = connections
+      .filter((c) => envFilter.has(c.environment))
+      .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base', numeric: true }));
     const folderNodes: UiNode[] = folders.map((name) => ({
       type: 'folder',
       id: folderId(name),
@@ -172,6 +186,7 @@ export function ConnectionsView(): React.JSX.Element {
 
   const rows = useMemo(() => {
     const forced = new Set<string>();
+    const collapsed = collapsedBy.query === query ? collapsedBy.ids : undefined;
     const nodes = query ? filterNodes(tree, query, forced, (id) => id in children) : tree;
     const out: Row[] = [];
     const walk = (list: UiNode[], depth: number): void => {
@@ -179,7 +194,10 @@ export function ConnectionsView(): React.JSX.Element {
         const expandable = node.type !== 'meta' || node.data.expandable;
         // Una conexión cerrada nunca se muestra expandida.
         const closed = node.type === 'connection' && status[node.config.id]?.state !== 'connected';
-        const isExpanded = expandable && !closed && (expanded.has(node.id) || forced.has(node.id));
+        const isExpanded =
+          expandable &&
+          !closed &&
+          (expanded.has(node.id) || (forced.has(node.id) && !collapsed?.has(node.id)));
         const isLoading =
           !!loading[node.id] ||
           (node.type === 'connection' && status[node.config.id]?.state === 'connecting');
@@ -189,7 +207,7 @@ export function ConnectionsView(): React.JSX.Element {
     };
     walk(nodes, 0);
     return out;
-  }, [tree, query, expanded, loading, status, children]);
+  }, [tree, query, collapsedBy, expanded, loading, status, children]);
 
   // Carga perezosa: todo nodo expandido de una conexión abierta carga sus hijos si aún no los tiene.
   useEffect(() => {
@@ -227,13 +245,21 @@ export function ConnectionsView(): React.JSX.Element {
     );
   }, [revealRequest]);
 
-  const setOpen = (id: string, open: boolean): void =>
+  const setOpen = (id: string, open: boolean): void => {
     setExpanded((prev) => {
       const next = new Set(prev);
       if (open) next.add(id);
       else next.delete(id);
       return next;
     });
+    // Con filtro, contraer un nodo que el filtro expande lo recuerda; expandirlo lo olvida.
+    setCollapsedBy((prev) => {
+      const ids = new Set(prev.query === query ? prev.ids : []);
+      if (open) ids.delete(id);
+      else ids.add(id);
+      return { query, ids };
+    });
+  };
 
   /** Expandir una conexión cerrada la conecta primero (pidiendo la contraseña si hace falta). */
   const toggleNode = async (node: UiNode, open: boolean): Promise<void> => {
@@ -441,6 +467,20 @@ export function ConnectionsView(): React.JSX.Element {
         SEPARATOR,
         refreshEntry,
         { type: 'item', id: 'count', label: t.countRows, run: () => void countRows(node.connectionId, ref) },
+      ];
+    }
+    if (isRoutine(ref)) {
+      return [
+        {
+          type: 'item',
+          id: 'edit',
+          label: es.routines.edit,
+          run: () => openRoutineTab(node.connectionId, objectRef(ref)),
+        },
+        SEPARATOR,
+        copyName,
+        SEPARATOR,
+        refreshEntry,
       ];
     }
     return [refreshEntry, copyName];
@@ -686,6 +726,9 @@ export function ConnectionsView(): React.JSX.Element {
                 // Doble clic o Enter en una tabla o vista: pestaña de objeto en Datos (specs/04 §6).
                 if (row.node.type === 'meta' && isDataObject(row.node.data.ref)) {
                   openObjectTab(row.node.connectionId, objectRef(row.node.data.ref), 'data');
+                } else if (row.node.type === 'meta' && isRoutine(row.node.data.ref)) {
+                  // Doble clic o Enter en un procedimiento o función: editor de su definición.
+                  openRoutineTab(row.node.connectionId, objectRef(row.node.data.ref));
                 } else if (row.expandable) void toggleNode(row.node, !row.expanded);
               }}
               onRowKeyDown={onRowKeyDown}

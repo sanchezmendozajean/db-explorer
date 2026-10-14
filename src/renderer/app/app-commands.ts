@@ -51,6 +51,7 @@ import { getActiveGrid } from '../features/results/grid-edit';
 import { pendingCount } from '../features/results/edit-state';
 import { tabResults } from '../features/results/results-store';
 import { openCatalogObject } from '../features/objects/object-tabs';
+import { saveRoutine } from '../features/objects/routine-tabs';
 
 /** Cambios pendientes de la grilla con foco. */
 function activeGridChanges(): number {
@@ -129,6 +130,10 @@ export function registerAppCommands(): () => void {
     return tab?.kind === 'script' ? tab.id : undefined;
   };
   const hasScript = (): boolean => activeScript() !== undefined;
+  const activeRoutine = (): string | undefined => {
+    const tab = wb().tabs.find((t) => t.id === wb().activeId);
+    return tab?.kind === 'routine' ? tab.id : undefined;
+  };
   /** SQLite no tiene plan real (specs/12 §2). */
   const sqliteScript = (): boolean => {
     const tab = wb().tabs.find((t) => t.id === activeScript());
@@ -220,8 +225,13 @@ export function registerAppCommands(): () => void {
     {
       id: 'db.save',
       category: cat.file,
-      enabled: hasScript,
+      enabled: () => hasScript() || activeRoutine() !== undefined,
       run: async () => {
+        const routine = activeRoutine();
+        if (routine) {
+          await saveRoutine(routine);
+          return;
+        }
         const id = activeScript();
         if (id) await saveDocument(id);
       },
