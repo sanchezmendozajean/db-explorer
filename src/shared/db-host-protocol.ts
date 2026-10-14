@@ -51,6 +51,7 @@ export interface DbHostMethods {
   'session.end-transaction': { params: { sessionId: string; commit: boolean }; result: null };
   'meta.table': { params: ObjectTarget; result: TableDetails };
   'meta.ddl': { params: ObjectTarget; result: string };
+  'meta.saveRoutine': { params: ObjectTarget & { definition: string }; result: null };
   'data.apply': { params: ApplyChangesRequest; result: ApplyChangesResult };
   'export.start': { params: ExportRequest; result: ExportSummary };
 }
@@ -67,6 +68,8 @@ export interface DbHostRequest<M extends DbHostMethod = DbHostMethod> {
 export interface DbHostErrorPayload {
   message: string;
   code?: string;
+  /** Posición (1-based) del error dentro del texto enviado, si el motor la informó. */
+  position?: number;
 }
 
 export type DbHostResponse =

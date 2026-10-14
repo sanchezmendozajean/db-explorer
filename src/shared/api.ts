@@ -62,6 +62,7 @@ export interface DbExplorerApi {
     count: Invoke<'meta:count'>;
     table: Invoke<'meta:table'>;
     ddl: Invoke<'meta:ddl'>;
+    saveRoutine: Invoke<'meta:save-routine'>;
   };
   query: {
     execute: Invoke<'query:execute'>;

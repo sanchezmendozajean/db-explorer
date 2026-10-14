@@ -206,6 +206,27 @@ describe.each(cases)('$label', (c: EngineCase) => {
       }
     });
 
+    it.runIf(c.writable && !!c.routine)(
+      'edita una función: guarda el cambio y, si falla, conserva la anterior',
+      async () => {
+        const r = c.routine!;
+        await exec(r.setup);
+        const value = async (): Promise<number> => Number(rowsOf((await exec([r.call])).queryId)[0]![0]);
+        expect(await value()).toBe(1001);
+
+        const ddl = await manager.ddl(id, r.ref, 'function');
+        expect(ddl).toContain('1001');
+        await manager.saveRoutine(id, r.ref, 'function', ddl.replace('1001', '2002'));
+        expect(await value()).toBe(2002);
+
+        // Una definición inválida falla y la función queda como estaba (en MariaDB se restaura).
+        await expect(
+          manager.saveRoutine(id, r.ref, 'function', ddl.replace('1001', '@@@')),
+        ).rejects.toThrow();
+        expect(await value()).toBe(2002);
+      },
+    );
+
     it.runIf(c.writable)('describe claves foráneas y restricciones CHECK', async () => {
       const p = c.plan.prefix;
       await exec(

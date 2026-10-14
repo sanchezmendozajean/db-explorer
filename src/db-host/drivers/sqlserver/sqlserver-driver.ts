@@ -15,6 +15,7 @@ import { DriverError } from '../types';
 import { formatRowEstimate } from '../common';
 import { toSqlServerError } from './errors';
 import { installExactValues } from './exact-values';
+import { toAlterStatement } from './routine-sql';
 import type { DescribedColumn } from './sqlserver-session';
 import { SqlServerSession } from './sqlserver-session';
 
@@ -438,6 +439,26 @@ export class SqlServerDriver implements DbDriver {
       `EXEC ${bracket(database)}.sys.sp_executesql @stmt, N'${declare}'${assign ? `, ${assign}` : ''}`,
       { stmt: sql, ...params },
     );
+  }
+
+  /** `ALTER` en una conexión propia con la base de la rutina como contexto (un solo lote). */
+  async replaceRoutine(ref: ObjectRef, kind: ObjectKind, definition: string): Promise<void> {
+    if (kind !== 'procedure' && kind !== 'function') {
+      throw new DriverError('Solo se pueden editar procedimientos y funciones', 'unsupported');
+    }
+    const alter = toAlterStatement(definition);
+    if (!alter) {
+      throw new DriverError('La definición debe empezar con CREATE PROCEDURE o CREATE FUNCTION', 'invalid');
+    }
+    const connection = await this.open(ref.database, 'DB Explorer (rutina)', METADATA_TIMEOUT_MS);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const request = new Request(alter, (err) => (err ? reject(toSqlServerError(err, alter)) : resolve()));
+        connection.execSqlBatch(request);
+      });
+    } finally {
+      connection.close();
+    }
   }
 
   async countRows(ref: ObjectRef): Promise<number> {

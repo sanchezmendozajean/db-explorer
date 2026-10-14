@@ -35,7 +35,7 @@ export function toIpcError(err: unknown): IpcError {
   if (err instanceof DbHostRequestError) {
     const passthrough: readonly string[] = ['engine-unavailable', 'not-connected', 'busy'];
     const code = err.code && passthrough.includes(err.code) ? (err.code as IpcErrorCode) : 'db-error';
-    return { code, message: err.message };
+    return { code, message: err.message, position: err.position };
   }
   if (err instanceof FileConflictError) return { code: 'conflict', message: err.message };
   if (err instanceof FileAccessError) return { code: 'forbidden', message: err.message };

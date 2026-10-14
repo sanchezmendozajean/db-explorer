@@ -107,6 +107,11 @@ export interface DbDriver {
   getConstraints(ref: ObjectRef): Promise<ConstraintInfo[]>;
   /** Sentencia de creación del objeto. */
   getDDL(ref: ObjectRef, kind: ObjectKind): Promise<string>;
+  /**
+   * Reemplaza la definición de un procedimiento o función por `definition` (el texto completo del
+   * `CREATE`, como lo devuelve `getDDL`, ya editado). Cada motor usa su mecanismo (specs/NOTAS).
+   */
+  replaceRoutine(ref: ObjectRef, kind: ObjectKind, definition: string): Promise<void>;
   /** `SELECT count(*)` de una tabla o vista. */
   countRows(ref: ObjectRef): Promise<number>;
 

@@ -117,6 +117,12 @@ export class ConnectionManager {
     return this.get(id).driver.getDDL(ref, kind);
   }
 
+  async saveRoutine(id: string, ref: ObjectRef, kind: ObjectKind, definition: string): Promise<void> {
+    const { driver, config } = this.get(id);
+    if (config.readOnly) throw new DriverError('La conexión es de solo lectura', 'read-only');
+    await driver.replaceRoutine(ref, kind, definition);
+  }
+
   apply(req: ApplyChangesRequest): Promise<ApplyChangesResult> {
     return this.queries.apply(req);
   }

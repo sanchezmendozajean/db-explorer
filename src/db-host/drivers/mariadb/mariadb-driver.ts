@@ -275,6 +275,55 @@ export class MariaDbDriver implements DbDriver {
     return Number(row?.['n'] ?? 0);
   }
 
+  /**
+   * MariaDB/MySQL no tienen `ALTER` del cuerpo ni `CREATE OR REPLACE` para rutinas: se hace
+   * `DROP` + `CREATE` en una conexión propia con la base como contexto. Si el `CREATE` falla se
+   * vuelve a crear la definición anterior (el DDL confirma solo, no hay transacción que revertir).
+   */
+  async replaceRoutine(ref: ObjectRef, kind: ObjectKind, definition: string): Promise<void> {
+    const what = ROUTINE_TYPES[kind];
+    if (!what) throw new DriverError('Solo se pueden editar procedimientos y funciones', 'unsupported');
+    const create = definition.trim().replace(/;+\s*$/, '');
+    if (!new RegExp(`^CREATE\\b[\\s\\S]*?\\b${what}\\b`, 'i').test(create)) {
+      throw new DriverError(`La definición debe empezar con CREATE ${what}`, 'invalid');
+    }
+    const conn = await this.open(ref.database);
+    try {
+      const name = qualifiedName('mariadb', { schema: ref.database, name: ref.name });
+      const rows = await new Promise<RowDataPacket[]>((resolve, reject) => {
+        conn.query<RowDataPacket[]>(`SHOW CREATE ${what} ${name}`, (err, r) =>
+          err ? reject(toMariaDbError(err)) : resolve(r),
+        );
+      });
+      const current = rows[0];
+      const key = current ? Object.keys(current).find((k) => /^create /i.test(k)) : undefined;
+      const previous = key ? String(current![key] ?? '') : '';
+      if (!previous) {
+        throw new DriverError('No se pudo leer la definición actual (¿faltan permisos?)', 'no-definition');
+      }
+      // Misma modalidad SQL que la de la rutina original (afecta el análisis del cuerpo).
+      const sqlMode = typeof current!['sql_mode'] === 'string' ? (current!['sql_mode'] as string) : undefined;
+      if (sqlMode !== undefined) await this.run(conn, `SET SESSION sql_mode = ${mysql.escape(sqlMode)}`);
+
+      await this.run(conn, `DROP ${what} ${name}`);
+      try {
+        await this.run(conn, create);
+      } catch (err) {
+        try {
+          await this.run(conn, previous);
+        } catch {
+          throw new DriverError(
+            `${toMariaDbError(err).message}. Además no se pudo restaurar la definición anterior: la rutina ya no existe.`,
+            'restore-failed',
+          );
+        }
+        throw err;
+      }
+    } finally {
+      conn.destroy();
+    }
+  }
+
   async openSession(database: string | undefined): Promise<DbSession> {
     const cfg = this.requireConfig();
     const connection = await this.open(database || undefined);
@@ -313,7 +362,7 @@ export class MariaDbDriver implements DbDriver {
 
   private run(conn: Connection, sql: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      conn.query(sql, (err) => (err ? reject(toMariaDbError(err)) : resolve()));
+      conn.query(sql, (err) => (err ? reject(toMariaDbError(err, sql)) : resolve()));
     });
   }
 

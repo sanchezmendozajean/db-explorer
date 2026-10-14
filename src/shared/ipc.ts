@@ -125,6 +125,9 @@ export const ExecuteRequestSchema = z.object({
 
 const SessionId = z.string().min(1).max(4200);
 
+/** Tope del texto de una rutina al guardarla (10 millones de caracteres). */
+const MAX_ROUTINE_LENGTH = 10_000_000;
+
 export const ObjectTargetSchema = z.object({
   connectionId: Id,
   database: Name,
@@ -339,6 +342,10 @@ export const ipcInvokeContract = {
   },
   'meta:table': { request: ObjectTargetSchema, response: z.custom<TableDetails>() },
   'meta:ddl': { request: ObjectTargetSchema, response: z.object({ ddl: z.string() }) },
+  'meta:save-routine': {
+    request: ObjectTargetSchema.extend({ definition: z.string().min(1).max(MAX_ROUTINE_LENGTH) }),
+    response: Empty,
+  },
   'data:apply': { request: ApplyChangesSchema, response: z.custom<ApplyChangesResult>() },
   /** Diálogo "Guardar como" de una exportación; la ruta queda autorizada para `data:export`. */
   'data:pick-export-path': {
@@ -398,6 +405,8 @@ export type IpcErrorCode =
 export interface IpcError {
   code: IpcErrorCode;
   message: string;
+  /** Posición (1-based) del error en el texto enviado al motor (errores de sintaxis). */
+  position?: number;
 }
 
 /** Toda respuesta IPC viaja envuelta: nunca se lanzan excepciones a través del puente. */

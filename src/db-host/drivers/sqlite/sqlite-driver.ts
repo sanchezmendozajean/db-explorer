@@ -239,6 +239,13 @@ export class SqliteDriver implements DbDriver {
     );
   }
 
+  /** SQLite no tiene procedimientos ni funciones almacenadas. */
+  replaceRoutine(): Promise<void> {
+    return Promise.reject(
+      new DriverError('SQLite no tiene procedimientos ni funciones almacenadas', 'unsupported'),
+    );
+  }
+
   async openSession(): Promise<DbSession> {
     const cfg = this.requireConfig();
     const session = new SqliteSession(

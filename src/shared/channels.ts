@@ -49,6 +49,7 @@ export const IPC_INVOKE_CHANNELS = [
   'meta:count',
   'meta:table',
   'meta:ddl',
+  'meta:save-routine',
   'query:execute',
   'query:fetch-more',
   'query:cancel',

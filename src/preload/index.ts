@@ -75,6 +75,7 @@ const api: DbExplorerApi = {
     count: invoke('meta:count'),
     table: invoke('meta:table'),
     ddl: invoke('meta:ddl'),
+    saveRoutine: invoke('meta:save-routine'),
   },
   query: {
     execute: invoke('query:execute'),

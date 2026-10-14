@@ -144,6 +144,10 @@ export function registerConnectionHandlers({
 
   handle('meta:table', (req) => dbHost.request('meta.table', req));
   handle('meta:ddl', async (req) => ({ ddl: await dbHost.request('meta.ddl', req) }));
+  handle('meta:save-routine', async (req) => {
+    await dbHost.request('meta.saveRoutine', req, { timeoutMs: null });
+    return {};
+  });
   handle('data:apply', (req) => dbHost.request('data.apply', req, { timeoutMs: null }));
 
   // El renderer no elige rutas libremente: solo exporta a una ruta elegida en el diálogo de main.

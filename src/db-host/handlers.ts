@@ -53,13 +53,18 @@ export function createHandlers(
     },
     'meta.table': ({ connectionId, kind, ...ref }) => connections.tableDetails(connectionId, ref, kind),
     'meta.ddl': ({ connectionId, kind, ...ref }) => connections.ddl(connectionId, ref, kind),
+    'meta.saveRoutine': async ({ connectionId, kind, definition, ...ref }) => {
+      await connections.saveRoutine(connectionId, ref, kind, definition);
+      return null;
+    },
     'data.apply': (req) => connections.apply(req),
     'export.start': (req) => connections.export(req),
   };
 }
 
 function toErrorPayload(err: unknown): DbHostErrorPayload {
-  if (err instanceof DriverError) return { message: err.message, code: err.code };
+  if (err instanceof DriverError)
+    return { message: err.message, code: err.code, position: err.extra.position };
   return { message: err instanceof Error ? err.message : String(err) };
 }
 

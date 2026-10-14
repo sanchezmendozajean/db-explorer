@@ -55,6 +55,8 @@ export interface EngineCase {
    * `prefix` califica sus nombres en las sentencias.
    */
   plan: { setup: string[]; prefix: string };
+  /** Función de prueba con la constante 1001 en el cuerpo (editar rutinas); sin valor: el motor no tiene. */
+  routine?: { setup: string[]; ref: { database: string; schema: string; name: string }; call: string };
 }
 
 /** Ejecuta sentencias en una sesión propia y devuelve sus eventos (para preparar datos). */
@@ -150,6 +152,13 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
       },
       begin: 'BEGIN',
       rollback: 'ROLLBACK',
+    },
+    routine: {
+      setup: [
+        'CREATE OR REPLACE FUNCTION comun.fn_dbx_prueba() RETURNS int LANGUAGE sql AS $$ SELECT 1001 $$',
+      ],
+      ref: { database: pg.database, schema: 'comun', name: 'fn_dbx_prueba()' },
+      call: 'SELECT comun.fn_dbx_prueba() AS v',
     },
     plan: {
       prefix: 'comun.',
@@ -296,6 +305,14 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
       begin: 'BEGIN TRAN',
       rollback: 'ROLLBACK',
     },
+    routine: {
+      setup: [
+        'DROP FUNCTION IF EXISTS comun.fn_dbx_prueba',
+        'CREATE FUNCTION comun.fn_dbx_prueba() RETURNS int AS BEGIN RETURN 1001 END',
+      ],
+      ref: { database: msDatabase, schema: 'comun', name: 'fn_dbx_prueba' },
+      call: 'SELECT comun.fn_dbx_prueba() AS v',
+    },
     plan: {
       prefix: 'comun.',
       setup: [
@@ -380,6 +397,18 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
       begin: 'BEGIN',
       rollback: 'ROLLBACK',
     },
+    routine: {
+      setup: [
+        `DROP FUNCTION IF EXISTS \`${env('MARIADB_DATABASE', 'dbx_test')}\`.fn_dbx_prueba`,
+        `CREATE FUNCTION \`${env('MARIADB_DATABASE', 'dbx_test')}\`.fn_dbx_prueba() RETURNS int DETERMINISTIC RETURN 1001`,
+      ],
+      ref: {
+        database: env('MARIADB_DATABASE', 'dbx_test')!,
+        schema: env('MARIADB_DATABASE', 'dbx_test')!,
+        name: 'fn_dbx_prueba',
+      },
+      call: `SELECT \`${env('MARIADB_DATABASE', 'dbx_test')}\`.fn_dbx_prueba() AS v`,
+    },
     plan: {
       prefix: '',
       setup: [
@@ -447,6 +476,14 @@ export async function engineCases(pg: PgTestConfig): Promise<EngineCase[]> {
       multipleResults: 'CALL dos_resultados()',
       begin: 'BEGIN',
       rollback: 'ROLLBACK',
+    },
+    routine: {
+      setup: [
+        `DROP FUNCTION IF EXISTS \`${mysqlDb}\`.fn_dbx_prueba`,
+        `CREATE FUNCTION \`${mysqlDb}\`.fn_dbx_prueba() RETURNS int DETERMINISTIC RETURN 1001`,
+      ],
+      ref: { database: mysqlDb, schema: mysqlDb, name: 'fn_dbx_prueba' },
+      call: `SELECT \`${mysqlDb}\`.fn_dbx_prueba() AS v`,
     },
     plan: {
       prefix: '',

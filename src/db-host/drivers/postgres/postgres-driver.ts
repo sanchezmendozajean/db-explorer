@@ -416,6 +416,27 @@ export class PostgresDriver implements DbDriver {
     return Number(rows[0]?.n ?? 0);
   }
 
+  /** `CREATE OR REPLACE` (el texto de `pg_get_functiondef` ya lo trae) en una conexión propia. */
+  async replaceRoutine(ref: ObjectRef, kind: ObjectKind, definition: string): Promise<void> {
+    if (kind !== 'procedure' && kind !== 'function') {
+      throw new DriverError('Solo se pueden editar procedimientos y funciones', 'unsupported');
+    }
+    if (!/^\s*CREATE\s+(OR\s+REPLACE\s+)?(FUNCTION|PROCEDURE)\b/i.test(definition)) {
+      throw new DriverError(
+        'La definición debe empezar con CREATE OR REPLACE FUNCTION o PROCEDURE',
+        'invalid',
+      );
+    }
+    const client = await this.createClient(ref.database, 'DB Explorer (rutina)');
+    try {
+      await client.query(definition);
+    } catch (err) {
+      throw toDriverError(err);
+    } finally {
+      void client.end().catch(() => undefined);
+    }
+  }
+
   async openSession(database: string | undefined, schema: string | undefined): Promise<DbSession> {
     const db = database || this.defaultDatabase;
     const client = await this.createClient(db, 'DB Explorer (editor)');

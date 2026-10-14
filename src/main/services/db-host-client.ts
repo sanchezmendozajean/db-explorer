@@ -29,6 +29,7 @@ export class DbHostRequestError extends Error {
   constructor(
     message: string,
     readonly code?: string,
+    readonly position?: number,
   ) {
     super(message);
     this.name = 'DbHostRequestError';
@@ -137,7 +138,8 @@ export class DbHostClient {
     this.pending.delete(message.id);
     clearTimeout(entry.timer);
     if (message.ok) entry.resolve(message.result);
-    else entry.reject(new DbHostRequestError(message.error.message, message.error.code));
+    else
+      entry.reject(new DbHostRequestError(message.error.message, message.error.code, message.error.position));
   }
 
   private handleExit(transport: DbHostTransport, code: number): void {
