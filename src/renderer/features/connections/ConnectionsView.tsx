@@ -22,6 +22,7 @@ import { countRows, newDdlScript, newTableScript, objectRef, targetOfRef } from 
 import { openObjectTab } from '../objects/object-tabs';
 import { openRoutineTab } from '../objects/routine-tabs';
 import { invalidateDetails } from '../objects/object-details';
+import * as dbAdmin from '../db-admin/db-admin-actions';
 import { dotStyle } from '../../components/env-dot';
 
 const ENGINE_BADGE: Record<string, string> = { postgres: 'PG', mariadb: 'MY', sqlite: 'LT', sqlserver: 'MS' };
@@ -334,6 +335,17 @@ export function ConnectionsView(): React.JSX.Element {
           keybinding: 'Ctrl+]',
           run: () => void newScript({ connectionId: cfg.id }),
         },
+        ...(cfg.engine !== 'sqlite'
+          ? [
+              {
+                type: 'item',
+                id: 'create-db',
+                label: es.dbAdmin.menu.create,
+                disabled: !connected,
+                run: () => dbAdmin.createDatabase(cfg.id),
+              } satisfies MenuEntry,
+            ]
+          : []),
         SEPARATOR,
         {
           type: 'item',
@@ -416,6 +428,49 @@ export function ConnectionsView(): React.JSX.Element {
       keybinding: 'F5',
       run: () => refresh(node),
     };
+    if (ref.kind === 'database') {
+      const m = es.dbAdmin.menu;
+      return [
+        {
+          type: 'item',
+          id: 'script',
+          label: t.newScript,
+          keybinding: 'Ctrl+]',
+          run: () => void newScript(targetOfRef(node.connectionId, ref)),
+        },
+        SEPARATOR,
+        {
+          type: 'item',
+          id: 'backup',
+          label: m.backup,
+          run: () => dbAdmin.backupOrRestore(node.connectionId, ref.database, 'backup'),
+        },
+        {
+          type: 'item',
+          id: 'restore',
+          label: m.restore,
+          run: () => dbAdmin.backupOrRestore(node.connectionId, ref.database, 'restore'),
+        },
+        SEPARATOR,
+        {
+          type: 'item',
+          id: 'rename-db',
+          label: m.rename,
+          keybinding: 'F2',
+          run: () => dbAdmin.renameDatabase(node.connectionId, ref.database),
+        },
+        {
+          type: 'item',
+          id: 'drop-db',
+          label: m.drop,
+          keybinding: 'Supr',
+          run: () => dbAdmin.dropDatabase(node.connectionId, ref.database),
+        },
+        SEPARATOR,
+        refreshEntry,
+        copyName,
+      ];
+    }
     if (ref.kind === 'object' && HAS_DATA.includes(ref.objectKind)) {
       const engine = connections.find((x) => x.id === node.connectionId)?.engine ?? 'postgres';
       const isTable = ref.objectKind === 'table';
@@ -501,11 +556,15 @@ export function ConnectionsView(): React.JSX.Element {
       case 'F2':
         if (node.type === 'folder') actions.renameFolder(node.name);
         else if (node.type === 'connection') actions.renameConnection(node.config.id);
+        else if (node.data.ref.kind === 'database')
+          dbAdmin.renameDatabase(node.connectionId, node.data.ref.database);
         else return false;
         return true;
       case 'Delete':
         if (node.type === 'folder') actions.deleteFolder(node.name);
         else if (node.type === 'connection') actions.deleteConnection(node.config.id);
+        else if (node.data.ref.kind === 'database')
+          dbAdmin.dropDatabase(node.connectionId, node.data.ref.database);
         else return false;
         return true;
       case 'F4':

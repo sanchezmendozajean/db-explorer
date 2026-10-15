@@ -494,6 +494,14 @@ export function registerAppCommands(): () => void {
     { id: 'db.preferences.openJson', category: cat.file, run: () => openConfigFile('settings') },
     { id: 'db.keybindings.open', category: cat.help, run: () => openConfigFile('keybindings') },
     {
+      id: 'db.tools.openFolder',
+      category: cat.file,
+      run: async () => {
+        const r = await window.api.tools.openFolder({});
+        if (!r.ok) showToast('error', r.error.message);
+      },
+    },
+    {
       id: 'db.preferences',
       category: cat.file,
       run: () =>

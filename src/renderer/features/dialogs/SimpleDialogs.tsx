@@ -54,16 +54,20 @@ export function ConfirmDialog({
 export function PromptDialog({
   title,
   label,
+  message,
   initialValue,
   confirmLabel,
+  danger,
   validate,
   onSubmit,
   onClose,
 }: {
   title: string;
   label: string;
+  message?: string;
   initialValue: string;
   confirmLabel: string;
+  danger?: boolean;
   validate?: (value: string) => string | null;
   onSubmit: (value: string) => void;
   onClose: () => void;
@@ -84,12 +88,15 @@ export function PromptDialog({
       title={title}
       onClose={onClose}
       width={420}
+      accentColor={danger ? 'var(--error)' : undefined}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
             {es.dialogs.cancel}
           </Button>
-          <Button onClick={submit}>{confirmLabel}</Button>
+          <Button variant={danger ? 'danger' : 'primary'} onClick={submit}>
+            {confirmLabel}
+          </Button>
         </>
       }
     >
@@ -99,6 +106,7 @@ export function PromptDialog({
           submit();
         }}
       >
+        {message && <p>{message}</p>}
         <label className="form-field">
           <span className="form-label">{label}</span>
           <TextInput

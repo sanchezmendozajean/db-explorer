@@ -932,3 +932,106 @@ button.chip > span:not(.env-dot) {
     'calt' 0,
     'liga' 0;
 }
+
+/* Herramientas auxiliares y respaldos (db-admin) */
+.tool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 12px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: 3px;
+}
+
+.tool-row {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  line-height: 22px;
+}
+
+.tool-name {
+  font-family: var(--font-code);
+}
+
+.tool-state {
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
+.tool-row[data-installed='true'] .tool-state {
+  color: var(--success);
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 16px;
+  border: 1px dashed var(--border-input);
+  border-radius: 3px;
+  color: var(--fg-muted);
+  text-align: center;
+}
+
+.dropzone.is-active {
+  border-color: var(--border-focus);
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+
+.dropzone.is-busy {
+  opacity: 0.7;
+}
+
+.tool-rejected {
+  margin: 0 0 12px;
+  color: var(--error);
+  font-size: 12px;
+}
+
+.tool-rejected ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.backup-running {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--fg-muted);
+}
+
+.backup-error {
+  margin: 8px 0 0;
+  padding: 8px;
+  max-height: 160px;
+  overflow: auto;
+  border: 1px solid var(--error);
+  border-radius: 3px;
+  color: var(--error);
+  font-size: 12px;
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+.modal-footer .footer-left {
+  margin-right: auto;
+}
+
+.tool-libs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin: 0 0 4px 24px;
+  color: var(--fg-muted);
+  font-size: 11px;
+}
+
+.tool-lib.is-missing {
+  color: var(--error);
+}

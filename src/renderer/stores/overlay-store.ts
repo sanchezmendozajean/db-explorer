@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ToolFamily } from '@shared/db-admin';
 import type { ExportFormat } from '@shared/query';
 import type { MenuEntry } from '../components/menu-types';
 import type { ExportChoice } from '../features/results/ExportDialog';
@@ -62,8 +63,11 @@ export type DialogState =
       id: 'prompt';
       title: string;
       label: string;
+      /** Texto explicativo sobre el campo (opcional). */
+      message?: string;
       initialValue: string;
       confirmLabel: string;
+      danger?: boolean;
       /** Devuelve un mensaje de error o `null` si el valor es válido. */
       validate?: (value: string) => string | null;
       onSubmit: (value: string) => void;
@@ -104,6 +108,10 @@ export type DialogState =
     }
   /** Sentencias que generará el guardado de la grilla ("Ver SQL"): Cancelar / Aplicar. */
   | { id: 'sqlPreview'; statements: string[]; language: string; onResult: (apply: boolean) => void }
+  /** Respaldo o restauración de una base de datos (archivo, contraseña y progreso). */
+  | { id: 'backup'; connectionId: string; database: string; kind: 'backup' | 'restore' }
+  /** Pide los binarios auxiliares de una familia (pg_dump, mysqldump…); `onDone(true)` si quedaron todos. */
+  | { id: 'tools'; family: ToolFamily; onDone: (ready: boolean) => void }
   /** Comparar el archivo en disco con el editor (aviso de cambio externo, specs/11 §4). */
   | { id: 'compare'; tabId: string; name: string; disk: string };
 

@@ -1,6 +1,19 @@
 /**
  * Textos de la interfaz en español. Todo texto visible debe salir de aquí.
  */
+
+/** Tamaño de un archivo legible (`12,3 MB`). */
+function formatBytes(bytes: number): string {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return `${value.toLocaleString('es', { maximumFractionDigits: unit === 0 ? 0 : 1 })} ${units[unit]}`;
+}
+
 export const es = {
   app: {
     name: 'DB Explorer',
@@ -64,6 +77,7 @@ export const es = {
     'db.newConnection': 'Nueva conexión…',
     'db.preferences': 'Preferencias',
     'db.keybindings.open': 'Abrir keybindings.json (atajos de teclado)',
+    'db.tools.openFolder': 'Abrir carpeta de herramientas de respaldo',
     'db.preferences.openJson': 'Abrir settings.json',
     'db.window.quit': 'Salir',
     'db.edit.undo': 'Deshacer',
@@ -529,6 +543,125 @@ export const es = {
     commitTitle: 'Commit (Ctrl+Alt+C)',
     rollbackTitle: 'Rollback (Ctrl+Alt+R)',
     statusManual: (n: number) => `Manual (${n})`,
+  },
+
+  dbAdmin: {
+    menu: {
+      create: 'Crear base de datos…',
+      backup: 'Respaldar base de datos…',
+      restore: 'Restaurar base de datos…',
+      rename: 'Renombrar base de datos…',
+      drop: 'Eliminar base de datos…',
+    },
+    families: { postgres: 'PostgreSQL', mariadb: 'MariaDB', mysql: 'MySQL' },
+    readOnly: 'La conexión es de solo lectura: no se puede modificar el servidor.',
+    systemDatabase: 'Es una base del sistema: no se puede modificar desde la aplicación.',
+    failed: (action: string, message: string) => `No se pudo ${action}: ${message}`,
+    actions: {
+      create: 'crear la base de datos',
+      drop: 'eliminar la base de datos',
+      rename: 'renombrar la base de datos',
+      backup: 'respaldar la base de datos',
+      restore: 'restaurar la base de datos',
+    },
+    create: {
+      title: 'Crear base de datos',
+      label: 'Nombre de la base de datos',
+      confirm: 'Crear',
+      done: (name: string) => `Se creó la base de datos "${name}".`,
+    },
+    rename: {
+      title: (name: string) => `Renombrar "${name}"`,
+      label: 'Nombre nuevo',
+      confirm: 'Renombrar',
+      same: 'El nombre nuevo es igual al actual',
+      done: (from: string, to: string) => `La base de datos "${from}" ahora se llama "${to}".`,
+      notes: {
+        postgres: 'Se cerrarán las conexiones activas a la base.',
+        mariadb:
+          'MariaDB/MySQL no renombra bases: se crea la nueva y se mueven las tablas. Falla si la base tiene vistas, rutinas, disparadores o eventos.',
+        sqlserver:
+          'Se cerrarán las conexiones activas. Cambia el nombre lógico; los archivos .mdf y .ldf conservan el suyo.',
+      },
+    },
+    drop: {
+      title: 'Eliminar base de datos',
+      message: (name: string, closes: boolean) =>
+        `Se eliminará la base de datos "${name}" con todo su contenido. Esta acción no se puede deshacer.${closes ? ' Se cerrarán las conexiones activas a ella.' : ''}`,
+      label: (name: string) => `Para confirmar, escribe el nombre de la base: ${name}`,
+      mismatch: 'El nombre no coincide',
+      confirm: 'Eliminar',
+      done: (name: string) => `Se eliminó la base de datos "${name}".`,
+      production: 'Es una conexión de PRODUCCIÓN.',
+    },
+    backup: {
+      title: (name: string) => `Respaldar "${name}"`,
+      restoreTitle: (name: string) => `Restaurar "${name}"`,
+      file: 'Archivo de respaldo',
+      serverFile: 'Ruta del archivo en el servidor',
+      serverHint:
+        'SQL Server escribe y lee el archivo en su propio equipo, no en este. Una ruta sin carpeta usa la carpeta de respaldos del servidor; la cuenta del servicio debe tener permiso sobre ella.',
+      browse: 'Examinar…',
+      password: 'Contraseña',
+      passwordHint: 'La conexión no tiene contraseña guardada: se usa solo para esta operación.',
+      toolVersion: (name: string, version: string) => `${name} ${version}`,
+      toolOlder: (tool: string, server: string) =>
+        `La herramienta es de la versión ${tool} y el servidor de la ${server}: es posible que se niegue a respaldarlo. Importa herramientas de la versión del servidor o superior.`,
+      restoreWarning: (name: string) =>
+        `Se reemplazará el contenido de "${name}" con el del respaldo. Los datos actuales que no estén en el respaldo se perderán.`,
+      restoreNotes: {
+        postgres:
+          'Se restaura en una sola transacción (si algo falla, no cambia nada) y sin dueños ni permisos del origen: los objetos quedan a nombre del usuario de la conexión. Solo admite respaldos hechos con esta aplicación (formato personalizado).',
+        mariadb:
+          'El script reemplaza las tablas que incluye; los objetos que existan en la base y no estén en el respaldo se conservan.',
+        sqlserver:
+          'Se cerrarán las conexiones activas. Los archivos de datos se colocan junto a los actuales de la base.',
+      },
+      restoreConfirm: 'Entiendo que se reemplazarán los datos',
+      start: 'Respaldar',
+      startRestore: 'Restaurar',
+      running: 'Respaldando… puede tardar según el tamaño de la base.',
+      runningRestore: 'Restaurando… puede tardar según el tamaño del respaldo.',
+      cancel: 'Cancelar operación',
+      cancelled: 'Operación cancelada.',
+      done: (name: string, path: string, bytes?: number) =>
+        `Se respaldó "${name}" en ${path}${bytes !== undefined ? ` (${formatBytes(bytes)})` : ''}.`,
+      restored: (name: string) => `Se restauró la base de datos "${name}".`,
+      pathRequired: 'Elige el archivo de respaldo',
+      close: 'Cerrar',
+    },
+    tools: {
+      title: (family: string) => `Herramientas auxiliares de ${family}`,
+      intro: (family: string) =>
+        `Para respaldar y restaurar bases de ${family}, DB Explorer usa las herramientas de línea de comandos oficiales. No las incluye (por sus licencias): adjunta los siguientes archivos.`,
+      needed: 'Archivos necesarios',
+      installed: (version?: string) => (version ? `Listo · versión ${version}` : 'Listo'),
+      missing: 'Falta',
+      libraries: 'Bibliotecas:',
+      expectedLibraries: (names: string[]) =>
+        `Con PostgreSQL 18, junto a los ejecutables suelen estar estas bibliotecas: ${names.join(', ')}. Se copian solas si eliges los archivos desde la carpeta bin de la instalación; la lista exacta se confirma al importar y puede variar según la versión.`,
+      libraryMissing: 'falta',
+      drop: 'Arrastra aquí los archivos',
+      dropActive: 'Suelta los archivos',
+      pick: 'Seleccionar archivos…',
+      copyNote:
+        'El asistente copia los archivos a una carpeta interna del programa y los usa desde ahí; los originales no se modifican ni hace falta conservarlos.',
+      dllNote:
+        'En Windows también se copian las bibliotecas (.dll) que estén junto a cada ejecutable y que este necesite.',
+      whereWindows: (family: string) =>
+        family === 'postgres'
+          ? 'Suelen estar en la carpeta bin de la instalación, p. ej. C:\\Program Files\\PostgreSQL\\18\\bin.'
+          : family === 'mariadb'
+            ? 'Suelen estar en la carpeta bin de la instalación, p. ej. C:\\Program Files\\MariaDB 11.4\\bin.'
+            : 'Suelen estar en la carpeta bin de la instalación, p. ej. C:\\Program Files\\MySQL\\MySQL Server 8.4\\bin.',
+      whereOther: 'Suelen estar en el paquete de clientes de tu distribución (p. ej. /usr/bin).',
+      separate: 'MariaDB y MySQL llevan binarios propios: los de uno no sirven para el otro.',
+      rejected: 'No se aceptaron',
+      remove: 'Quitar archivos importados',
+      continue: 'Continuar',
+      checking: 'Copiando y verificando…',
+      removed: (family: string) => `Se quitaron las herramientas de ${family}.`,
+    },
   },
 
   routines: {

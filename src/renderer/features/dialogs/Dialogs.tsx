@@ -13,6 +13,8 @@ import { ConfirmDialog, PasswordDialog, PromptDialog } from './SimpleDialogs';
 import { ChoiceDialog, SqlPreviewDialog, WriteConfirmDialog } from './ChoiceDialogs';
 import { ExportDialog } from '../results/ExportDialog';
 import { CompareDialog } from '../editor/CompareDialog';
+import { BackupDialog } from '../db-admin/BackupDialog';
+import { ToolsDialog } from '../db-admin/ToolsDialog';
 
 type PingState =
   { status: 'pending' } | { status: 'ok'; result: PingResult } | { status: 'error'; error: IpcError };
@@ -155,6 +157,17 @@ export function Dialogs(): React.JSX.Element | null {
       return <SqlPreviewDialog {...dialog} onClose={close} />;
     case 'export':
       return <ExportDialog {...dialog} onClose={close} />;
+    case 'backup':
+      return (
+        <BackupDialog
+          connectionId={dialog.connectionId}
+          database={dialog.database}
+          kind={dialog.kind}
+          onClose={close}
+        />
+      );
+    case 'tools':
+      return <ToolsDialog family={dialog.family} onDone={dialog.onDone} onClose={close} />;
     case 'compare':
       return <CompareDialog tabId={dialog.tabId} name={dialog.name} disk={dialog.disk} onClose={close} />;
   }
