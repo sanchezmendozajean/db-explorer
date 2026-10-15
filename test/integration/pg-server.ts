@@ -55,7 +55,7 @@ async function canConnect(cfg: PgTestConfig): Promise<boolean> {
 }
 
 /** Carpeta `bin` de una instalación local de PostgreSQL (Windows), o `PG_BIN`. */
-function findPgBin(): string | undefined {
+export function findPgBin(): string | undefined {
   if (process.env['PG_BIN'] && existsSync(join(process.env['PG_BIN'], 'pg_ctl.exe')))
     return process.env['PG_BIN'];
   const base = 'C:\\Program Files\\PostgreSQL';

@@ -12,9 +12,10 @@ import type {
 import { qualifiedName } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
-import { formatRowEstimate } from '../common';
+import { checkedDatabaseName, formatRowEstimate } from '../common';
 import { toSqlServerError } from './errors';
 import { installExactValues } from './exact-values';
+import { checkedServerPath, nstr, planFileMoves } from './database-sql';
 import { toAlterStatement } from './routine-sql';
 import type { DescribedColumn } from './sqlserver-session';
 import { SqlServerSession } from './sqlserver-session';
@@ -454,6 +455,145 @@ export class SqlServerDriver implements DbDriver {
     try {
       await new Promise<void>((resolve, reject) => {
         const request = new Request(alter, (err) => (err ? reject(toSqlServerError(err, alter)) : resolve()));
+        connection.execSqlBatch(request);
+      });
+    } finally {
+      connection.close();
+    }
+  }
+
+  async createDatabase(name: string): Promise<void> {
+    await this.query(`CREATE DATABASE ${bracket(checkedDatabaseName(name))}`);
+  }
+
+  async dropDatabase(name: string): Promise<void> {
+    const db = await this.userDatabase(name);
+    await this.withExclusiveAccess(db, () => this.query(`DROP DATABASE ${bracket(db)}`));
+  }
+
+  /** `MODIFY NAME` cambia el nombre lógico; los archivos físicos (.mdf/.ldf) conservan el suyo. */
+  async renameDatabase(name: string, newName: string): Promise<void> {
+    const db = await this.userDatabase(name);
+    const target = checkedDatabaseName(newName);
+    await this.withExclusiveAccess(db, () =>
+      this.query(`ALTER DATABASE ${bracket(db)} MODIFY NAME = ${bracket(target)}`),
+    ).then(() => this.query(`ALTER DATABASE ${bracket(target)} SET MULTI_USER`));
+  }
+
+  /**
+   * `BACKUP DATABASE` con `COPY_ONLY` (no altera la cadena de respaldos del servidor) y `CHECKSUM`.
+   * La ruta es del servidor; una ruta relativa cae en su carpeta de respaldos predeterminada.
+   */
+  async backupDatabase(name: string, path: string): Promise<string> {
+    const db = checkedDatabaseName(name);
+    const file = checkedServerPath(path);
+    await this.batch(`BACKUP DATABASE ${bracket(db)} TO DISK = ${nstr(file)} WITH COPY_ONLY, INIT, CHECKSUM`);
+    // Si el nombre era relativo, informa dónde quedó realmente (requiere leer msdb; si no se puede, se devuelve lo pedido).
+    try {
+      const rows = await this.batch(
+        `SELECT TOP 1 mf.physical_device_name AS path
+           FROM msdb.dbo.backupset bs JOIN msdb.dbo.backupmediafamily mf ON mf.media_set_id = bs.media_set_id
+          WHERE bs.database_name = ${nstr(db)} ORDER BY bs.backup_finish_date DESC`,
+      );
+      return String(rows[0]?.['path'] ?? file);
+    } catch {
+      return file;
+    }
+  }
+
+  /**
+   * `RESTORE DATABASE … WITH REPLACE` sobre una base existente. Los archivos del respaldo se mueven
+   * (`MOVE`) a la carpeta de los de la base actual con nombres `<base>_<lógico>`: así funciona aunque
+   * el respaldo venga de otra base o de otro servidor y sus rutas originales no existan o estén en uso.
+   */
+  async restoreDatabase(name: string, path: string): Promise<void> {
+    const db = await this.userDatabase(name);
+    const file = checkedServerPath(path);
+    const backupFiles = await this.batch(`RESTORE FILELISTONLY FROM DISK = ${nstr(file)}`);
+    const current = await this.batch(
+      `SELECT type, physical_name FROM sys.master_files WHERE database_id = DB_ID(${nstr(db)}) ORDER BY file_id`,
+    );
+    const dirOf = (physical: unknown): string | undefined => {
+      const m = /^(.*)[\\/][^\\/]*$/.exec(String(physical ?? ''));
+      return m?.[1];
+    };
+    const [defaults] = await this.query(
+      `SELECT CAST(SERVERPROPERTY('InstanceDefaultDataPath') AS nvarchar(512)) AS data,
+              CAST(SERVERPROPERTY('InstanceDefaultLogPath') AS nvarchar(512)) AS log`,
+    );
+    const stripSep = (dir: unknown): string | undefined =>
+      dir ? String(dir).replace(/[\\/]+$/, '') : undefined;
+    const dataDir =
+      dirOf(current.find((r) => Number(r['type']) === 0)?.['physical_name']) ?? stripSep(defaults?.['data']);
+    const logDir =
+      dirOf(current.find((r) => Number(r['type']) === 1)?.['physical_name']) ?? stripSep(defaults?.['log']);
+    const moves = planFileMoves(
+      db,
+      backupFiles.map((r) => ({ logical: String(r['LogicalName']), type: String(r['Type']) })),
+      { data: dataDir, log: logDir },
+    );
+
+    const exclusive = `ALTER DATABASE ${bracket(db)} SET SINGLE_USER WITH ROLLBACK IMMEDIATE;`;
+    const restore =
+      `RESTORE DATABASE ${bracket(db)} FROM DISK = ${nstr(file)} WITH REPLACE` +
+      moves.map((m) => `, MOVE ${nstr(m.logical)} TO ${nstr(m.target)}`).join('');
+    try {
+      await this.batch(`${exclusive}\n${restore}`);
+    } catch (err) {
+      await this.batch(`ALTER DATABASE ${bracket(db)} SET MULTI_USER`).catch(() => undefined);
+      throw err;
+    }
+    await this.batch(`ALTER DATABASE ${bracket(db)} SET MULTI_USER`).catch(() => undefined);
+  }
+
+  /**
+   * Una base de usuario que no sea aquella a la que está conectada la conexión de metadatos
+   * (SQL Server no deja eliminar, renombrar ni restaurar la base en uso).
+   */
+  private async userDatabase(name: string): Promise<string> {
+    const db = checkedDatabaseName(name);
+    const [row] = await this.query('SELECT database_id AS id FROM sys.databases WHERE name = @name', {
+      name: db,
+    });
+    if (!row) throw new DriverError(`No existe la base de datos "${db}"`, 'not-found');
+    if (Number(row['id']) <= 4) {
+      throw new DriverError(
+        `"${db}" es una base del sistema: no se puede modificar desde la aplicación`,
+        'system-database',
+      );
+    }
+    if (db === this.defaultDatabase) {
+      throw new DriverError(
+        `"${db}" es la base a la que está conectada esta conexión. Edita la conexión para usar otra base predeterminada (p. ej. master) y vuelve a intentarlo.`,
+        'current-database',
+      );
+    }
+    return db;
+  }
+
+  /** Ejecuta `action` con la base en modo de un solo usuario (cierra las demás conexiones) y la devuelve a multiusuario. */
+  private async withExclusiveAccess(db: string, action: () => Promise<unknown>): Promise<void> {
+    await this.query(`ALTER DATABASE ${bracket(db)} SET SINGLE_USER WITH ROLLBACK IMMEDIATE`);
+    try {
+      await action();
+    } catch (err) {
+      await this.query(`ALTER DATABASE ${bracket(db)} SET MULTI_USER`).catch(() => undefined);
+      throw err;
+    }
+  }
+
+  /** Lote en una conexión propia sin límite de tiempo (respaldos y restauraciones pueden tardar horas). */
+  private async batch(sql: string): Promise<Row[]> {
+    const connection = await this.open(undefined, 'DB Explorer (respaldo)', 0);
+    try {
+      return await new Promise<Row[]>((resolve, reject) => {
+        const rows: Row[] = [];
+        const request = new Request(sql, (err) => (err ? reject(toSqlServerError(err, sql)) : resolve(rows)));
+        request.on('row', (columns: { value: unknown; metadata: { colName: string } }[]) => {
+          const row: Row = {};
+          for (const c of columns) row[c.metadata.colName] = c.value;
+          rows.push(row);
+        });
         connection.execSqlBatch(request);
       });
     } finally {

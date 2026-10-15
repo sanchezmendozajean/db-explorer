@@ -112,6 +112,19 @@ export interface DbDriver {
    * `CREATE`, como lo devuelve `getDDL`, ya editado). Cada motor usa su mecanismo (specs/NOTAS).
    */
   replaceRoutine(ref: ObjectRef, kind: ObjectKind, definition: string): Promise<void>;
+  /** Crea una base de datos con los valores predeterminados del servidor. */
+  createDatabase(name: string): Promise<void>;
+  /** Elimina una base y cierra las conexiones activas a ella (según el motor). Irreversible. */
+  dropDatabase(name: string): Promise<void>;
+  /** Cambia el nombre de una base de datos (cada motor tiene sus restricciones, ver specs/NOTAS). */
+  renameDatabase(name: string, newName: string): Promise<void>;
+  /**
+   * Respaldo hecho por el propio servidor (solo SQL Server). Devuelve la ruta final del archivo,
+   * que es una ruta **del servidor**. PostgreSQL y MariaDB/MySQL respaldan con herramientas externas.
+   */
+  backupDatabase(name: string, path: string): Promise<string>;
+  /** Restaura una base desde un respaldo del servidor (solo SQL Server), sobrescribiéndola. */
+  restoreDatabase(name: string, path: string): Promise<void>;
   /** `SELECT count(*)` de una tabla o vista. */
   countRows(ref: ObjectRef): Promise<number>;
 

@@ -57,6 +57,25 @@ export function createHandlers(
       await connections.saveRoutine(connectionId, ref, kind, definition);
       return null;
     },
+    'admin.create': async ({ connectionId, name }) => {
+      await connections.createDatabase(connectionId, name);
+      return null;
+    },
+    'admin.drop': async ({ connectionId, database }) => {
+      await connections.dropDatabase(connectionId, database);
+      return null;
+    },
+    'admin.rename': async ({ connectionId, database, newName }) => {
+      await connections.renameDatabase(connectionId, database, newName);
+      return null;
+    },
+    'admin.backup': async ({ connectionId, database, path }) => ({
+      path: await connections.backupDatabase(connectionId, database, path),
+    }),
+    'admin.restore': async ({ connectionId, database, path }) => {
+      await connections.restoreDatabase(connectionId, database, path);
+      return null;
+    },
     'data.apply': (req) => connections.apply(req),
     'export.start': (req) => connections.export(req),
   };

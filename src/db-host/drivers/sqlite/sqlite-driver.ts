@@ -12,6 +12,7 @@ import type {
 import { quoteIdent } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
+import { unsupportedOperation } from '../common';
 import { SqliteSession } from './sqlite-session';
 
 /** Espera máxima ante un archivo bloqueado por otra conexión (la de metadatos corre en el hilo del db-host). */
@@ -244,6 +245,23 @@ export class SqliteDriver implements DbDriver {
     return Promise.reject(
       new DriverError('SQLite no tiene procedimientos ni funciones almacenadas', 'unsupported'),
     );
+  }
+
+  /** En SQLite la base es el archivo de la conexión: no hay nada que crear, eliminar ni respaldar aquí. */
+  createDatabase(): Promise<void> {
+    return unsupportedOperation('SQLite no administra bases de datos: cada archivo es una conexión');
+  }
+  dropDatabase(): Promise<void> {
+    return unsupportedOperation('SQLite no administra bases de datos: cada archivo es una conexión');
+  }
+  renameDatabase(): Promise<void> {
+    return unsupportedOperation('SQLite no administra bases de datos: cada archivo es una conexión');
+  }
+  backupDatabase(): Promise<string> {
+    return unsupportedOperation('SQLite no admite respaldos desde la aplicación');
+  }
+  restoreDatabase(): Promise<void> {
+    return unsupportedOperation('SQLite no admite restauraciones desde la aplicación');
   }
 
   async openSession(): Promise<DbSession> {

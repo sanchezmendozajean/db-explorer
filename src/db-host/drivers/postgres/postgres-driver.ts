@@ -14,7 +14,7 @@ import type { LogicalType, ResultColumn } from '@shared/query';
 import { qualifiedName, quoteIdent } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
-import { formatRowEstimate } from '../common';
+import { checkedDatabaseName, formatRowEstimate, unsupportedOperation } from '../common';
 import { toDriverError } from './errors';
 import { PostgresSession } from './postgres-session';
 
@@ -51,6 +51,9 @@ const RELKIND: Partial<Record<ObjectKind, string[]>> = {
   materializedView: ['m'],
   sequence: ['S'],
 };
+
+/** Bases que PostgreSQL necesita para funcionar (plantillas y la de mantenimiento). */
+const SYSTEM_DATABASES = new Set(['postgres', 'template0', 'template1']);
 
 const PROKIND: Partial<Record<ObjectKind, string>> = { function: 'f', procedure: 'p' };
 
@@ -434,6 +437,78 @@ export class PostgresDriver implements DbDriver {
       throw toDriverError(err);
     } finally {
       void client.end().catch(() => undefined);
+    }
+  }
+
+  async createDatabase(name: string): Promise<void> {
+    const db = checkedDatabaseName(name);
+    await this.query(this.defaultDatabase, `CREATE DATABASE ${quoteIdent('postgres', db)}`);
+  }
+
+  async dropDatabase(name: string): Promise<void> {
+    const db = this.notCurrent(name);
+    await this.releaseDatabase(db);
+    await this.retryWhileInUse(`DROP DATABASE ${quoteIdent('postgres', db)}`);
+  }
+
+  async renameDatabase(name: string, newName: string): Promise<void> {
+    const db = this.notCurrent(name);
+    const target = checkedDatabaseName(newName);
+    await this.releaseDatabase(db);
+    await this.retryWhileInUse(
+      `ALTER DATABASE ${quoteIdent('postgres', db)} RENAME TO ${quoteIdent('postgres', target)}`,
+    );
+  }
+
+  /** El respaldo de PostgreSQL lo hace `pg_dump` (herramientas auxiliares), no el servidor. */
+  backupDatabase(): Promise<string> {
+    return unsupportedOperation('PostgreSQL respalda con pg_dump (herramientas auxiliares)');
+  }
+  restoreDatabase(): Promise<void> {
+    return unsupportedOperation('PostgreSQL restaura con pg_restore (herramientas auxiliares)');
+  }
+
+  /** La base a la que está conectada la conexión de metadatos no se puede eliminar ni renombrar desde ella. */
+  private notCurrent(name: string): string {
+    const db = checkedDatabaseName(name);
+    if (SYSTEM_DATABASES.has(db)) {
+      throw new DriverError(
+        `"${db}" es una base del sistema: no se puede modificar desde la aplicación`,
+        'system-database',
+      );
+    }
+    if (db === this.defaultDatabase) {
+      throw new DriverError(
+        `"${db}" es la base a la que está conectada esta conexión. Edita la conexión para usar otra base predeterminada (p. ej. postgres) y vuelve a intentarlo.`,
+        'current-database',
+      );
+    }
+    return db;
+  }
+
+  /** Cierra la conexión de metadatos a `db` y las demás conexiones del servidor a esa base (PostgreSQL exige que no haya ninguna). */
+  private async releaseDatabase(db: string): Promise<void> {
+    const pending = this.clients.get(db);
+    this.clients.delete(db);
+    const client = await pending?.catch(() => null);
+    await client?.end().catch(() => undefined);
+    await this.query(
+      this.defaultDatabase,
+      'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()',
+      [db],
+    );
+  }
+
+  /** Las conexiones terminadas tardan unos instantes en desaparecer: se reintenta mientras la base siga "en uso" (55006). */
+  private async retryWhileInUse(sql: string): Promise<void> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await this.query(this.defaultDatabase, sql);
+        return;
+      } catch (err) {
+        if (!(err instanceof DriverError) || err.code !== '55006' || attempt >= 10) throw err;
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
     }
   }
 

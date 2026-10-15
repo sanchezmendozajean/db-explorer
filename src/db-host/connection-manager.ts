@@ -123,6 +123,34 @@ export class ConnectionManager {
     await driver.replaceRoutine(ref, kind, definition);
   }
 
+  /** Operaciones sobre bases de datos: las que modifican el servidor se rechazan en conexiones de solo lectura. */
+  private writable(id: string): DbDriver {
+    const { driver, config } = this.get(id);
+    if (config.readOnly) throw new DriverError('La conexión es de solo lectura', 'read-only');
+    return driver;
+  }
+
+  async createDatabase(id: string, name: string): Promise<void> {
+    return await this.writable(id).createDatabase(name);
+  }
+
+  async dropDatabase(id: string, database: string): Promise<void> {
+    return await this.writable(id).dropDatabase(database);
+  }
+
+  async renameDatabase(id: string, database: string, newName: string): Promise<void> {
+    return await this.writable(id).renameDatabase(database, newName);
+  }
+
+  /** El respaldo solo lee la base, así que se permite en conexiones de solo lectura. */
+  async backupDatabase(id: string, database: string, path: string): Promise<string> {
+    return await this.get(id).driver.backupDatabase(database, path);
+  }
+
+  async restoreDatabase(id: string, database: string, path: string): Promise<void> {
+    return await this.writable(id).restoreDatabase(database, path);
+  }
+
   apply(req: ApplyChangesRequest): Promise<ApplyChangesResult> {
     return this.queries.apply(req);
   }

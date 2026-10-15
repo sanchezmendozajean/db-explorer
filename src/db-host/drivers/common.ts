@@ -1,6 +1,22 @@
 import { tokenize } from '@shared/splitter';
 import type { SqlDialect } from '@shared/splitter';
 import type { CellValue, LogicalType } from '@shared/query';
+import { DriverError } from './types';
+
+/** Valida el nombre de una base antes de armar sentencias con él (nunca vacío ni con caracteres de control). */
+export function checkedDatabaseName(name: string): string {
+  const trimmed = name.trim();
+  // eslint-disable-next-line no-control-regex -- justamente se rechazan los caracteres de control
+  if (!trimmed || trimmed.length > 128 || /[\u0000-\u001f]/.test(trimmed)) {
+    throw new DriverError('El nombre de la base de datos no es válido', 'invalid-name');
+  }
+  return trimmed;
+}
+
+/** Rechazo de una operación que el motor no admite desde la aplicación. */
+export function unsupportedOperation(message: string): Promise<never> {
+  return Promise.reject(new DriverError(message, 'unsupported'));
+}
 
 /**
  * Utilidades compartidas por los drivers que no reciben del motor la
