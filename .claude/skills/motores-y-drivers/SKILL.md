@@ -50,3 +50,10 @@ Arquitectura en `specs/02` y `specs/03`; decisiones por hito en `specs/NOTAS.md`
 - El primer resultado se describe con `sys.dm_exec_describe_first_result_set` en la conexión de metadatos (tabla de origen y PK).
 - Planes: `SET SHOWPLAN_XML ON` (no ejecuta) o `SET STATISTICS XML ON` (ejecuta), cada `SET` en su propio lote. El XML llega como resultado de una columna llamada `Microsoft SQL Server 2005 XML Showplan`. `TableCardinality` da las filas de la tabla en un *Clustered Index Scan*. En modo fila `ActualElapsedms` incluye a los hijos; en modo lote es del operador.
 - Para leer desde otra sesión mientras una prueba tiene una transacción abierta, la base de pruebas usa `ALLOW_SNAPSHOT_ISOLATION`.
+
+## Administración de bases (crear, renombrar, eliminar, respaldar)
+- PostgreSQL: `DROP/ALTER DATABASE … RENAME` exigen cero conexiones: cerrar la de metadatos a esa base y `pg_terminate_backend` de las demás, con reintento mientras el error sea `55006`. No se puede operar sobre la base de la conexión de metadatos.
+- MariaDB/MySQL: no hay `RENAME DATABASE`; se mueve con `RENAME TABLE a.t TO b.t, …` (atómico; con `foreign_key_checks = 0` en una conexión propia). Las vistas, rutinas, disparadores y eventos no se mueven.
+- SQL Server: `BACKUP`/`RESTORE` escriben en el **servidor**; ejecutarlos en una conexión propia sin límite de tiempo (`requestTimeout` 0), no en la de metadatos (60 s). `RESTORE … WITH REPLACE` necesita `MOVE` si el respaldo viene de otra base; `RESTORE FILELISTONLY` da `LogicalName` y `Type`.
+- `mysqldump` de MySQL emite `SET @@GLOBAL.GTID_PURGED` si hay GTID: usar `--set-gtid-purged=OFF` o el script no se recarga en el mismo servidor. `--no-tablespaces` solo existe en MySQL. La contraseña va en un `--defaults-extra-file` (debe ser el primer argumento), nunca en la línea de comandos.
+- Los binarios de Windows de PostgreSQL dependen de `libpq.dll`, `libssl`, etc. de su carpeta; los de MariaDB/MySQL son casi autónomos. Por eso `pe-imports.ts` lee la tabla de importación del PE y copia solo lo que existe junto al ejecutable.

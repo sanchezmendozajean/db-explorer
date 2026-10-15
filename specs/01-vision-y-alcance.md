@@ -31,6 +31,7 @@ Más un **explorador de archivos** editable para organizar y abrir scripts `.sql
 - Edición de datos en grilla (según D7).
 - Abrir tabla: ver datos (con filtro WHERE y orden) y ver estructura (columnas, índices, claves, DDL).
 - Editar procedimientos y funciones (SQL Server, PostgreSQL, MariaDB/MySQL): doble clic en el árbol abre su definición en un editor; Ctrl+S la guarda en la base tras confirmar.
+- Administrar bases de datos (PostgreSQL, MariaDB/MySQL, SQL Server): crear, renombrar, eliminar, respaldar y restaurar desde el árbol. PostgreSQL y MariaDB/MySQL respaldan con herramientas auxiliares que aporta el usuario (ver `08`).
 - Historial de consultas ejecutadas.
 - Plan de ejecución estimado y real en una vista de árbol común a los cuatro motores, con avisos y detalle por paso (ver `12`).
 - Scripts como archivos `.sql` en un **espacio de trabajo** (carpeta por defecto del usuario, configurable), con **guardado automático** opcional y restauración de pestañas al abrir (ver `11`).
@@ -40,7 +41,7 @@ Más un **explorador de archivos** editable para organizar y abrir scripts `.sql
 
 ## Fuera del alcance (v1)
 - Diagramas ER, diagrama gráfico del plan de ejecución, diseñador visual de tablas, comparadores de esquema, generadores de datos.
-- Administración de servidor (usuarios, roles, sesiones, backups).
+- Administración de servidor (usuarios, roles, sesiones). Los respaldos de bases sí están dentro del alcance (ver arriba).
 - Importación de datos desde archivos (v2).
 - Túnel SSH (v2, ver D8).
 - Extensiones / plugins de terceros.

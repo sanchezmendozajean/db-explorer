@@ -57,3 +57,9 @@ Credenciales solo en `test/integration/.env` (ignorado; plantilla en `.env.examp
 
 ## Enlaces externos en e2e
 - Un enlace `https` que abre la app va a `shell.openExternal` y abre el navegador real del equipo. En las pruebas, reemplaza `shell.openExternal` con `app.evaluate` (como en `app.spec.ts`) y verifica la URL recibida.
+
+## Administración de bases (`db-admin`)
+- Crear/renombrar/eliminar bases solo se prueba en el PostgreSQL temporal (libre). En MariaDB, MySQL y SQL Server de los servidores compartidos **no** se crean ni eliminan bases (solo `dbx_test`): esas rutas quedan sin probar en vivo salvo permiso del usuario.
+- Respaldo/restauración de MariaDB y MySQL sí se puede verificar sobre `dbx_test` (respaldo = lectura; restaurar su propio volcado la deja igual). Se hizo con una prueba temporal que no se commitea; las rutas de los binarios son de este equipo (`C:\Program Files\MariaDB 13.0\bin`, `…\MySQL\MySQL Server 26.7\bin`).
+- `test/integration/db-admin.test.ts` y `test/e2e/db-admin.spec.ts` usan el `pg_dump`/`pg_restore` de `findPgBin()` (se saltan si no están). En e2e el diálogo de archivos se reemplaza con `app.evaluate` (`showOpenDialog`/`showSaveDialog`); el mismo `showOpenDialog` sirve a las herramientas y al archivo de restauración, así que hay que volver a fijarlo entre pasos.
+- Al borrar una carpeta con un `.exe` recién ejecutado en Windows, `rm` puede dar `EPERM` unos instantes: usar `maxRetries`.

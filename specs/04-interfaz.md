@@ -144,6 +144,7 @@ Interacciones:
 - Teclado: flechas, ←/→ colapsa/expande, Enter abre, F2 renombra (conexiones y carpetas), Supr elimina conexión (con confirmación), F5 refresca nodo.
 
 Menú contextual de **conexión**: Conectar / Desconectar, Nuevo script SQL (Ctrl+]), —, Editar conexión… (F4), Duplicar, Renombrar (F2), Mover a carpeta ▸, Eliminar, —, Refrescar, Copiar nombre.
+Menú contextual de **base de datos** (PostgreSQL, MariaDB/MySQL, SQL Server): Nuevo script SQL (Ctrl+]), —, Respaldar base de datos…, Restaurar base de datos…, —, Renombrar base de datos… (F2), Eliminar base de datos… (Supr), —, Refrescar, Copiar nombre. La conexión suma "Crear base de datos…" (no en SQLite). Eliminar pide escribir el nombre de la base.
 Menú contextual de **tabla**: Ver datos, Ver estructura, Nuevo script ▸ (SELECT, INSERT, UPDATE, DELETE, DDL), —, Copiar nombre, Copiar nombre calificado, —, Refrescar, Contar filas.
 
 ## 7. Side bar — vista Archivos (ver `07`)

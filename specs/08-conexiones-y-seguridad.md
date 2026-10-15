@@ -66,3 +66,10 @@ Validado con zod al leer `connections.json`; entradas inválidas se omiten con a
 - Resultados solo en memoria; no se cachean en disco.
 - Los scripts se guardan como archivos `.sql` en el espacio de trabajo (con guardado automático, ver `11`). Pueden contener datos pegados por el usuario: el espacio por defecto está en la carpeta del usuario de Windows, y el estado del espacio (nombres de conexión por archivo) se guarda en `userData`, no en la carpeta del espacio.
 - Botón "Limpiar historial" y "Olvidar contraseñas guardadas" en Preferencias.
+
+## Herramientas auxiliares de respaldo
+- PostgreSQL y MariaDB/MySQL respaldan y restauran con `pg_dump`/`pg_restore`, `mariadb-dump`/`mariadb` y `mysqldump`/`mysql`. **No se distribuyen** con el programa (licencias): el usuario los adjunta la primera vez que respalda (arrastrándolos o con un selector) y se copian a `userData/tools/<familia>/`. MariaDB y MySQL son familias separadas.
+- Al importar se comprueba la cabecera del ejecutable (PE/ELF), que el nombre sea el esperado y que `--version` responda como esa herramienta; si no, se descarta la copia. En Windows se copian también las DLL que el ejecutable importa y que están en su carpeta.
+- La contraseña nunca va en la línea de comandos: `PGPASSWORD` en el entorno del proceso (PostgreSQL) o un archivo `--defaults-extra-file` temporal con permisos 0600, borrado al terminar (MariaDB/MySQL). Los mensajes de error se limpian de la contraseña. Si la conexión no la tiene guardada, el diálogo la pide y solo se usa en esa operación.
+- El renderer no elige rutas de respaldo: salen de un diálogo de main y quedan autorizadas para una sola operación (como la exportación).
+- SQL Server respalda con `BACKUP DATABASE` en el propio servidor: la ruta es **del servidor**.
