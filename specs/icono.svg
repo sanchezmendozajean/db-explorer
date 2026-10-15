@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>DB Explorer - propuesta de ícono</title>
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2a47"/>
+      <stop offset="1" stop-color="#0c1428"/>
+    </linearGradient>
+    <linearGradient id="cuerpo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3ea6ff"/>
+      <stop offset="1" stop-color="#0a4fd6"/>
+    </linearGradient>
+    <linearGradient id="tapa" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9ad8ff"/>
+      <stop offset="0.5" stop-color="#3a9bff"/>
+      <stop offset="1" stop-color="#1e6fe8"/>
+    </linearGradient>
+    <radialGradient id="cristal" cx="0.4" cy="0.35" r="0.8">
+      <stop offset="0" stop-color="#1f5fa8"/>
+      <stop offset="1" stop-color="#0b2f66"/>
+    </radialGradient>
+    <linearGradient id="mango" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2fb0ff"/>
+      <stop offset="1" stop-color="#0f6cf0"/>
+    </linearGradient>
+    <clipPath id="recorte"><rect x="100" y="100" width="824" height="824" rx="220"/></clipPath>
+  </defs>
+
+  <!-- Fondo -->
+  <rect x="100" y="100" width="824" height="824" rx="220" fill="url(#fondo)"/>
+
+  <g clip-path="url(#recorte)">
+    <!-- Panel de lista (detrás) -->
+    <rect x="548" y="190" width="326" height="360" rx="30" fill="#5b6f95" opacity="0.55"/>
+    <rect x="574" y="216" width="274" height="308" rx="14" fill="#14203a" opacity="0.7"/>
+    <g>
+      <rect x="592" y="236" width="36" height="34" rx="8" fill="#22c3ff"/>
+      <rect x="644" y="238" width="180" height="30" rx="15" fill="#5b739e"/>
+      <rect x="592" y="298" width="36" height="34" rx="8" fill="#22c3ff"/>
+      <rect x="644" y="300" width="180" height="30" rx="15" fill="#5b739e"/>
+      <rect x="592" y="360" width="36" height="34" rx="8" fill="#22c3ff"/>
+      <rect x="644" y="362" width="180" height="30" rx="15" fill="#5b739e"/>
+      <rect x="592" y="422" width="36" height="34" rx="8" fill="#22c3ff"/>
+      <rect x="644" y="424" width="180" height="30" rx="15" fill="#5b739e"/>
+    </g>
+
+    <!-- Cilindro -->
+    <!-- Cuerpo inferior -->
+    <path d="M205 650 V740 C205 790 330 825 455 825 C580 825 640 800 640 770 V650 Z" fill="url(#cuerpo)"/>
+    <!-- Cuerpo medio -->
+    <path d="M205 520 V640 C205 690 330 725 455 725 C580 725 705 690 705 640 V520 Z" fill="url(#cuerpo)"/>
+    <!-- Cuerpo superior -->
+    <path d="M205 380 V520 C205 570 330 605 455 605 C580 605 705 570 705 520 V380 Z" fill="url(#cuerpo)"/>
+    <!-- Separaciones oscuras -->
+    <path d="M205 535 C205 585 330 620 455 620 C580 620 705 585 705 535" fill="none" stroke="#0a2f85" stroke-width="16" stroke-linecap="round"/>
+    <path d="M205 665 C205 715 330 750 455 750 C500 750 540 745 575 738" fill="none" stroke="#0a2f85" stroke-width="16" stroke-linecap="round"/>
+    <!-- Brillo del borde de cada sección -->
+    <path d="M212 548 C230 590 330 618 455 618 C580 618 680 590 698 548" fill="none" stroke="#7cc4ff" stroke-width="5" opacity="0.5"/>
+    <!-- Tapa -->
+    <ellipse cx="455" cy="380" rx="250" ry="88" fill="url(#tapa)"/>
+
+    <!-- Lupa -->
+    <circle cx="705" cy="702" r="178" fill="#0a1328" opacity="0.55"/>
+    <path d="M845 830 L930 915" stroke="#0a1328" stroke-width="86" stroke-linecap="round" opacity="0.6"/>
+    <path d="M838 818 L935 915" stroke="url(#mango)" stroke-width="72" stroke-linecap="round"/>
+    <circle cx="705" cy="702" r="178" fill="#f4f8ff"/>
+    <circle cx="705" cy="702" r="130" fill="url(#cristal)"/>
+    <path d="M625 700 A82 82 0 0 1 690 622" fill="none" stroke="#a9c8f2" stroke-width="22" stroke-linecap="round" opacity="0.85"/>
+  </g>
+</svg>
