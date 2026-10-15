@@ -607,11 +607,25 @@ export const es = {
       toolVersion: (name: string, version: string) => `${name} ${version}`,
       toolOlder: (tool: string, server: string) =>
         `La herramienta es de la versión ${tool} y el servidor de la ${server}: es posible que se niegue a respaldarlo. Importa herramientas de la versión del servidor o superior.`,
+      dbname: {
+        label: '--dbname',
+        hint: 'Base de datos existente donde se restaura. Por defecto es la que elegiste; cámbiala para restaurar el respaldo en otra base (se reemplaza su contenido).',
+      },
+      noOwner: {
+        label: '--no-owner',
+        hint: 'No restaura el dueño original de los objetos: quedan a nombre del usuario que conecta. Evita errores si el rol de origen no existe en este servidor.',
+      },
+      noPrivileges: {
+        label: '--no-privileges',
+        hint: 'No restaura los permisos (GRANT y REVOKE) de los objetos. Evita errores si los roles a los que se otorgaron no existen en este servidor.',
+      },
+      optionsHint:
+        'La restauración es atómica: si desmarcas una opción y falta un rol en el servidor, fallará completa y no cambiará nada.',
       restoreWarning: (name: string) =>
         `Se reemplazará el contenido de "${name}" con el del respaldo. Los datos actuales que no estén en el respaldo se perderán.`,
       restoreNotes: {
         postgres:
-          'Se restaura en una sola transacción (si algo falla, no cambia nada) y sin dueños ni permisos del origen: los objetos quedan a nombre del usuario de la conexión. Solo admite respaldos hechos con esta aplicación (formato personalizado).',
+          'Se restaura en una sola transacción (si algo falla, no cambia nada). Solo admite respaldos hechos con esta aplicación (formato personalizado).',
         mariadb:
           'El script reemplaza las tablas que incluye; los objetos que existan en la base y no estén en el respaldo se conservan.',
         sqlserver:

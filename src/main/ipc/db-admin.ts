@@ -85,7 +85,14 @@ export function registerDbAdminHandlers({ dbHost, connections, secrets, tools, r
 
   const toolJob = (
     kind: 'backup' | 'restore',
-    req: { connectionId: string; database: string; path: string; password?: string; family?: ToolFamily },
+    req: {
+      connectionId: string;
+      database: string;
+      path: string;
+      password?: string;
+      family?: ToolFamily;
+      options?: { noOwner: boolean; noPrivileges: boolean };
+    },
   ) => {
     const config = connectionOf(req.connectionId);
     const family = req.family;
@@ -103,6 +110,7 @@ export function registerDbAdminHandlers({ dbHost, connections, secrets, tools, r
       secret: secretFor(config, req.password),
       database: req.database,
       file: req.path,
+      options: kind === 'restore' ? req.options : undefined,
     };
   };
 

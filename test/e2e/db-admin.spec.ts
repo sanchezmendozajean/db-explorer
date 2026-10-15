@@ -107,6 +107,15 @@ test.describe('respaldo con herramientas auxiliares', () => {
     await expect(dialog()).toContainText('Restaurar "dbx_e2e_admin2"');
     await expect(dialog()).toContainText('pg_restore.exe');
     await expect(dialog().getByTestId('backup-start')).toBeDisabled();
+    // Opciones de pg_restore: la base destino parte de la elegida y las dos casillas, activas.
+    await expect(dialog().getByTestId('restore-dbname')).toHaveValue('dbx_e2e_admin2');
+    await expect(dialog().getByTestId('restore-no-owner')).toBeChecked();
+    await expect(dialog().getByTestId('restore-no-privileges')).toBeChecked();
+    await expect(dialog()).toContainText('No restaura el dueño original');
+    await expect(dialog()).toContainText('No restaura los permisos');
+    await dialog().getByTestId('restore-no-owner').uncheck();
+    await expect(dialog()).toContainText('fallará completa');
+    await dialog().getByTestId('restore-no-owner').check();
     await dialog().getByRole('button', { name: 'Examinar…' }).click();
     await dialog().getByText('Entiendo que se reemplazarán los datos').click();
     await dialog().getByTestId('backup-start').click();

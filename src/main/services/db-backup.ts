@@ -11,12 +11,22 @@ import type { AuxTools } from './aux-tools';
 
 export type BackupKind = 'backup' | 'restore';
 
+/** Opciones de `pg_restore` que el usuario puede quitar; por defecto se aplican las dos. */
+export interface RestoreOptions {
+  /** `--no-owner`: los objetos quedan a nombre del usuario que conecta. */
+  noOwner: boolean;
+  /** `--no-privileges`: no se aplican los GRANT/REVOKE del respaldo. */
+  noPrivileges: boolean;
+}
+
 export interface BackupJob {
   family: ToolFamily;
   kind: BackupKind;
   config: ConnectionConfig;
   secret: string | undefined;
   database: string;
+  /** Solo PostgreSQL al restaurar. */
+  options?: RestoreOptions;
   /** Archivo de respaldo (de salida al respaldar, de entrada al restaurar). */
   file: string;
 }
@@ -99,15 +109,15 @@ export function buildInvocation(
       ? { env, args: [...connection, '-d', database, '--format=custom', '--file', file] }
       : {
           env,
-          // Atómico y sin depender de que existan los roles del origen: el dueño pasa a ser el usuario que conecta.
+          // Atómico: si algo falla (p. ej. un rol del origen que no existe), no cambia nada.
           args: [
             ...connection,
             '-d',
             database,
             '--clean',
             '--if-exists',
-            '--no-owner',
-            '--no-privileges',
+            ...((job.options?.noOwner ?? true) ? ['--no-owner'] : []),
+            ...((job.options?.noPrivileges ?? true) ? ['--no-privileges'] : []),
             '--single-transaction',
             file,
           ],

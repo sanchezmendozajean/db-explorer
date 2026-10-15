@@ -203,6 +203,29 @@ describe.skipIf(!bin || !existsSync(join(bin, 'pg_dump.exe')))(
       expect(await count()).toBe(2);
     });
 
+    it('restaura en otra base (--dbname) con las opciones desactivadas', async () => {
+      const other = 'dbx_admin_bk2';
+      await withClient(server.database, (c) => c.query(`DROP DATABASE IF EXISTS ${other} WITH (FORCE)`));
+      await withClient(server.database, (c) => c.query(`CREATE DATABASE ${other}`));
+      try {
+        const file = join(scratch, 'otra.backup');
+        const job = { family: 'postgres' as const, config, secret: server.password, file };
+        await runner.run('op-6', { ...job, kind: 'backup', database: db });
+        await runner.run('op-7', {
+          ...job,
+          kind: 'restore',
+          database: other,
+          options: { noOwner: false, noPrivileges: false },
+        });
+        const n = await withClient(other, async (c) =>
+          Number((await c.query('SELECT count(*)::int AS n FROM cliente')).rows[0].n),
+        );
+        expect(n).toBe(await count());
+      } finally {
+        await withClient(server.database, (c) => c.query(`DROP DATABASE IF EXISTS ${other} WITH (FORCE)`));
+      }
+    });
+
     it('informa el motivo cuando la herramienta falla y no deja el archivo a medias', async () => {
       const file = join(scratch, 'malo.backup');
       await expect(

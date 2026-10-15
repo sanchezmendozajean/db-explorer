@@ -180,6 +180,29 @@ describe('invocación de las herramientas', () => {
     expect(inv.args[inv.args.length - 1]).toBe('r.backup');
   });
 
+  it('pg_restore: --no-owner y --no-privileges se pueden quitar por separado', () => {
+    const job = {
+      family: 'postgres' as const,
+      kind: 'restore' as const,
+      config: pg,
+      secret: undefined,
+      database: 'otra',
+      file: 'r.backup',
+    };
+    const sin = buildInvocation({ ...job, options: { noOwner: false, noPrivileges: false } }, 'unused', base);
+    expect(sin.args).not.toContain('--no-owner');
+    expect(sin.args).not.toContain('--no-privileges');
+    expect(sin.args).toContain('--single-transaction');
+    expect(sin.args).toContain('otra');
+    const soloDueno = buildInvocation(
+      { ...job, options: { noOwner: true, noPrivileges: false } },
+      'unused',
+      base,
+    );
+    expect(soloDueno.args).toContain('--no-owner');
+    expect(soloDueno.args).not.toContain('--no-privileges');
+  });
+
   it('mysqldump: contraseña en archivo de opciones; solo MySQL lleva --no-tablespaces', () => {
     const job = { kind: 'backup' as const, config: my, secret: 's', database: 'ventas', file: 'v.sql' };
     const mysql = buildInvocation({ ...job, family: 'mysql' }, 'C:\\t\\c.cnf', base);

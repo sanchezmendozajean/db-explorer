@@ -44,6 +44,10 @@ export function BackupDialog({
   );
   const [password, setPassword] = useState('');
   const [confirmed, setConfirmed] = useState(false);
+  // Opciones de pg_restore (solo PostgreSQL): base destino y las dos opciones, activas de forma predeterminada.
+  const [target, setTarget] = useState(database);
+  const [noOwner, setNoOwner] = useState(true);
+  const [noPrivileges, setNoPrivileges] = useState(true);
   const [phase, setPhase] = useState<Phase>({ name: 'form' });
   const [tool, setTool] = useState<ToolFamilyStatus | null>(null);
   const operationId = useRef(crypto.randomUUID());
@@ -63,6 +67,8 @@ export function BackupDialog({
   const running = phase.name === 'running';
   const needsPassword = mode === 'tools' && !hasSavedPassword;
   const production = conn.environment === 'prod';
+  const pgRestore = !isBackup && engine === 'postgres';
+  const restoreTarget = pgRestore ? target.trim() : database;
 
   const toolFile = tool?.files[isBackup ? 0 : 1];
   const olderTool =
@@ -90,11 +96,12 @@ export function BackupDialog({
     setPhase({ name: 'running' });
     const request = {
       connectionId,
-      database,
+      database: restoreTarget,
       path: path.trim(),
       operationId: operationId.current,
       family: family ?? undefined,
       password: password || undefined,
+      options: pgRestore ? { noOwner, noPrivileges } : undefined,
     };
     const r = isBackup ? await window.api.dbadmin.backup(request) : await window.api.dbadmin.restore(request);
     if (r.ok) {
@@ -103,7 +110,7 @@ export function BackupDialog({
         const data = r.data as { path: string; bytes?: number };
         showToast('success', t.done(database, data.path, data.bytes));
       } else {
-        showToast('success', t.restored(database));
+        showToast('success', t.restored(restoreTarget));
         refreshConnection(connectionId);
       }
       return;
@@ -118,7 +125,8 @@ export function BackupDialog({
     setPhase({ name: 'error', message: r.error.message });
   };
 
-  const canStart = !running && (isBackup || confirmed) && (mode === 'server' || path.trim() !== '');
+  const canStart =
+    !running && (isBackup || confirmed) && (mode === 'server' || path.trim() !== '') && restoreTarget !== '';
 
   return (
     <Modal
@@ -157,7 +165,7 @@ export function BackupDialog({
     >
       {!isBackup && (
         <p className="form-hint is-warning">
-          {t.restoreWarning(database)} {production && es.dbAdmin.drop.production}
+          {t.restoreWarning(restoreTarget || database)} {production && es.dbAdmin.drop.production}
         </p>
       )}
 
@@ -192,6 +200,46 @@ export function BackupDialog({
       )}
       {olderTool && toolFile?.version && server && (
         <p className="form-hint is-warning">{t.toolOlder(toolFile.version, server.version)}</p>
+      )}
+
+      {pgRestore && (
+        <>
+          <label className="form-field">
+            <span className="form-label">{t.dbname.label}</span>
+            <TextInput
+              value={target}
+              disabled={running}
+              aria-label={t.dbname.label}
+              data-testid="restore-dbname"
+              invalid={restoreTarget === ''}
+              onChange={(e) => setTarget(e.target.value)}
+            />
+            <span className="form-hint">{t.dbname.hint}</span>
+          </label>
+          <div className="restore-option">
+            <Checkbox
+              className="form-checkbox"
+              label={t.noOwner.label}
+              checked={noOwner}
+              disabled={running}
+              data-testid="restore-no-owner"
+              onChange={(e) => setNoOwner(e.target.checked)}
+            />
+            <span className="form-hint">{t.noOwner.hint}</span>
+          </div>
+          <div className="restore-option">
+            <Checkbox
+              className="form-checkbox"
+              label={t.noPrivileges.label}
+              checked={noPrivileges}
+              disabled={running}
+              data-testid="restore-no-privileges"
+              onChange={(e) => setNoPrivileges(e.target.checked)}
+            />
+            <span className="form-hint">{t.noPrivileges.hint}</span>
+          </div>
+          {(!noOwner || !noPrivileges) && <p className="form-hint is-warning">{t.optionsHint}</p>}
+        </>
       )}
 
       {needsPassword && (

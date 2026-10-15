@@ -1035,3 +1035,18 @@ button.chip > span:not(.env-dot) {
 .tool-lib.is-missing {
   color: var(--error);
 }
+
+.restore-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.restore-option .form-checkbox {
+  margin-top: 6px;
+}
+
+.restore-option .form-hint {
+  margin-left: 24px;
+}
