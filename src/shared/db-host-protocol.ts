@@ -52,6 +52,15 @@ export interface DbHostMethods {
   'meta.table': { params: ObjectTarget; result: TableDetails };
   'meta.ddl': { params: ObjectTarget; result: string };
   'meta.saveRoutine': { params: ObjectTarget & { definition: string }; result: null };
+  'admin.create': { params: { connectionId: string; name: string }; result: null };
+  'admin.drop': { params: { connectionId: string; database: string }; result: null };
+  'admin.rename': { params: { connectionId: string; database: string; newName: string }; result: null };
+  /** Respaldo hecho por el servidor (SQL Server). Devuelve la ruta final, que es del servidor. */
+  'admin.backup': {
+    params: { connectionId: string; database: string; path: string };
+    result: { path: string };
+  };
+  'admin.restore': { params: { connectionId: string; database: string; path: string }; result: null };
   'data.apply': { params: ApplyChangesRequest; result: ApplyChangesResult };
   'export.start': { params: ExportRequest; result: ExportSummary };
 }

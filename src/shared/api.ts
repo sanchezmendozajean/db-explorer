@@ -74,6 +74,24 @@ export interface DbExplorerApi {
     historyDelete: Invoke<'query:history-delete'>;
     historyClear: Invoke<'query:history-clear'>;
   };
+  dbadmin: {
+    create: Invoke<'dbadmin:create'>;
+    drop: Invoke<'dbadmin:drop'>;
+    rename: Invoke<'dbadmin:rename'>;
+    backup: Invoke<'dbadmin:backup'>;
+    restore: Invoke<'dbadmin:restore'>;
+    cancel: Invoke<'dbadmin:cancel'>;
+    pickFile: Invoke<'dbadmin:pick-file'>;
+  };
+  tools: {
+    status: Invoke<'tools:status'>;
+    pick: Invoke<'tools:pick'>;
+    import: Invoke<'tools:import'>;
+    remove: Invoke<'tools:remove'>;
+    openFolder: Invoke<'tools:open-folder'>;
+    /** Ruta en disco de un archivo arrastrado a la ventana (`webUtils.getPathForFile`); vacía si no tiene. */
+    pathForFile(file: unknown): string;
+  };
   data: {
     apply: Invoke<'data:apply'>;
     pickExportPath: Invoke<'data:pick-export-path'>;

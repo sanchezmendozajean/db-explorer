@@ -5,6 +5,8 @@ import type { UserKeybindings } from './keybindings';
 import type { IpcEventChannel, IpcInvokeChannel } from './channels';
 import { UiStateSchema } from './ui-state';
 import type { ServerInfo } from './connection';
+import type { ToolFamilyStatus, ToolImportResult } from './db-admin';
+import { TOOL_FAMILIES } from './db-admin';
 import { ConnectionConfigSchema } from './connection';
 import type { TableDetails, TreeNodeData } from './metadata';
 import { ObjectKindSchema, TreeNodeRefSchema } from './metadata';
@@ -134,6 +136,23 @@ export const ObjectTargetSchema = z.object({
   schema: Name,
   name: Name,
   kind: ObjectKindSchema,
+});
+
+const OperationId = z.string().min(1).max(100);
+const ToolFamilySchema = z.enum(TOOL_FAMILIES as [string, ...string[]]) as z.ZodType<
+  ToolFamilyStatus['family']
+>;
+const DatabaseName = z.string().trim().min(1).max(128);
+const BackupTarget = z.object({
+  connectionId: Id,
+  database: DatabaseName,
+  /** PostgreSQL y MariaDB/MySQL: ruta elegida con `dbadmin:pick-file`. SQL Server: ruta del servidor, escrita por el usuario. */
+  path: z.string().min(1).max(1000),
+  operationId: OperationId,
+  /** Familia de herramientas auxiliares (solo PostgreSQL y MariaDB/MySQL). */
+  family: ToolFamilySchema.optional(),
+  /** Contraseña para las herramientas auxiliares si la conexión no la tiene guardada (nunca se almacena). */
+  password: Password.optional(),
 });
 
 const Cell = z.union([z.string(), z.number(), z.boolean(), z.null()]);
@@ -346,6 +365,45 @@ export const ipcInvokeContract = {
     request: ObjectTargetSchema.extend({ definition: z.string().min(1).max(MAX_ROUTINE_LENGTH) }),
     response: Empty,
   },
+  'dbadmin:create': { request: z.object({ connectionId: Id, name: DatabaseName }), response: Empty },
+  'dbadmin:drop': { request: z.object({ connectionId: Id, database: DatabaseName }), response: Empty },
+  'dbadmin:rename': {
+    request: z.object({ connectionId: Id, database: DatabaseName, newName: DatabaseName }),
+    response: Empty,
+  },
+  'dbadmin:backup': {
+    request: BackupTarget,
+    /** `bytes` solo lo informan las herramientas auxiliares (el servidor escribe el archivo de SQL Server). */
+    response: z.object({ path: z.string(), bytes: z.number().optional() }),
+  },
+  'dbadmin:restore': { request: BackupTarget, response: Empty },
+  'dbadmin:cancel': { request: z.object({ operationId: OperationId }), response: Empty },
+  /** Diálogo de archivo para un respaldo (guardar) o una restauración (abrir); la ruta queda autorizada para main. */
+  'dbadmin:pick-file': {
+    request: z.object({
+      mode: z.enum(['save', 'open']),
+      engine: z.enum(['postgres', 'mariadb', 'sqlite', 'sqlserver']),
+      defaultName: z.string().max(255),
+    }),
+    response: z.object({ path: z.string().nullable() }),
+  },
+  'tools:status': { request: Empty, response: z.custom<ToolFamilyStatus[]>() },
+  /** Abre el selector de archivos y los importa; `null` si se canceló. */
+  'tools:pick': {
+    request: z.object({ family: ToolFamilySchema }),
+    response: z.custom<ToolImportResult | null>(),
+  },
+  /** Importa archivos arrastrados a la ventana (rutas de `webUtils.getPathForFile`). */
+  'tools:import': {
+    request: z.object({
+      family: ToolFamilySchema,
+      paths: z.array(z.string().min(1).max(4096)).min(1).max(20),
+    }),
+    response: z.custom<ToolImportResult>(),
+  },
+  /** Abre en el explorador de archivos la carpeta donde están los binarios importados; devuelve su ruta. */
+  'tools:open-folder': { request: Empty, response: z.object({ path: z.string() }) },
+  'tools:remove': { request: z.object({ family: ToolFamilySchema }), response: z.custom<ToolFamilyStatus>() },
   'data:apply': { request: ApplyChangesSchema, response: z.custom<ApplyChangesResult>() },
   /** Diálogo "Guardar como" de una exportación; la ruta queda autorizada para `data:export`. */
   'data:pick-export-path': {
@@ -400,7 +458,11 @@ export type IpcErrorCode =
   /** Ya existe un archivo o carpeta con ese nombre. */
   | 'exists'
   /** Nombre de archivo no válido. */
-  | 'invalid-name';
+  | 'invalid-name'
+  /** El usuario canceló una operación en curso (respaldo o restauración). */
+  | 'cancelled'
+  /** Faltan las herramientas auxiliares de respaldo de la familia. */
+  | 'tools-missing';
 
 export interface IpcError {
   code: IpcErrorCode;

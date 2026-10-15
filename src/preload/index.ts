@@ -2,7 +2,7 @@
  * Preload (sandbox): expone una API mínima y tipada como `window.api`.
  * Nunca se expone `ipcRenderer` completo.
  */
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import type { IpcRendererEvent } from 'electron';
 import type { DbExplorerApi } from '@shared/api';
 import { IPC_EVENT_CHANNELS } from '@shared/channels';
@@ -86,6 +86,29 @@ const api: DbExplorerApi = {
     historyList: invoke('query:history-list'),
     historyDelete: invoke('query:history-delete'),
     historyClear: invoke('query:history-clear'),
+  },
+  dbadmin: {
+    create: invoke('dbadmin:create'),
+    drop: invoke('dbadmin:drop'),
+    rename: invoke('dbadmin:rename'),
+    backup: invoke('dbadmin:backup'),
+    restore: invoke('dbadmin:restore'),
+    cancel: invoke('dbadmin:cancel'),
+    pickFile: invoke('dbadmin:pick-file'),
+  },
+  tools: {
+    status: invoke('tools:status'),
+    pick: invoke('tools:pick'),
+    import: invoke('tools:import'),
+    remove: invoke('tools:remove'),
+    openFolder: invoke('tools:open-folder'),
+    pathForFile: (file: unknown) => {
+      try {
+        return webUtils.getPathForFile(file as Parameters<typeof webUtils.getPathForFile>[0]);
+      } catch {
+        return '';
+      }
+    },
   },
   data: {
     apply: invoke('data:apply'),

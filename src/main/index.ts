@@ -13,6 +13,9 @@ import { ConnectionStore } from './services/connection-store';
 import { SecretStore } from './services/secret-store';
 import { registerConnectionHandlers } from './ipc/connections';
 import { registerWorkspaceHandlers } from './ipc/workspace';
+import { registerDbAdminHandlers } from './ipc/db-admin';
+import { AuxTools } from './services/aux-tools';
+import { BackupRunner } from './services/db-backup';
 import { SettingsStore } from './services/settings-store';
 import { WorkspaceService } from './services/workspace-service';
 import { HistoryService } from './services/history-service';
@@ -111,6 +114,14 @@ if (!app.requestSingleInstanceLock()) {
       secrets,
       history: historyService,
       skippedOnLoad: skipped,
+    });
+    const auxTools = new AuxTools(join(userData, 'tools'));
+    registerDbAdminHandlers({
+      dbHost,
+      connections,
+      secrets,
+      tools: auxTools,
+      runner: new BackupRunner(auxTools),
     });
     const keybindings = new KeybindingsStore(join(userData, 'keybindings.json'));
     await keybindings.load();
