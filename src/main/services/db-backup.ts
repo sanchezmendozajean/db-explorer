@@ -1,23 +1,16 @@
 import type { ChildProcess } from 'node:child_process';
 import { spawn } from 'node:child_process';
 import { createReadStream } from 'node:fs';
+import { Transform } from 'node:stream';
 import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ConnectionConfig } from '@shared/connection';
-import type { ToolFamily } from '@shared/db-admin';
+import type { DumpOptions, RestoreOptions, ToolFamily } from '@shared/db-admin';
 import { toolFileNames } from '@shared/db-admin';
 import type { AuxTools } from './aux-tools';
 
 export type BackupKind = 'backup' | 'restore';
-
-/** Opciones de `pg_restore` que el usuario puede quitar; por defecto se aplican las dos. */
-export interface RestoreOptions {
-  /** `--no-owner`: los objetos quedan a nombre del usuario que conecta. */
-  noOwner: boolean;
-  /** `--no-privileges`: no se aplican los GRANT/REVOKE del respaldo. */
-  noPrivileges: boolean;
-}
 
 export interface BackupJob {
   family: ToolFamily;
@@ -25,8 +18,10 @@ export interface BackupJob {
   config: ConnectionConfig;
   secret: string | undefined;
   database: string;
-  /** Solo PostgreSQL al restaurar. */
+  /** Opciones al restaurar (PostgreSQL y MariaDB/MySQL). */
   options?: RestoreOptions;
+  /** Opciones al respaldar (MariaDB/MySQL). */
+  dump?: DumpOptions;
   /** Archivo de respaldo (de salida al respaldar, de entrada al restaurar). */
   file: string;
 }
@@ -135,12 +130,14 @@ export function buildInvocation(
     '--default-character-set=utf8mb4',
   ];
   if (job.kind === 'backup') {
+    const dump = job.dump ?? {};
     const args = [
       ...connection,
       '--single-transaction',
-      '--routines',
-      '--triggers',
-      '--events',
+      ...((dump.routines ?? true) ? ['--routines'] : []),
+      ...((dump.triggers ?? true) ? ['--triggers'] : ['--skip-triggers']),
+      ...((dump.events ?? true) ? ['--events'] : []),
+      ...(dump.structureOnly ? ['--no-data'] : []),
       `--result-file=${file}`,
       database,
     ];
@@ -150,6 +147,70 @@ export function buildInvocation(
     return { env, args, usesDefaultsFile: true };
   }
   return { env, args: [...connection, database], stdinFile: file, usesDefaultsFile: true };
+}
+
+/** `DEFINER=usuario@host` (con o sin comillas), con o sin `SQL SECURITY DEFINER`, dentro o fuera de un comentario condicional de MySQL. */
+const DEFINER =
+  /\/\*!\d+\s+DEFINER\s*=\s*(?:`[^`]*`|'[^']*'|"[^"]*"|[^\s@*]+)@(?:`[^`]*`|'[^']*'|"[^"]*"|[^\s*]+)(?:\s+SQL\s+SECURITY\s+DEFINER)?\s*\*\/|\bDEFINER\s*=\s*(?:`[^`]*`|'[^']*'|"[^"]*"|[^\s@]+)@(?:`[^`]*`|'[^']*'|"[^"]*"|[^\s]+)/gi;
+
+/** Las filas de datos no se tocan: un valor podría contener ese texto. */
+const DATA_LINE = /^\s*(?:INSERT|REPLACE)\s+(?:IGNORE\s+)?INTO\b/i;
+
+/**
+ * Transforma un script de mysqldump quitando las cláusulas `DEFINER` (vistas, rutinas, disparadores y
+ * eventos) para poder crearlos aunque el usuario original no exista en el servidor de destino. Trabaja
+ * por líneas y byte a byte (latin1), así que conserva cualquier codificación; las líneas de datos
+ * (`INSERT`) pasan sin leerse completas.
+ */
+export function createDefinerStripper(): Transform {
+  let line = '';
+  let passthrough = false;
+  const convert = (text: string, final: boolean): string => {
+    let out = '';
+    let rest = text;
+    while (rest.length > 0) {
+      if (passthrough) {
+        const nl = rest.indexOf('\n');
+        if (nl < 0) {
+          out += rest;
+          rest = '';
+        } else {
+          out += rest.slice(0, nl + 1);
+          rest = rest.slice(nl + 1);
+          passthrough = false;
+        }
+        continue;
+      }
+      const nl = rest.indexOf('\n');
+      if (nl < 0) {
+        line += rest;
+        // Línea larga sin terminar: si es de datos (o gigante) se deja pasar sin acumularla.
+        if (line.length >= 24 && (DATA_LINE.test(line) || line.length > 1 << 20)) {
+          out += line;
+          line = '';
+          passthrough = true;
+        }
+        break;
+      }
+      line += rest.slice(0, nl + 1);
+      rest = rest.slice(nl + 1);
+      out += DATA_LINE.test(line) ? line : line.replace(DEFINER, '');
+      line = '';
+    }
+    if (final && line) {
+      out += DATA_LINE.test(line) ? line : line.replace(DEFINER, '');
+      line = '';
+    }
+    return out;
+  };
+  return new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      callback(null, Buffer.from(convert(chunk.toString('latin1'), false), 'latin1'));
+    },
+    flush(callback) {
+      callback(null, Buffer.from(convert('', true), 'latin1'));
+    },
+  });
 }
 
 /** Cuántos bytes del final de stderr se conservan para el mensaje de error. */
@@ -255,7 +316,13 @@ export class BackupRunner {
         });
         // La herramienta puede cerrar la entrada antes (p. ej. un error de conexión): el motivo viene por stderr.
         child.stdin.on('error', () => undefined);
-        input.pipe(child.stdin);
+        if (job.options?.removeDefiner ?? job.family !== 'postgres') {
+          const stripper = createDefinerStripper();
+          input.on('error', () => stripper.destroy());
+          input.pipe(stripper).pipe(child.stdin);
+        } else {
+          input.pipe(child.stdin);
+        }
       }
     });
   }

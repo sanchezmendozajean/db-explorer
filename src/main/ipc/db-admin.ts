@@ -3,7 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import { app, BrowserWindow, dialog, shell } from 'electron';
 import type { OpenDialogOptions, SaveDialogOptions } from 'electron';
 import type { ConnectionConfig } from '@shared/connection';
-import type { ToolFamily } from '@shared/db-admin';
+import type { DumpOptions, RestoreOptions, ToolFamily } from '@shared/db-admin';
 import { TOOL_FAMILIES, backupFileFilters, backupModeOf } from '@shared/db-admin';
 import type { DbHostClient } from '../services/db-host-client';
 import type { ConnectionStore } from '../services/connection-store';
@@ -91,7 +91,8 @@ export function registerDbAdminHandlers({ dbHost, connections, secrets, tools, r
       path: string;
       password?: string;
       family?: ToolFamily;
-      options?: { noOwner: boolean; noPrivileges: boolean };
+      options?: RestoreOptions;
+      dump?: DumpOptions;
     },
   ) => {
     const config = connectionOf(req.connectionId);
@@ -111,6 +112,7 @@ export function registerDbAdminHandlers({ dbHost, connections, secrets, tools, r
       database: req.database,
       file: req.path,
       options: kind === 'restore' ? req.options : undefined,
+      dump: kind === 'backup' ? req.dump : undefined,
     };
   };
 

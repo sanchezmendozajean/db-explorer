@@ -152,7 +152,22 @@ const BackupTarget = z.object({
   /** Familia de herramientas auxiliares (solo PostgreSQL y MariaDB/MySQL). */
   family: ToolFamilySchema.optional(),
   /** Opciones de `pg_restore` (solo PostgreSQL); sin valor, ambas activas. */
-  options: z.object({ noOwner: z.boolean(), noPrivileges: z.boolean() }).optional(),
+  options: z
+    .object({
+      noOwner: z.boolean().optional(),
+      noPrivileges: z.boolean().optional(),
+      removeDefiner: z.boolean().optional(),
+    })
+    .optional(),
+  /** Opciones del respaldo de MariaDB/MySQL. */
+  dump: z
+    .object({
+      routines: z.boolean().optional(),
+      triggers: z.boolean().optional(),
+      events: z.boolean().optional(),
+      structureOnly: z.boolean().optional(),
+    })
+    .optional(),
   /** Contraseña para las herramientas auxiliares si la conexión no la tiene guardada (nunca se almacena). */
   password: Password.optional(),
 });

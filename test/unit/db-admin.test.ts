@@ -10,7 +10,7 @@ import {
 } from '@shared/db-admin';
 import { checkedServerPath, nstr, planFileMoves } from '../../src/db-host/drivers/sqlserver/database-sql';
 import { checkedDatabaseName } from '../../src/db-host/drivers/common';
-import { buildDefaultsFile, buildInvocation } from '../../src/main/services/db-backup';
+import { buildDefaultsFile, buildInvocation, createDefinerStripper } from '../../src/main/services/db-backup';
 import { importedDlls, isElf, isPortableExecutable } from '../../src/main/services/pe-imports';
 
 describe('herramientas auxiliares: nombres, familias y versiones', () => {
@@ -218,6 +218,31 @@ describe('invocación de las herramientas', () => {
     expect(mysql.usesDefaultsFile).toBe(true);
   });
 
+  it('mysqldump: rutinas, disparadores y eventos activos; se pueden quitar y pedir solo estructura', () => {
+    const job = {
+      family: 'mariadb' as const,
+      kind: 'backup' as const,
+      config: my,
+      secret: undefined,
+      database: 'ventas',
+      file: 'v.sql',
+    };
+    const normal = buildInvocation(job, 'c.cnf', base).args;
+    expect(normal).toEqual(expect.arrayContaining(['--routines', '--triggers', '--events']));
+    expect(normal).not.toContain('--no-data');
+    const custom = buildInvocation(
+      { ...job, dump: { routines: false, triggers: false, events: false, structureOnly: true } },
+      'c.cnf',
+      base,
+    ).args;
+    expect(custom).not.toContain('--routines');
+    expect(custom).not.toContain('--events');
+    expect(custom).not.toContain('--triggers');
+    expect(custom).toContain('--skip-triggers');
+    expect(custom).toContain('--no-data');
+    expect(custom[custom.length - 1]).toBe('ventas');
+  });
+
   it('mysql (restaurar) lee el respaldo por la entrada estándar', () => {
     const inv = buildInvocation(
       {
@@ -246,6 +271,61 @@ describe('invocación de las herramientas', () => {
       'ssl-verify-server-cert\nssl-ca="C:\\\\ca.pem"',
     );
     expect(buildDefaultsFile('mariadb', tls, undefined)).not.toContain('password');
+  });
+});
+
+/** Pasa el texto por el filtro en trozos del tamaño indicado (para probar los cortes entre bloques). */
+async function strip(input: Buffer, chunk: number): Promise<Buffer> {
+  const stripper = createDefinerStripper();
+  const parts: Buffer[] = [];
+  stripper.on('data', (d: Buffer) => parts.push(d));
+  const done = new Promise<void>((resolve) => stripper.on('end', resolve));
+  for (let i = 0; i < input.length; i += chunk) stripper.write(input.subarray(i, i + chunk));
+  stripper.end();
+  await done;
+  return Buffer.concat(parts);
+}
+
+describe('filtro de DEFINER para restaurar en MariaDB/MySQL', () => {
+  const dump = [
+    '-- MySQL dump',
+    '/*!50001 CREATE ALGORITHM=UNDEFINED */',
+    '/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */',
+    '/*!50001 VIEW `v` AS select 1 */;',
+    '/*!50003 CREATE*/ /*!50017 DEFINER=`ana`@`%`*/ /*!50003 TRIGGER t BEFORE INSERT ON x FOR EACH ROW SET NEW.a=1 */;;',
+    'CREATE DEFINER=`root`@`localhost` PROCEDURE p() SELECT 1;',
+    "/*!50106 CREATE*/ /*!50117 DEFINER='bob'@'10.0.0.1'*/ /*!50106 EVENT e ON SCHEDULE EVERY 1 DAY DO SELECT 1 */ ;;",
+    "INSERT INTO `notas` VALUES (1,'DEFINER=`root`@`localhost` ñandú');",
+    '',
+  ].join('\n');
+
+  it('quita los DEFINER de vistas, rutinas, disparadores y eventos', async () => {
+    const out = (await strip(Buffer.from(dump, 'utf8'), 1 << 16)).toString('utf8');
+    // La fila de datos (INSERT) conserva su texto; en el resto del script no queda ningún DEFINER.
+    const code = out.split('\n').filter((l) => !l.startsWith('INSERT INTO'));
+    expect(code.join('\n')).not.toContain('DEFINER');
+    expect(out).toContain('/*!50001 VIEW `v` AS select 1 */;');
+    expect(out).toContain('TRIGGER t BEFORE INSERT ON x');
+    expect(out).toContain('CREATE  PROCEDURE p() SELECT 1;');
+    expect(out).toContain('EVENT e ON SCHEDULE EVERY 1 DAY');
+  });
+
+  it('no toca las filas de datos, ni los bytes no ASCII', async () => {
+    const out = (await strip(Buffer.from(dump, 'utf8'), 1 << 16)).toString('utf8');
+    expect(out).toContain("INSERT INTO `notas` VALUES (1,'DEFINER=`root`@`localhost` ñandú');");
+  });
+
+  it('da el mismo resultado sin importar dónde se corte el flujo', async () => {
+    const whole = await strip(Buffer.from(dump, 'utf8'), 1 << 16);
+    for (const size of [1, 2, 3, 7, 13, 50]) {
+      expect((await strip(Buffer.from(dump, 'utf8'), size)).equals(whole)).toBe(true);
+    }
+  });
+
+  it('deja pasar sin cambios un archivo sin DEFINER, incluidas líneas enormes', async () => {
+    const big = `INSERT INTO t VALUES ${"(1,'x'),".repeat(200_000)}(2,'y');\n`;
+    const input = Buffer.from(`-- hola\n${big}SELECT 1;`, 'latin1');
+    expect((await strip(input, 4096)).equals(input)).toBe(true);
   });
 });
 

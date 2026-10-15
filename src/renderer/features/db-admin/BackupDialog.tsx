@@ -48,6 +48,12 @@ export function BackupDialog({
   const [target, setTarget] = useState(database);
   const [noOwner, setNoOwner] = useState(true);
   const [noPrivileges, setNoPrivileges] = useState(true);
+  // Opciones propias de MariaDB/MySQL.
+  const [removeDefiner, setRemoveDefiner] = useState(true);
+  const [routines, setRoutines] = useState(true);
+  const [triggers, setTriggers] = useState(true);
+  const [events, setEvents] = useState(true);
+  const [structureOnly, setStructureOnly] = useState(false);
   const [phase, setPhase] = useState<Phase>({ name: 'form' });
   const [tool, setTool] = useState<ToolFamilyStatus | null>(null);
   const operationId = useRef(crypto.randomUUID());
@@ -68,7 +74,9 @@ export function BackupDialog({
   const needsPassword = mode === 'tools' && !hasSavedPassword;
   const production = conn.environment === 'prod';
   const pgRestore = !isBackup && engine === 'postgres';
-  const restoreTarget = pgRestore ? target.trim() : database;
+  const myRestore = !isBackup && engine === 'mariadb';
+  const myBackup = isBackup && engine === 'mariadb';
+  const restoreTarget = pgRestore || myRestore ? target.trim() : database;
 
   const toolFile = tool?.files[isBackup ? 0 : 1];
   const olderTool =
@@ -101,7 +109,8 @@ export function BackupDialog({
       operationId: operationId.current,
       family: family ?? undefined,
       password: password || undefined,
-      options: pgRestore ? { noOwner, noPrivileges } : undefined,
+      options: pgRestore ? { noOwner, noPrivileges } : myRestore ? { removeDefiner } : undefined,
+      dump: myBackup ? { routines, triggers, events, structureOnly } : undefined,
     };
     const r = isBackup ? await window.api.dbadmin.backup(request) : await window.api.dbadmin.restore(request);
     if (r.ok) {
@@ -200,6 +209,59 @@ export function BackupDialog({
       )}
       {olderTool && toolFile?.version && server && (
         <p className="form-hint is-warning">{t.toolOlder(toolFile.version, server.version)}</p>
+      )}
+
+      {myRestore && (
+        <>
+          <label className="form-field">
+            <span className="form-label">{t.database.label}</span>
+            <TextInput
+              value={target}
+              disabled={running}
+              aria-label={t.database.label}
+              data-testid="restore-dbname"
+              invalid={restoreTarget === ''}
+              onChange={(e) => setTarget(e.target.value)}
+            />
+            <span className="form-hint">{t.database.hint}</span>
+          </label>
+          <div className="restore-option">
+            <Checkbox
+              className="form-checkbox"
+              label={t.removeDefiner.label}
+              checked={removeDefiner}
+              disabled={running}
+              data-testid="restore-remove-definer"
+              onChange={(e) => setRemoveDefiner(e.target.checked)}
+            />
+            <span className="form-hint">{t.removeDefiner.hint}</span>
+          </div>
+        </>
+      )}
+
+      {myBackup && (
+        <>
+          {(
+            [
+              ['routines', routines, setRoutines],
+              ['triggers', triggers, setTriggers],
+              ['events', events, setEvents],
+              ['structureOnly', structureOnly, setStructureOnly],
+            ] as const
+          ).map(([key, value, set]) => (
+            <div className="restore-option" key={key}>
+              <Checkbox
+                className="form-checkbox"
+                label={t.dump[key].label}
+                checked={value}
+                disabled={running}
+                data-testid={`dump-${key}`}
+                onChange={(e) => set(e.target.checked)}
+              />
+              <span className="form-hint">{t.dump[key].hint}</span>
+            </div>
+          ))}
+        </>
       )}
 
       {pgRestore && (

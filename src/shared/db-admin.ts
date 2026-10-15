@@ -113,3 +113,25 @@ export function backupFileFilters(engine: Engine): { name: string; extensions: s
       return [{ name: 'Script SQL', extensions: ['sql'] }];
   }
 }
+
+/** Opciones al restaurar. `noOwner` y `noPrivileges` son de `pg_restore`; `removeDefiner` de MariaDB/MySQL. */
+export interface RestoreOptions {
+  /** `--no-owner`: los objetos quedan a nombre del usuario que conecta (por defecto, sí). */
+  noOwner?: boolean;
+  /** `--no-privileges`: no se aplican los GRANT/REVOKE del respaldo (por defecto, sí). */
+  noPrivileges?: boolean;
+  /** Quita las cláusulas `DEFINER=…` del script mientras se envía al cliente (por defecto, sí). */
+  removeDefiner?: boolean;
+}
+
+/** Opciones al respaldar con `mysqldump`/`mariadb-dump` (por defecto: rutinas, disparadores y eventos, con datos). */
+export interface DumpOptions {
+  /** `--routines` */
+  routines?: boolean;
+  /** `--triggers` (si no, `--skip-triggers`) */
+  triggers?: boolean;
+  /** `--events` */
+  events?: boolean;
+  /** `--no-data`: solo estructura. */
+  structureOnly?: boolean;
+}

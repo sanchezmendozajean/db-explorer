@@ -611,6 +611,32 @@ export const es = {
         label: '--dbname',
         hint: 'Base de datos existente donde se restaura. Por defecto es la que elegiste; cámbiala para restaurar el respaldo en otra base (se reemplaza su contenido).',
       },
+      database: {
+        label: '--database',
+        hint: 'Base de datos existente donde se restaura. Por defecto es la que elegiste; cámbiala para restaurar el script en otra base (se reemplazan las tablas que incluye).',
+      },
+      removeDefiner: {
+        label: 'Quitar DEFINER',
+        hint: 'Quita del script las cláusulas DEFINER=usuario@host de vistas, rutinas, disparadores y eventos; así se crean a nombre del usuario que conecta. Evita el error 1449 si el usuario de origen no existe en este servidor. Modifica el texto del script mientras se envía; el archivo no cambia.',
+      },
+      dump: {
+        routines: {
+          label: '--routines',
+          hint: 'Incluye los procedimientos y funciones almacenados.',
+        },
+        triggers: {
+          label: '--triggers',
+          hint: 'Incluye los disparadores de las tablas. Desmarcada, se omiten (--skip-triggers).',
+        },
+        events: {
+          label: '--events',
+          hint: 'Incluye los eventos programados.',
+        },
+        structureOnly: {
+          label: '--no-data',
+          hint: 'Solo estructura: crea las tablas pero no respalda sus filas.',
+        },
+      },
       noOwner: {
         label: '--no-owner',
         hint: 'No restaura el dueño original de los objetos: quedan a nombre del usuario que conecta. Evita errores si el rol de origen no existe en este servidor.',
