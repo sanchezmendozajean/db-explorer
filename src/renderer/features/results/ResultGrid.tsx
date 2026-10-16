@@ -36,6 +36,7 @@ import type { CopySelection, CopySource } from './copy';
 import { selectionBounds, tsvField } from './copy';
 import type { RowRef } from './edit-state';
 import { cellValue, isCellEdited, rowKey, setCells } from './edit-state';
+import type { ViewedValue } from './ValueViewer';
 import type { GridHandle } from './grid-edit';
 import { editPending, isEditableColumn, setActiveGrid } from './grid-edit';
 import {
@@ -151,7 +152,7 @@ interface Props {
   onCopy: (sel: CopySelection, source: CopySource, headers: boolean) => void;
   /** Copiar como (CSV, JSON, INSERT…): texto ya armado. */
   onCopyText: (text: string) => void;
-  onViewValue: (value: { column: ResultColumn; value: unknown }) => void;
+  onViewValue: (value: ViewedValue) => void;
   onSelectionStats: (stats: SelectionStats | null) => void;
 }
 
@@ -425,10 +426,15 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
     updateView(tabId, result.id, { sort: next ? { column: c, dir: next } : null });
   };
 
-  const valueAt = (cell: Item): { column: ResultColumn; value: unknown } => ({
-    column: columns[cols[cell[0]]!]!,
-    value: source.value(cell[1], cell[0]),
-  });
+  const valueAt = (cell: Item): ViewedValue => {
+    const c = cols[cell[0]]!;
+    const at = refAt(cell[1]);
+    return {
+      column: columns[c]!,
+      value: source.value(cell[1], cell[0]),
+      target: at && isEditableColumn(result, c) ? { ref: at, column: c } : undefined,
+    };
+  };
 
   /** Filas y columnas (visibles) de la selección con sus valores, para "Copiar como". */
   const selectedMatrix = (): { columns: ResultColumn[]; rows: CellValue[][]; visibleCols: number[] } => {

@@ -109,6 +109,26 @@ test('Ver original muestra el JSON del motor', async () => {
   await expect(planNodes().first()).toBeVisible();
 });
 
+test('el ancho de una columna se recuerda al explicar otra consulta', async () => {
+  const header = page.locator('.plan-header-cell').filter({ hasText: 'Operación' });
+  const before = (await header.boundingBox())!.width;
+  const handle = header.locator('.plan-resizer');
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.up();
+  const resized = (await header.boundingBox())!.width;
+  expect(resized).toBeGreaterThan(before + 40);
+
+  // Otro plan: la columna conserva el ancho.
+  await typeInEditor('select * from dbx.plan_e2e where v = 6');
+  await page.keyboard.press('Control+Alt+E');
+  await expect(planNodes().first()).toBeVisible();
+  const again = page.locator('.plan-header-cell').filter({ hasText: 'Operación' });
+  await expect.poll(async () => Math.round((await again.boundingBox())!.width)).toBe(Math.round(resized));
+});
+
 test('con varias sentencias seleccionadas avisa y no explica', async () => {
   await typeInEditor('select 1;\nselect 2;');
   await page.keyboard.press('Control+A');

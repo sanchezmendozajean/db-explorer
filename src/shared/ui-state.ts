@@ -40,6 +40,8 @@ export const UiStateSchema = z.object({
       editor: PanelLayoutSchema.nullable().catch(null),
     })
     .catch({ main: null, editor: null }),
+  /** Anchos (px) de las columnas de la pestaña Plan, por columna: se recuerdan entre planes y al reiniciar. */
+  planColumns: z.record(z.string().max(30), z.number().min(20).max(2000)).catch({}),
 });
 
 export type UiState = z.infer<typeof UiStateSchema>;
@@ -50,6 +52,7 @@ export const DEFAULT_UI_STATE: UiState = {
   sideBar: { visible: true, view: 'connections' },
   panel: { visible: true, maximized: false },
   layout: { main: null, editor: null },
+  planColumns: {},
 };
 
 /** Interpreta datos arbitrarios como estado de UI, recuperando lo que se pueda. */

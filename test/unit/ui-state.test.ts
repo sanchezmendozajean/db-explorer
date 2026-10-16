@@ -17,6 +17,18 @@ afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
+describe('anchos de columna del plan', () => {
+  it('se conservan los válidos y se descartan los absurdos', () => {
+    expect(parseUiState({ planColumns: { operation: 400, cost: 150 } }).planColumns).toEqual({
+      operation: 400,
+      cost: 150,
+    });
+    expect(parseUiState({ planColumns: { operation: -5 } }).planColumns).toEqual({});
+    expect(parseUiState({ planColumns: 'x' }).planColumns).toEqual({});
+    expect(parseUiState({}).planColumns).toEqual({});
+  });
+});
+
 describe('parseUiState', () => {
   it('devuelve los valores por defecto para entradas vacías o inválidas', () => {
     expect(parseUiState(undefined)).toEqual(DEFAULT_UI_STATE);

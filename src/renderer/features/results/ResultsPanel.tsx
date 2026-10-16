@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
-import type { ResultColumn } from '@shared/query';
 import { Codicon } from '../../components/Codicon';
 import { Button, IconButton } from '../../components/Button';
 import { Dropdown } from '../../components/Dropdown';
@@ -17,15 +16,16 @@ import { askChoice } from '../dialogs/ask';
 import { loadMore, rerun, revealPosition } from '../execution/execute';
 import type { CopySelection, CopySource } from './copy';
 import { selectedCellCount, selectionToTsv, tableToTsv } from './copy';
-import { pendingCount } from './edit-state';
+import { pendingCount, setCells } from './edit-state';
 import { exportResult } from './export-actions';
 import { formatCell, separators } from './format';
 import { addRow, deleteSelectedRows } from './grid-commands';
-import { discardChanges, getActiveGrid, saveChanges, setActiveGrid } from './grid-edit';
+import { discardChanges, editPending, getActiveGrid, saveChanges, setActiveGrid } from './grid-edit';
 import type { ResultGridHandle, SelectionStats } from './ResultGrid';
 import { ResultGrid } from './ResultGrid';
 import type { MessageEntry, ResultSet } from './results-store';
 import { EMPTY_TAB_RESULTS, tabResults, useResultsStore } from './results-store';
+import type { ViewedValue } from './ValueViewer';
 import { ValueViewer } from './ValueViewer';
 import { PlanView } from '../plan/PlanView';
 import { visibleColumns, visibleRows } from './view';
@@ -97,7 +97,7 @@ export function ResultSetView({
   onServerSort?: (column: string, dir: 'asc' | 'desc') => void;
   onSaved?: () => void;
 }): React.JSX.Element {
-  const [viewer, setViewer] = useState<{ column: ResultColumn; value: unknown } | null>(null);
+  const [viewer, setViewer] = useState<ViewedValue | null>(null);
   const [stats, setStats] = useState<SelectionStats | null>(null);
   const gridRef = useRef<ResultGridHandle>(null);
   const engine = connectionById(tab.connectionId)?.engine;
@@ -141,7 +141,19 @@ export function ResultSetView({
             </Panel>
             <Separator className="sash sash-vertical" />
             <Panel id="viewer" minSize={180} defaultSize={300}>
-              <ValueViewer column={viewer.column} value={viewer.value} onClose={() => setViewer(null)} />
+              <ValueViewer
+                viewed={viewer}
+                onClose={() => setViewer(null)}
+                onApply={(value) => {
+                  const target = viewer.target;
+                  if (!target) return;
+                  editPending(tab.id, result.id, (p, r) =>
+                    setCells(r.rows, p, [{ ref: target.ref, column: target.column, value }]),
+                  );
+                  // El visor sigue mostrando el valor ya aplicado (queda como cambio pendiente en la grilla).
+                  setViewer({ ...viewer, value });
+                }}
+              />
             </Panel>
           </Group>
         ) : (

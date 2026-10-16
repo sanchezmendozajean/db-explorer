@@ -176,6 +176,27 @@ test('Ctrl+Z deshace un cambio pendiente', async () => {
   await expect(page.getByTestId('save-changes')).toHaveCount(0);
 });
 
+test('el visor de valor edita la celda como cambio pendiente', async () => {
+  const p = await cell(1, 1);
+  await page.mouse.click(p.x, p.y, { button: 'right' });
+  await page.getByRole('menuitem', { name: 'Ver valor' }).click();
+  const viewer = page.getByTestId('value-viewer');
+  await expect(viewer).toBeVisible();
+  await viewer.locator('.view-lines').click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.type('Desde el visor');
+  await page.keyboard.press('Control+Enter');
+  await expect(page.getByTestId('save-changes')).toHaveText('Guardar (1)');
+  // Aplicar con el botón dos veces con el mismo texto no suma otro cambio.
+  await viewer.getByTestId('value-apply').click();
+  await expect(page.getByTestId('save-changes')).toHaveText('Guardar (1)');
+  // Es un cambio pendiente más de la grilla: se descarta como cualquier otro.
+  await page.getByRole('button', { name: 'Descartar cambios' }).click();
+  await expect(page.getByTestId('save-changes')).toHaveCount(0);
+  await viewer.getByRole('button', { name: 'Cerrar' }).click();
+  await expect(viewer).toHaveCount(0);
+});
+
 test('la pestaña Estructura y el DDL muestran la tabla', async () => {
   await page.getByRole('tab', { name: 'Estructura' }).click();
   const structure = page.getByTestId('structure');
@@ -215,6 +236,13 @@ test('una tabla sin clave queda de solo lectura con la explicación', async () =
   await expect(grid()).toHaveAttribute('data-columns', 'a,b');
   await expect(grid()).toHaveAttribute('data-editable', 'false');
   await expect(page.getByTestId('read-only')).toHaveAttribute('title', /no tiene clave primaria/);
+  // El visor de valor de una celda de solo lectura no se puede editar.
+  const p = await cell(0, 0);
+  await page.mouse.click(p.x, p.y, { button: 'right' });
+  await page.getByRole('menuitem', { name: 'Ver valor' }).click();
+  await expect(page.getByTestId('value-viewer')).toBeVisible();
+  await expect(page.getByTestId('value-apply')).toHaveCount(0);
+  await page.getByTestId('value-viewer').getByRole('button', { name: 'Cerrar' }).click();
 });
 
 test('modo manual: Rollback descarta y Commit confirma', async () => {

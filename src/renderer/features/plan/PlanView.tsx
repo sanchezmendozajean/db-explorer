@@ -8,6 +8,7 @@ import type { TreeRow } from '../../components/VirtualTree';
 import { VirtualTree } from '../../components/VirtualTree';
 import { es } from '../../i18n/es';
 import { showToast } from '../../stores/toast-store';
+import { useUiStore } from '../../stores/ui-store';
 import { ReadOnlyCode } from '../editor/ReadOnlyCode';
 import { reexplain } from '../execution/execute';
 import { EMPTY_TAB_RESULTS, useResultsStore } from '../results/results-store';
@@ -42,6 +43,8 @@ const ROW_HEIGHT = 22;
 const ROW_HEIGHT_CONDITION = 36;
 /** Relleno del árbol antes de la operación: margen (8) + chevron (16 + 2). */
 const ROW_LEAD = 26;
+/** Margen derecho del encabezado (8) y reserva de la barra de desplazamiento vertical. */
+const TABLE_PADDING = 8 + 16;
 
 interface PlanRow extends TreeRow {
   node: PlanNode;
@@ -109,7 +112,10 @@ function PlanContent({ tabId, plan }: { tabId: string; plan: ExecutionPlan }): R
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState(false);
   const [raw, setRaw] = useState(false);
-  const [widths, setWidths] = useState(DEFAULT_WIDTHS);
+  // Los anchos viven en el estado de la interfaz: valen para todos los planes y sobreviven al reinicio.
+  const savedWidths = useUiStore((s) => s.planColumns);
+  const setPlanColumn = useUiStore((s) => s.setPlanColumn);
+  const widths = useMemo(() => ({ ...DEFAULT_WIDTHS, ...savedWidths }), [savedWidths]);
   const [warningIndex, setWarningIndex] = useState(-1);
 
   const nodes = useMemo(() => [...walkPlan(plan.roots)], [plan]);
@@ -150,7 +156,7 @@ function PlanContent({ tabId, plan }: { tabId: string; plan: ExecutionPlan }): R
     const startX = e.clientX;
     const startWidth = widths[column];
     const move = (ev: MouseEvent): void =>
-      setWidths((w) => ({ ...w, [column]: Math.max(MIN_WIDTH, startWidth + ev.clientX - startX) }));
+      setPlanColumn(column, Math.max(MIN_WIDTH, startWidth + ev.clientX - startX));
     const up = (): void => {
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
@@ -192,83 +198,88 @@ function PlanContent({ tabId, plan }: { tabId: string; plan: ExecutionPlan }): R
     }
   };
 
+  // Si las columnas no caben, la tabla se desplaza en horizontal en lugar de recortar las últimas.
+  const tableWidth =
+    ['operation', ...columns].reduce((sum, c) => sum + widths[c as ColumnId], 0) + TABLE_PADDING;
   const tree = (
-    <div className="plan-table">
-      <div className="plan-header" role="row">
-        {(['operation', ...columns] as ColumnId[]).map((c) => (
-          <div
-            key={c}
-            className={c === 'operation' ? 'plan-header-cell plan-header-op' : 'plan-header-cell'}
-            style={{ width: widths[c] }}
-          >
-            {t.columns[c]}
-            <span className="plan-resizer" onMouseDown={(e) => startResize(e, c)} />
-          </div>
-        ))}
-      </div>
-      <VirtualTree<PlanRow>
-        rows={rows}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-        onToggle={toggle}
-        toggleOnClick={false}
-        onRowClick={(row) => {
-          setSelectedId(row.id);
-          setDetail(true);
-        }}
-        onOpen={(row) => {
-          setSelectedId(row.id);
-          setDetail(true);
-        }}
-        onRowKeyDown={(e, row) => {
-          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-            void copyText(rowText(row.node));
-            return true;
-          }
-          if (e.key === 'Escape' && detail) {
-            setDetail(false);
-            return true;
-          }
-          return false;
-        }}
-        ariaLabel={t.treeLabel}
-        focusContext="planFocus"
-        indent={INDENT}
-        rowSize={(row) => (row.node.condition ? ROW_HEIGHT_CONDITION : ROW_HEIGHT)}
-        renderRow={(row) => {
-          const n = row.node;
-          return (
-            <>
-              <div
-                className="plan-op"
-                style={{ width: Math.max(MIN_WIDTH, widths.operation - ROW_LEAD - row.depth * INDENT) }}
-                data-testid="plan-node"
-                data-operation={n.operation}
-              >
-                <div className="plan-op-line">
-                  <Codicon name={planIcon(n.operation)} size={14} className="plan-op-icon" />
-                  <span className="plan-op-name">{n.operation}</span>
-                  {n.warnings.length > 0 && (
-                    <span className="plan-warning-icon" title={n.warnings.map(warningText).join('\n')}>
-                      <Codicon name="warning" size={14} color="var(--warning)" />
-                    </span>
+    <div className="plan-scroll">
+      <div className="plan-table" style={{ minWidth: tableWidth }}>
+        <div className="plan-header" role="row">
+          {(['operation', ...columns] as ColumnId[]).map((c) => (
+            <div
+              key={c}
+              className={c === 'operation' ? 'plan-header-cell plan-header-op' : 'plan-header-cell'}
+              style={{ width: widths[c] }}
+            >
+              {t.columns[c]}
+              <span className="plan-resizer" onMouseDown={(e) => startResize(e, c)} />
+            </div>
+          ))}
+        </div>
+        <VirtualTree<PlanRow>
+          rows={rows}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onToggle={toggle}
+          toggleOnClick={false}
+          onRowClick={(row) => {
+            setSelectedId(row.id);
+            setDetail(true);
+          }}
+          onOpen={(row) => {
+            setSelectedId(row.id);
+            setDetail(true);
+          }}
+          onRowKeyDown={(e, row) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+              void copyText(rowText(row.node));
+              return true;
+            }
+            if (e.key === 'Escape' && detail) {
+              setDetail(false);
+              return true;
+            }
+            return false;
+          }}
+          ariaLabel={t.treeLabel}
+          focusContext="planFocus"
+          indent={INDENT}
+          rowSize={(row) => (row.node.condition ? ROW_HEIGHT_CONDITION : ROW_HEIGHT)}
+          renderRow={(row) => {
+            const n = row.node;
+            return (
+              <>
+                <div
+                  className="plan-op"
+                  style={{ width: Math.max(MIN_WIDTH, widths.operation - ROW_LEAD - row.depth * INDENT) }}
+                  data-testid="plan-node"
+                  data-operation={n.operation}
+                >
+                  <div className="plan-op-line">
+                    <Codicon name={planIcon(n.operation)} size={14} className="plan-op-icon" />
+                    <span className="plan-op-name">{n.operation}</span>
+                    {n.warnings.length > 0 && (
+                      <span className="plan-warning-icon" title={n.warnings.map(warningText).join('\n')}>
+                        <Codicon name="warning" size={14} color="var(--warning)" />
+                      </span>
+                    )}
+                  </div>
+                  {n.condition && (
+                    <div className="plan-condition" title={n.condition}>
+                      {n.condition}
+                    </div>
                   )}
                 </div>
-                {n.condition && (
-                  <div className="plan-condition" title={n.condition}>
-                    {n.condition}
+                {columns.map((c) => (
+                  <div key={c} className={`plan-cell plan-cell-${c}`} style={{ width: widths[c] }}>
+                    {cell(c, n)}
                   </div>
-                )}
-              </div>
-              {columns.map((c) => (
-                <div key={c} className={`plan-cell plan-cell-${c}`} style={{ width: widths[c] }}>
-                  {cell(c, n)}
-                </div>
-              ))}
-            </>
-          );
-        }}
-      />
+                ))}
+              </>
+            );
+          }}
+        />
+      </div>
     </div>
   );
 

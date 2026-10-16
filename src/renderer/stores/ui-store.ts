@@ -14,6 +14,8 @@ interface UiStore extends UiState {
   togglePanel: () => void;
   toggleMaximizePanel: () => void;
   setEditorLayout: (layout: PanelLayout) => void;
+  /** Ancho de una columna de la pestaña Plan (se recuerda entre planes). */
+  setPlanColumn: (column: string, width: number) => void;
 }
 
 let systemDark = true;
@@ -53,11 +55,21 @@ export const useUiStore = create<UiStore>((set, get) => ({
   toggleMaximizePanel: () => set((s) => ({ panel: { visible: true, maximized: !s.panel.maximized } })),
 
   setEditorLayout: (layout) => set((s) => ({ layout: { ...s.layout, editor: layout } })),
+
+  setPlanColumn: (column, width) =>
+    set((s) => ({ planColumns: { ...s.planColumns, [column]: Math.round(width) } })),
 }));
 
 /** Extrae la parte persistible del store. */
 export function selectPersistedUiState(s: UiStore): UiState {
-  return { version: 1, theme: s.theme, sideBar: s.sideBar, panel: s.panel, layout: s.layout };
+  return {
+    version: 1,
+    theme: s.theme,
+    sideBar: s.sideBar,
+    panel: s.panel,
+    layout: s.layout,
+    planColumns: s.planColumns,
+  };
 }
 
 /**
