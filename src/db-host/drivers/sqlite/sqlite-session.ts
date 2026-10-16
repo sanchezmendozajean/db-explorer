@@ -244,7 +244,12 @@ export class SqliteSession implements DbSession {
     if (!this.pending || !this.worker) return;
     const worker = this.worker;
     this.reset();
-    this.fail(reason);
+    // Terminar el hilo cierra la conexión: la transacción manual abierta se revierte sin aviso del motor.
+    this.fail(
+      this.manual
+        ? new DriverError(reason.message, reason.code, { ...reason.extra, transactionLost: true })
+        : reason,
+    );
     void worker.terminate();
   }
 

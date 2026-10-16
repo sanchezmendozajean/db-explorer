@@ -125,6 +125,7 @@ export class QueryRunner {
             position: e.extra.position,
             code: e.code,
             cancelled: run.cancelled,
+            transactionLost: e.extra.transactionLost,
             durationMs: Math.round(this.now() - statementStart),
           });
           break;

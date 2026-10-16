@@ -248,12 +248,9 @@ describe.each(cases)('$label', (c: EngineCase) => {
       const fk = details.constraints.find((k) => k.type === 'foreignKey');
       expect(fk?.columns).toEqual(['padre_id']);
       expect(fk?.definition).toMatch(/restr_padre/);
-      // SQLite no informa las CHECK por separado (se ven en el DDL).
-      if (c.engine !== 'sqlite') {
-        const check = details.constraints.find((k) => k.type === 'check');
-        expect(check?.name.toLowerCase()).toBe('ck_restr_n');
-        expect(check?.definition).toMatch(/n.*>.*0/);
-      }
+      const check = details.constraints.find((k) => k.type === 'check');
+      expect(check?.name.toLowerCase()).toBe('ck_restr_n');
+      expect(check?.definition).toMatch(/n.*>.*0/);
       await exec([`DROP TABLE ${p}restr_hijo`, `DROP TABLE ${p}restr_padre`], null);
     });
 

@@ -13,6 +13,7 @@ import { quoteIdent } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
 import { unsupportedOperation } from '../common';
+import { parseSqliteChecks } from './checks';
 import { SqliteSession } from './sqlite-session';
 
 /** Espera máxima ante un archivo bloqueado por otra conexión (la de metadatos corre en el hilo del db-host). */
@@ -213,6 +214,19 @@ export class SqliteDriver implements DbDriver {
         type: 'foreignKey',
         columns: fk.from,
         definition: `FOREIGN KEY (${q(fk.from)}) REFERENCES ${quoteIdent('sqlite', fk.table)}${target}`,
+      });
+    }
+    // SQLite no expone los CHECK en un PRAGMA: se leen del CREATE TABLE guardado.
+    const create = this.get<{ sql: string | null }>(
+      "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = ?",
+      ref.name,
+    )?.sql;
+    for (const check of create ? parseSqliteChecks(create) : []) {
+      result.push({
+        name: check.name ?? '',
+        type: 'check',
+        columns: check.columns,
+        definition: check.expression,
       });
     }
     return result;

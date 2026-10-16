@@ -138,7 +138,7 @@ export class DriverError extends Error {
     message: string,
     readonly code?: string,
     /** Datos adicionales del motor (posición del error, detalle, sugerencia). */
-    readonly extra: { position?: number; detail?: string; hint?: string } = {},
+    readonly extra: { position?: number; detail?: string; hint?: string; transactionLost?: boolean } = {},
   ) {
     super(message);
     this.name = 'DriverError';

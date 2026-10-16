@@ -164,6 +164,8 @@ export type QueryEvent =
       position?: number;
       code?: string;
       cancelled: boolean;
+      /** El motor terminó la sesión y con ella revirtió la transacción manual abierta (SQLite al cancelar). */
+      transactionLost?: boolean;
       durationMs: number;
     }
   | { type: 'message'; queryId: string; index: number; severity: MessageSeverity; text: string }

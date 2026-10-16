@@ -26,7 +26,7 @@ import {
 } from '../results/results-store';
 import { useUiStore } from '../../stores/ui-store';
 import { confirmDiscardGridChanges } from '../results/grid-edit';
-import { isManual, trackExecuted } from './transactions';
+import { isManual, trackExecuted, wasTransactionLost } from './transactions';
 
 export type ExecuteMode = 'statement' | 'script';
 
@@ -230,7 +230,7 @@ async function runStatements(
   if (r.ok) {
     const event = await done.promise;
     // Lo que se ejecuta para medir un plan se revierte: no queda pendiente en la transacción.
-    if (event.type === 'execution-done' && !explain) {
+    if (event.type === 'execution-done' && !explain && !wasTransactionLost(queryId)) {
       const ok = event.summary.executed - (event.summary.failed ? 1 : 0);
       trackExecuted(
         tab.id,

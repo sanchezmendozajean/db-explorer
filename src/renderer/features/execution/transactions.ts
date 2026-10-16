@@ -65,6 +65,20 @@ export function trackExecuted(tabId: string, statements: readonly string[], dial
   put(tabId, { pending });
 }
 
+/** Ejecuciones en las que el motor revirtió la transacción (para no contar lo ejecutado antes como pendiente). */
+const lostRuns = new Set<string>();
+
+/** El motor terminó la sesión: la transacción manual abierta se perdió y el contador vuelve a cero. */
+export function markTransactionLost(tabId: string, queryId: string): void {
+  lostRuns.add(queryId);
+  if (isManual(tabId)) put(tabId, { pending: 0 });
+}
+
+/** ¿Se perdió la transacción durante esta ejecución? (se consulta una vez). */
+export function wasTransactionLost(queryId: string): boolean {
+  return lostRuns.delete(queryId);
+}
+
 export function forgetTransaction(tabId: string): void {
   useTransactionStore.setState((s) => ({ byTab: withoutKey(s.byTab, tabId) }));
 }

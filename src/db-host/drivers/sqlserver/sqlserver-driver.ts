@@ -16,7 +16,7 @@ import { checkedDatabaseName, formatRowEstimate } from '../common';
 import { toSqlServerError } from './errors';
 import { installExactValues } from './exact-values';
 import { checkedServerPath, nstr, planFileMoves } from './database-sql';
-import { toAlterStatement } from './routine-sql';
+import { toAlterWithMap } from './routine-sql';
 import type { DescribedColumn } from './sqlserver-session';
 import { SqlServerSession } from './sqlserver-session';
 
@@ -447,14 +447,21 @@ export class SqlServerDriver implements DbDriver {
     if (kind !== 'procedure' && kind !== 'function') {
       throw new DriverError('Solo se pueden editar procedimientos y funciones', 'unsupported');
     }
-    const alter = toAlterStatement(definition);
+    const alter = toAlterWithMap(definition);
     if (!alter) {
       throw new DriverError('La definición debe empezar con CREATE PROCEDURE o CREATE FUNCTION', 'invalid');
     }
     const connection = await this.open(ref.database, 'DB Explorer (rutina)', METADATA_TIMEOUT_MS);
     try {
       await new Promise<void>((resolve, reject) => {
-        const request = new Request(alter, (err) => (err ? reject(toSqlServerError(err, alter)) : resolve()));
+        const request = new Request(alter.sql, (err) => {
+          if (!err) return resolve();
+          // La posición se informa sobre el texto con ALTER: se traslada al que ve el usuario.
+          const e = toSqlServerError(err, alter.sql);
+          reject(
+            new DriverError(e.message, e.code, { ...e.extra, position: alter.toOriginal(e.extra.position) }),
+          );
+        });
         connection.execSqlBatch(request);
       });
     } finally {

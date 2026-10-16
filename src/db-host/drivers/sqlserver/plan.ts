@@ -15,6 +15,9 @@ const parser = new XMLParser({
   attributesGroupName: '$',
   removeNSPrefix: true,
   parseAttributeValue: false,
+  // El límite predeterminado (100 etiquetas anidadas) corta los planes con ~30 operadores anidados: cada
+  // RelOp suma tres niveles (RelOp → operador → RelOp). El texto lo genera el propio servidor.
+  maxNestedTags: 20_000,
   isArray: (_name, _path, _leaf, isAttribute) => !isAttribute,
 });
 

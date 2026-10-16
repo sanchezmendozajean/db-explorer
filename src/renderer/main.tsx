@@ -25,12 +25,14 @@ import { activeTab } from './stores/workbench-store';
 import { handleExternalChanges } from './features/editor/documents';
 import { useFilesStore } from './stores/files-store';
 import {
+  addMessage,
   applyQueryEvent,
   positionInStatement,
   resetAllRunning,
   setExecutionCallbacks,
 } from './features/results/results-store';
 import { markError } from './features/execution/execute';
+import { markTransactionLost } from './features/execution/transactions';
 import { resolveEditable } from './features/results/editable';
 
 async function bootstrap(): Promise<void> {
@@ -69,6 +71,11 @@ async function bootstrap(): Promise<void> {
   window.api.on('query:event', applyQueryEvent);
   setExecutionCallbacks({
     onStatementError: (tabId, meta, event) => {
+      if (event.transactionLost) {
+        markTransactionLost(tabId, event.queryId);
+        addMessage(tabId, { kind: 'warning', text: es.execution.transactionLost });
+        showToast('warning', es.execution.transactionLost);
+      }
       if (!meta || event.cancelled) return;
       const pos =
         event.position !== undefined
