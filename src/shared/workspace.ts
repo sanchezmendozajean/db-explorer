@@ -74,6 +74,16 @@ export interface ScriptFile {
   eol: 'LF' | 'CRLF';
 }
 
+/**
+ * Nombre de la conexión de la cabecera `-- @connection: Nombre` en la primera línea de un script
+ * (specs/07 §Asociación archivo ↔ conexión); `undefined` si no la tiene.
+ */
+export function parseConnectionHeader(text: string): string | undefined {
+  const firstLine = text.split(/\r?\n/, 1)[0] ?? '';
+  const name = /^\uFEFF?\s*--\s*@connection\s*:\s*(.+?)\s*$/i.exec(firstLine)?.[1];
+  return name || undefined;
+}
+
 /** Entrada del árbol de la vista Archivos. */
 export interface FileNode {
   name: string;

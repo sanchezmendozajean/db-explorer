@@ -276,6 +276,19 @@ export function PreferencesView(): React.JSX.Element {
             />
           ),
         }),
+        keyed('files.connectionHeader', {
+          id: 'files-connection-header',
+          icon: 'plug',
+          title: p.connectionHeader,
+          description: p.connectionHeaderDescription,
+          render: () => (
+            <Checkbox
+              label={p.connectionHeaderLabel}
+              checked={settings['files.connectionHeader']}
+              onChange={(e) => void update('files.connectionHeader', e.target.checked)}
+            />
+          ),
+        }),
         keyed('files.autoReveal', {
           id: 'files-auto-reveal',
           icon: 'target',

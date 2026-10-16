@@ -81,9 +81,21 @@ function buildNodes(
   return nodes;
 }
 
+/** Carpetas del árbol completo del espacio por `pathKey` (la raíz y cada subcarpeta con su contenido). */
+function dirsFromTree(all: FileNode[]): Record<string, FileNode[]> {
+  const map: Record<string, FileNode[]> = {};
+  const walk = (nodes: FileNode[], dirPath: string): void => {
+    map[pathKey(dirPath)] = nodes.map(({ name, path, dir }) => ({ name, path, dir }));
+    for (const node of nodes) if (node.dir && node.children) walk(node.children, node.path);
+  };
+  const root = useFilesStore.getState().root;
+  if (root) walk(all, root);
+  return map;
+}
+
 /** Vista Archivos (specs/07): árbol del espacio de trabajo y sus operaciones. */
 export function FilesView(): React.JSX.Element {
-  const { root, dirs, expanded, selected, editing, clipboard } = useFilesStore();
+  const { root, dirs: loadedDirs, expanded, selected, selection, editing, clipboard, all } = useFilesStore();
   const workspace = useWorkspaceStore();
   const tabs = useWorkbenchStore((s) => s.tabs);
   const activeId = useWorkbenchStore((s) => s.activeId);
@@ -97,6 +109,14 @@ export function FilesView(): React.JSX.Element {
   }, [activePath, autoReveal]);
 
   const query = filter.trim().toLowerCase();
+  // Con filtro se busca en todo el espacio (no solo en las carpetas ya abiertas): se carga el árbol completo.
+  useEffect(() => {
+    if (query) void useFilesStore.getState().loadAll();
+  }, [query]);
+  const dirs = useMemo(
+    () => (query ? { ...dirsFromTree(all), ...loadedDirs } : loadedDirs),
+    [query, all, loadedDirs],
+  );
   const uiNodes = useMemo(
     () => (root ? buildNodes(root, dirs, expanded, editing, query) : []),
     [root, dirs, expanded, editing, query],
@@ -112,12 +132,22 @@ export function FilesView(): React.JSX.Element {
     [tabs],
   );
   const cut = useMemo(() => new Set(clipboard?.cut ? clipboard.paths.map(pathKey) : []), [clipboard]);
-  const rootLoaded = root ? dirs[pathKey(root)] : undefined;
+  const rootLoaded = root ? loadedDirs[pathKey(root)] : undefined;
 
+  const selectedIds = useMemo(() => new Set(selection.map(pathKey)), [selection]);
   const store = useFilesStore.getState;
   const pathOfId = (id: string): string | null => rows.find((r) => r.id === id)?.node.file.path ?? null;
 
   const contextEntries = (file: FileNode | null): MenuEntry[] => {
+    // Con varios nodos seleccionados solo valen las operaciones de lote.
+    if (selection.length > 1) {
+      return [
+        commandEntry('db.files.cut'),
+        commandEntry('db.files.copy'),
+        SEPARATOR,
+        commandEntry('db.files.delete'),
+      ];
+    }
     const isFile = file && !file.dir;
     const entries: MenuEntry[] = [
       commandEntry('db.files.newFile'),
@@ -226,7 +256,15 @@ export function FilesView(): React.JSX.Element {
               ariaLabel={es.sideBar.filesTitle}
               focusContext="filesFocus"
               selectedId={selected ? pathKey(selected) : null}
-              onSelect={(id) => store().select(pathOfId(id))}
+              selectedIds={selectedIds}
+              onSelect={(id, mods) => {
+                const path = pathOfId(id);
+                if (!path) return;
+                const order = rows.filter((r) => !r.node.isNew).map((r) => r.node.file.path);
+                if (mods?.ctrl) store().selectWith(path, 'toggle', order);
+                else if (mods?.shift) store().selectWith(path, 'range', order);
+                else store().select(path);
+              }}
               onToggle={(id, open) => {
                 const path = pathOfId(id);
                 if (path) void store().toggle(path, open);
@@ -246,7 +284,7 @@ export function FilesView(): React.JSX.Element {
                 store().select(row.node.file.path);
                 showContextMenu(e, contextEntries(row.node.file));
               }}
-              onRowKeyDown={(e) => {
+              onTreeKeyDown={(e) => {
                 // Filtro por nombre al escribir con el árbol enfocado (specs/07).
                 if (e.key === 'Escape' && filter) {
                   setFilter('');
@@ -262,15 +300,25 @@ export function FilesView(): React.JSX.Element {
                 }
                 return false;
               }}
-              dragData={(row) => (row.node.isNew ? null : row.node.file.path)}
-              canDrop={(source, target) => {
+              // Se arrastra la selección si la fila pertenece a ella; si no, solo esa fila (siempre una lista JSON).
+              dragData={(row) => {
+                if (row.node.isNew) return null;
+                const paths =
+                  selection.length > 1 && selectedIds.has(row.id) ? selection : [row.node.file.path];
+                return JSON.stringify(paths);
+              }}
+              canDrop={(data, target) => {
                 if (target.node.isNew) return false;
                 const dir = target.node.file.dir ? target.node.file.path : parentOf(target.node.file.path);
-                return !isInside(source, dir) && pathKey(parentOf(source)) !== pathKey(dir);
+                const sources = JSON.parse(data) as string[];
+                return (
+                  sources.every((source) => !isInside(source, dir)) &&
+                  sources.some((source) => pathKey(parentOf(source)) !== pathKey(dir))
+                );
               }}
-              onDrop={(source, target) => {
+              onDrop={(data, target) => {
                 const dir = target.node.file.dir ? target.node.file.path : parentOf(target.node.file.path);
-                void actions.move([source], dir);
+                void actions.move(JSON.parse(data) as string[], dir);
               }}
               basePadding={12}
               renderRow={(row) => {

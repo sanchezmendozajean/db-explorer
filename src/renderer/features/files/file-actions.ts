@@ -94,12 +94,22 @@ export async function trash(paths: readonly string[] = selected()): Promise<void
   if (!r.ok) return failed(r.error.message);
   closeTrashed(paths);
   await files().refresh(paths);
-  if (paths.some((p) => files().selected && isInside(p, files().selected!))) files().select(null);
+  // Lo eliminado ya no puede seguir seleccionado (ni en la selección múltiple).
+  if (files().selection.some((sel) => paths.some((p) => isInside(p, sel)))) files().select(null);
+  else if (paths.some((p) => files().selected && isInside(p, files().selected!))) files().select(null);
 }
 
+/** Rutas seleccionadas (sin la raíz): una sola, o todas las de la selección múltiple. */
 function selected(): string[] {
-  const path = selectedPath();
-  return path && pathKey(path) !== pathKey(files().root) ? [path] : [];
+  const root = pathKey(files().root);
+  const { selection, selected: focus } = files();
+  const paths = selection.length > 0 ? selection : focus ? [focus] : [];
+  return paths.filter((p) => pathKey(p) !== root);
+}
+
+/** Cantidad de nodos seleccionados (para habilitar comandos de lote). */
+export function selectedCount(): number {
+  return selected().length;
 }
 
 export function copyToClipboard(cut: boolean, paths: readonly string[] = selected()): void {

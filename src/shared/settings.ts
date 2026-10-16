@@ -48,6 +48,8 @@ export const SETTINGS_SCHEMA = {
   'files.confirmDragAndDrop': Bool,
   /** Seleccionar en el árbol el archivo de la pestaña activa. */
   'files.autoReveal': Bool,
+  /** Reconocer `-- @connection: Nombre` en la primera línea de un script al abrirlo (specs/07). */
+  'files.connectionHeader': Bool,
   /** Qué separa las sentencias de un script: solo el punto y coma, o también una línea en blanco. */
   'sql.statementSeparator': z.enum(['semicolon', 'blankLine']),
   /** Guardar las consultas ejecutadas en el historial (specs/06, specs/08). */
@@ -98,6 +100,7 @@ export const DEFAULT_SETTINGS: Settings = {
   'files.exclude': ['.git', 'node_modules', '.DS_Store', 'Thumbs.db'],
   'files.confirmDragAndDrop': true,
   'files.autoReveal': true,
+  'files.connectionHeader': false,
   'sql.statementSeparator': 'semicolon',
   'history.enabled': true,
   'history.maxEntries': 5000,

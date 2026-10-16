@@ -32,7 +32,12 @@ interface FilesStore {
   dirs: Record<string, FileNode[]>;
   /** Carpetas expandidas, por `pathKey`. */
   expanded: Set<string>;
+  /** Nodo con el foco (el que usan Renombrar, Nuevo…, Duplicar). */
   selected: string | null;
+  /** Selección múltiple (incluye `selected`); las operaciones de lote (copiar, cortar, eliminar, mover) la usan. */
+  selection: string[];
+  /** Extremo fijo de una selección con Shift. */
+  anchor: string | null;
   editing: FileEditing | null;
   /** Archivos copiados o cortados con Ctrl+C / Ctrl+X en el árbol. */
   clipboard: { paths: string[]; cut: boolean } | null;
@@ -46,6 +51,8 @@ interface FilesStore {
   toggle: (path: string, open: boolean) => Promise<void>;
   collapseAll: () => void;
   select: (path: string | null) => void;
+  /** Ctrl+clic suma o quita `path`; Shift+clic selecciona el rango desde el ancla (en el orden visible `order`). */
+  selectWith: (path: string, mode: 'toggle' | 'range', order: readonly string[]) => void;
   setEditing: (editing: FileEditing | null) => void;
   setClipboard: (clipboard: FilesStore['clipboard']) => void;
   /** Expande las carpetas hasta `path` y lo selecciona (sincronizar con la pestaña activa). */
@@ -58,12 +65,24 @@ export const useFilesStore = create<FilesStore>((set, get) => ({
   dirs: {},
   expanded: new Set(),
   selected: null,
+  selection: [],
+  anchor: null,
   editing: null,
   clipboard: null,
   all: [],
 
   setRoot: (root) => {
-    set({ root, dirs: {}, expanded: new Set(), selected: null, editing: null, clipboard: null, all: [] });
+    set({
+      root,
+      dirs: {},
+      expanded: new Set(),
+      selected: null,
+      selection: [],
+      anchor: null,
+      editing: null,
+      clipboard: null,
+      all: [],
+    });
     if (root) void get().loadDir(root);
   },
 
@@ -107,7 +126,27 @@ export const useFilesStore = create<FilesStore>((set, get) => ({
 
   collapseAll: () => set({ expanded: new Set() }),
 
-  select: (path) => set({ selected: path }),
+  select: (path) => set({ selected: path, selection: path ? [path] : [], anchor: path }),
+
+  selectWith: (path, mode, order) => {
+    const { selection, anchor } = get();
+    const key = pathKey(path);
+    if (mode === 'toggle') {
+      const has = selection.some((p) => pathKey(p) === key);
+      const next = has ? selection.filter((p) => pathKey(p) !== key) : [...selection, path];
+      set({ selection: next, selected: has ? (next[next.length - 1] ?? null) : path, anchor: path });
+      return;
+    }
+    const keys = order.map(pathKey);
+    const from = keys.indexOf(pathKey(anchor ?? path));
+    const to = keys.indexOf(key);
+    if (from < 0 || to < 0) {
+      set({ selected: path, selection: [path], anchor: path });
+      return;
+    }
+    const [a, b] = from <= to ? [from, to] : [to, from];
+    set({ selected: path, selection: order.slice(a, b + 1) });
+  },
 
   setEditing: (editing) => set({ editing }),
 
@@ -125,7 +164,7 @@ export const useFilesStore = create<FilesStore>((set, get) => ({
       chain.unshift(dir);
     }
     for (const dir of chain) await get().toggle(dir, true);
-    set({ selected: path });
+    set({ selected: path, selection: [path], anchor: path });
   },
 
   loadAll: async () => {

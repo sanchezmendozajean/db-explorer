@@ -12,10 +12,19 @@ export interface TreeRow {
   loading?: boolean;
 }
 
+/** Teclas que acompañan a una selección (Ctrl/Cmd+clic suma o quita; Shift+clic o Shift+flechas extienden). */
+export interface SelectModifiers {
+  ctrl: boolean;
+  shift: boolean;
+}
+
 export interface VirtualTreeProps<T extends TreeRow> {
   rows: T[];
+  /** Fila con el foco (y la única seleccionada si no hay `selectedIds`). */
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  /** Selección múltiple: filas resaltadas. Sin valor, solo `selectedId`. */
+  selectedIds?: ReadonlySet<string>;
+  onSelect: (id: string, modifiers?: SelectModifiers) => void;
   onToggle: (id: string, expanded: boolean) => void;
   /** Enter o doble clic. */
   onOpen?: (row: T) => void;
@@ -36,6 +45,11 @@ export interface VirtualTreeProps<T extends TreeRow> {
    * las flechas o doble clic (árbol de conexiones: conectar es explícito).
    */
   toggleOnClick?: boolean;
+  /**
+   * Teclas que no dependen de una fila (escribir para filtrar): se evalúan primero y aunque no haya
+   * ninguna fila seleccionada (p. ej. cuando el filtro acaba de ocultar la seleccionada).
+   */
+  onTreeKeyDown?: (event: React.KeyboardEvent) => boolean;
   /** Teclas extra (F2, Supr, F5…). Devuelve true si la manejó. */
   onRowKeyDown?: (event: React.KeyboardEvent, row: T) => boolean;
   /** Arrastrar y soltar: datos a arrastrar desde una fila (`null` = no arrastrable). */
@@ -59,6 +73,7 @@ const DRAG_TYPE = 'application/x-dbx-tree';
 export function VirtualTree<T extends TreeRow>({
   rows,
   selectedId,
+  selectedIds,
   onSelect,
   onToggle,
   onOpen,
@@ -72,6 +87,7 @@ export function VirtualTree<T extends TreeRow>({
   focusContext = 'treeFocus',
   toggleOnClick = true,
   onRowKeyDown,
+  onTreeKeyDown,
   dragData,
   canDrop,
   onDrop,
@@ -110,10 +126,19 @@ export function VirtualTree<T extends TreeRow>({
   };
 
   const onKeyDown = (e: React.KeyboardEvent): void => {
+    if (onTreeKeyDown?.(e)) {
+      e.preventDefault();
+      return;
+    }
     if (rows.length === 0) return;
     const index = selectedIndex < 0 ? 0 : selectedIndex;
     const row = rows[index]!;
-    const select = (i: number): void => onSelect(rows[Math.max(0, Math.min(rows.length - 1, i))]!.id);
+    // Shift + flechas extiende la selección (los árboles de selección simple ignoran el modificador).
+    const select = (i: number): void =>
+      onSelect(
+        rows[Math.max(0, Math.min(rows.length - 1, i))]!.id,
+        e.shiftKey ? { ctrl: false, shift: true } : undefined,
+      );
     const page = Math.max(1, Math.floor((scrollRef.current?.clientHeight ?? rowHeight) / rowHeight) - 1);
     if (selectedIndex >= 0 && onRowKeyDown?.(e, row)) {
       e.preventDefault();
@@ -175,7 +200,7 @@ export function VirtualTree<T extends TreeRow>({
       <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
         {virtualizer.getVirtualItems().map((item) => {
           const row = rows[item.index]!;
-          const selected = row.id === selectedId;
+          const selected = selectedIds ? selectedIds.has(row.id) : row.id === selectedId;
           return (
             <div
               key={row.id}
@@ -230,13 +255,23 @@ export function VirtualTree<T extends TreeRow>({
                 paddingLeft: basePadding + row.depth * indent,
               }}
               onMouseDown={(e) => {
-                if (e.button === 0 || e.button === 2) onSelect(row.id);
+                // Clic derecho sobre una fila de la selección múltiple: se conserva para actuar sobre todas.
+                if (e.button === 2 && selectedIds?.has(row.id) && selectedIds.size > 1) return;
+                if (e.button === 0 || e.button === 2) {
+                  onSelect(row.id, { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey });
+                }
               }}
               onClick={(e) => {
                 const onTwistie = (e.target as Element).closest('.tree-twistie') !== null;
-                if (row.expandable && e.detail === 1 && (toggleOnClick || onTwistie))
+                const modified = e.ctrlKey || e.metaKey || e.shiftKey;
+                if (
+                  row.expandable &&
+                  e.detail === 1 &&
+                  (toggleOnClick || onTwistie) &&
+                  !(modified && !onTwistie)
+                )
                   onToggle(row.id, !row.expanded);
-                if (e.detail === 1 && !onTwistie) onRowClick?.(row);
+                if (e.detail === 1 && !onTwistie && !modified) onRowClick?.(row);
               }}
               onDoubleClick={() => onOpen?.(row)}
               onAuxClick={(e) => {

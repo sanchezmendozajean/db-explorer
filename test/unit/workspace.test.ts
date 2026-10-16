@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, w
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DEFAULT_SETTINGS, parseSettings, validateSetting } from '@shared/settings';
-import { parseWorkspaceState } from '@shared/workspace';
+import { parseConnectionHeader, parseWorkspaceState } from '@shared/workspace';
 import { SettingsStore } from '../../src/main/services/settings-store';
 import {
   FileAccessError,
@@ -240,5 +240,20 @@ describe('operaciones de la vista Archivos', () => {
     await expect(ws.readScript(outside)).rejects.toBeInstanceOf(FileAccessError);
     ws.allow(outside);
     expect((await ws.readScript(outside)).content).toBe('select 1;');
+  });
+});
+
+describe('cabecera -- @connection:', () => {
+  it('lee el nombre de la conexión de la primera línea', () => {
+    expect(parseConnectionHeader('-- @connection: PayBox Prod\nselect 1')).toBe('PayBox Prod');
+    expect(parseConnectionHeader('--@connection:   Mi SQLite  \r\nselect 1')).toBe('Mi SQLite');
+    expect(parseConnectionHeader('﻿-- @Connection: Con BOM\nselect 1')).toBe('Con BOM');
+  });
+
+  it('solo vale en la primera línea y con ese formato', () => {
+    expect(parseConnectionHeader('select 1\n-- @connection: X')).toBeUndefined();
+    expect(parseConnectionHeader('-- conexión: X')).toBeUndefined();
+    expect(parseConnectionHeader('-- @connection:')).toBeUndefined();
+    expect(parseConnectionHeader('')).toBeUndefined();
   });
 });

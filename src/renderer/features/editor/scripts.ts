@@ -1,5 +1,5 @@
 import type { ScriptTabState, WorkspaceState } from '@shared/workspace';
-import { isTextFile } from '@shared/workspace';
+import { isTextFile, parseConnectionHeader } from '@shared/workspace';
 import { es } from '../../i18n/es';
 import { currentContext } from '../../commands/service';
 import { connectionById, useConnectionsStore } from '../../stores/connections-store';
@@ -129,9 +129,25 @@ export async function openScript(
   // La vista previa anterior se cierra (guardando si hiciera falta) antes de abrir la nueva.
   const previous = wb().tabs.find((t) => t.preview);
   if (options.preview && previous) await closeTabs([previous.id]);
-  const tab = { ...scriptTab(path, connectionFor(path)), preview: !!options.preview };
+  const target = (await connectionFromHeader(path)) ?? connectionFor(path);
+  const tab = { ...scriptTab(path, target), preview: !!options.preview };
   wb().open(tab);
   if (focus) focusEditorWhenReady(tab.id);
+}
+
+/**
+ * Conexión que nombra la cabecera `-- @connection: Nombre` del script (opcional, `files.connectionHeader`).
+ * Solo vale si el archivo no tiene ya una conexión asociada en este equipo (la última usada con él manda).
+ */
+async function connectionFromHeader(path: string): Promise<Partial<TreeTarget> | undefined> {
+  if (!setting('files.connectionHeader') || !isSqlPath(path) || connectionFor(path).connectionId)
+    return undefined;
+  const r = await window.api.fs.readScript({ path });
+  if (!r.ok) return undefined;
+  const name = parseConnectionHeader(r.data.content)?.toLowerCase();
+  if (!name) return undefined;
+  const conn = useConnectionsStore.getState().connections.find((c) => c.name.trim().toLowerCase() === name);
+  return conn ? { connectionId: conn.id } : undefined;
 }
 
 /** Conexión asociada a un archivo (la última usada con él), sin distinguir mayúsculas en la ruta. */
