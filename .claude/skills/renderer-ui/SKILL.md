@@ -43,3 +43,9 @@ description: Lecciones del renderer de DB Explorer (React 19, zustand, Monaco 0.
 - Un input visualmente oculto (checkbox) necesita un contenedor `position: relative`; si no, queda debajo de otro elemento posicionado, que se lleva los clics.
 - Ctrl+1 / Ctrl+2 enfocan en el cuadro siguiente (`requestAnimationFrame`): en las pruebas, espera ese foco antes de mover el foco a mano.
 - El renderer se minifica (`minify: true` en `electron.vite.config.ts`); Monaco se carga recién con el primer script (chunk `setup`).
+
+## Árboles, atajos y editores (aprendido al cerrar pendientes)
+- `VirtualTree`: `onSelect(id, { ctrl, shift })` y `selectedIds` permiten selección múltiple (los árboles de selección simple ignoran el segundo argumento). Las teclas que no dependen de una fila (escribir para filtrar) van en `onTreeKeyDown`: `onRowKeyDown` solo corre si hay una fila seleccionada y el filtro puede ocultarla.
+- Los proveedores SQL de Monaco (`registerSqlProviders`) se registran al montar cada editor que los necesite (SqlEditor, ClauseEditor, RoutineView): si una vista nueva no lo hace, el autocompletado cae en las palabras del texto. Un modelo que no es documento del espacio se asocia a su pestaña con `setModelOwner`.
+- Los acordes de dos teclas dentro de Monaco se registran con `syncAppChords` a partir de `keybindings.allRules()`; no reemplazan a los que Monaco ya trae (p. ej. Ctrl+K Ctrl+J).
+- La grilla Glide es un canvas: tras abrir el visor de valor la grilla se angosta; las pruebas deben recalcular coordenadas (usar la primera columna) y para deshacer usar el botón "Descartar cambios".

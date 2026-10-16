@@ -31,7 +31,7 @@ Segunda vista de la side bar (activity bar → `codicon-files`, Ctrl+Shift+E). C
 
 ## Asociación archivo ↔ conexión
 - Al abrir un `.sql` se restaura la última conexión usada con ese archivo (`fileConnections` en el estado del espacio, ver `11` §3; clave = ruta relativa al espacio).
-- Opcional: comentario en la primera línea `-- @connection: PayBox Prod` reconocido al abrir (útil al compartir scripts). Desactivado por defecto (`files.connectionHeader`). *No implementado en M5 (ver `NOTAS.md`).*
+- Opcional: comentario en la primera línea `-- @connection: PayBox Prod` reconocido al abrir (útil al compartir scripts). Desactivado por defecto (`files.connectionHeader`). Implementado: el comentario solo vale si el archivo no tiene ya una conexión asociada en el equipo (ver `NOTAS.md`).
 
 ## Guardado
 - Reglas de guardado, guardado automático y cierre: ver `11` §4.

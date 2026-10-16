@@ -1728,6 +1728,15 @@ button.plan-warnings:hover {
   flex: 1;
 }
 
+.plan-scroll {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
 .plan-table {
   display: flex;
   flex-direction: column;
@@ -1943,4 +1952,11 @@ button.plan-warnings:hover {
   padding: 6px 12px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-editor);
+}
+
+.value-viewer-footer {
+  display: flex;
+  gap: 8px;
+  padding: 6px 8px;
+  border-top: 1px solid var(--border);
 }

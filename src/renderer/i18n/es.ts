@@ -434,6 +434,8 @@ export const es = {
     showHidden: (n: number) => `Mostrar columnas ocultas (${n})`,
     goToLine: (line: number) => `Ir a la línea ${line}`,
     valueViewer: 'Visor de valor',
+    valueApply: 'Aplicar (Ctrl+Enter)',
+    valueSetNull: 'Establecer NULL',
     summary: (sum: string, avg: string, min: string, max: string) =>
       `Suma: ${sum} · Prom.: ${avg} · Mín.: ${min} · Máx.: ${max}`,
     noMessages: 'Sin mensajes',
@@ -901,6 +903,10 @@ export const es = {
     confirmDragLabel: 'Pedir confirmación al mover archivos arrastrando en la vista Archivos',
     autoReveal: 'Seleccionar el archivo activo',
     autoRevealLabel: 'Seleccionar en la vista Archivos el archivo de la pestaña activa',
+    connectionHeader: 'Conexión en la cabecera del script',
+    connectionHeaderDescription:
+      'Al abrir un .sql que no tenga conexión asociada en este equipo, la primera línea `-- @connection: Nombre` elige la conexión con ese nombre. Útil al compartir scripts.',
+    connectionHeaderLabel: 'Reconocer `-- @connection: Nombre` al abrir un script',
     search: 'Buscar preferencias',
     noResults: 'Ninguna preferencia coincide con la búsqueda.',
     groupsLabel: 'Grupos de preferencias',
@@ -1051,6 +1057,8 @@ export const es = {
       `${n.toLocaleString('es')} ${n === 1 ? 'fila' : 'filas'}${truncated ? ' (truncado)' : ''}`,
     completed: (command: string) => `${command}: completado`,
     cancelled: 'Consulta cancelada por el usuario.',
+    transactionLost:
+      'SQLite terminó la sesión al detener la consulta: la transacción manual abierta se revirtió y no hay cambios pendientes.',
     detail: (text: string) => `Detalle: ${text}`,
     hint: (text: string) => `Sugerencia: ${text}`,
     statementOk: 'Sentencia ejecutada',
@@ -1107,6 +1115,7 @@ export const es = {
       key: 'Atajo',
       id: 'Identificador',
       pending: 'próximamente',
+      custom: 'personalizado',
     },
   },
 

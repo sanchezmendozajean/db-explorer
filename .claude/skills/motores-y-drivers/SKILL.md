@@ -57,3 +57,8 @@ Arquitectura en `specs/02` y `specs/03`; decisiones por hito en `specs/NOTAS.md`
 - SQL Server: `BACKUP`/`RESTORE` escriben en el **servidor**; ejecutarlos en una conexión propia sin límite de tiempo (`requestTimeout` 0), no en la de metadatos (60 s). `RESTORE … WITH REPLACE` necesita `MOVE` si el respaldo viene de otra base; `RESTORE FILELISTONLY` da `LogicalName` y `Type`.
 - `mysqldump` de MySQL emite `SET @@GLOBAL.GTID_PURGED` si hay GTID: usar `--set-gtid-purged=OFF` o el script no se recarga en el mismo servidor. `--no-tablespaces` solo existe en MySQL. La contraseña va en un `--defaults-extra-file` (debe ser el primer argumento), nunca en la línea de comandos.
 - Los binarios de Windows de PostgreSQL dependen de `libpq.dll`, `libssl`, etc. de su carpeta; los de MariaDB/MySQL son casi autónomos. Por eso `pe-imports.ts` lee la tabla de importación del PE y copia solo lo que existe junto al ejecutable.
+
+## Otros detalles
+- `fast-xml-parser` corta en 100 etiquetas anidadas por defecto: los planes de SQL Server (RelOp → operador → RelOp) lo superan con ~30 operadores; `plan.ts` fija `maxNestedTags`.
+- SQLite no expone los CHECK en un PRAGMA: se leen del `CREATE TABLE` de `sqlite_schema` (`checks.ts`). Cancelar termina el hilo y revierte la transacción manual: `DriverError.extra.transactionLost` lo informa al renderer.
+- SQL Server informa los errores de `ALTER` sobre el texto ya transformado: `toAlterWithMap` traslada la posición al texto original del editor. PostgreSQL informa `position` relativa a todo el `CREATE`, incluso dentro de un cuerpo `$$`.
