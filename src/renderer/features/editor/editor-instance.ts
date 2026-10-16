@@ -1,9 +1,13 @@
 import { create } from 'zustand';
 import type * as MonacoApi from 'monaco-editor/editor/editor.api';
 import type { KeyChord } from '../../commands/keybindings';
-import { commands, registerContextProvider } from '../../commands/service';
-import { DEFAULT_KEYBINDINGS } from '../../commands/default-keybindings';
-import { parseKeybinding } from '../../commands/keybindings';
+import {
+  commands,
+  keybindings,
+  registerContextProvider,
+  useKeybindingsVersion,
+} from '../../commands/service';
+import { evaluateWhen } from '../../commands/keybindings';
 import type { Monaco } from './monaco/loader';
 
 export type CodeEditor = MonacoApi.editor.IStandaloneCodeEditor;
@@ -107,20 +111,30 @@ function setupGlobal(monaco: Monaco): void {
   ]);
 
   // Acordes de la app (p. ej. Ctrl+K S = Guardar todo): dentro del editor los resuelve Monaco.
-  for (const rule of DEFAULT_KEYBINDINGS) {
-    let sequence: KeyChord[];
-    try {
-      sequence = parseKeybinding(rule.key);
-    } catch {
-      continue;
-    }
-    if (sequence.length !== 2 || rule.command.startsWith('editor.')) continue;
-    const first = monacoChord(monaco, sequence[0]!);
-    const second = monacoChord(monaco, sequence[1]!);
+  // Se vuelven a registrar cada vez que cambian los atajos (keybindings.json).
+  syncAppChords(monaco);
+  useKeybindingsVersion.subscribe(() => syncAppChords(monaco));
+}
+
+let appChords: { dispose: () => void }[] = [];
+
+/** Registra en Monaco los acordes vigentes de la app (los por defecto con los cambios del usuario aplicados). */
+function syncAppChords(monaco: Monaco): void {
+  for (const d of appChords) d.dispose();
+  appChords = [];
+  const M = monaco;
+  const inEditor = new Set(['editorTextFocus']);
+  for (const rule of keybindings.allRules()) {
+    if (rule.sequence.length !== 2 || rule.command.startsWith('editor.')) continue;
+    // Solo los que valen con el editor enfocado (no los de la grilla, el árbol…).
+    if (!evaluateWhen(rule.when, inEditor)) continue;
+    const first = monacoChord(M, rule.sequence[0]!);
+    const second = monacoChord(M, rule.sequence[1]!);
     if (first === undefined || second === undefined) continue;
     const command = rule.command;
-    monaco.editor.registerCommand(`app:${command}`, () => void commands.execute(command));
-    monaco.editor.addKeybindingRule({ keybinding: chord(first, second), command: `app:${command}` });
+    const id = `app:${command}`;
+    appChords.push(M.editor.registerCommand(id, () => void commands.execute(command)));
+    appChords.push(M.editor.addKeybindingRule({ keybinding: M.KeyMod.chord(first, second), command: id }));
   }
 }
 

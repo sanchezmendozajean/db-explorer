@@ -8,6 +8,7 @@ import { useWorkbenchStore } from '../../stores/workbench-store';
 import { ensureConnected } from '../connections/actions';
 import { askChoice } from '../dialogs/ask';
 import { languageFor } from '../editor/documents';
+import { setModelOwner } from '../editor/model-owners';
 import { loadMonaco, monacoIfLoaded } from '../editor/monaco/loader';
 import { MARKER_OWNER } from '../execution/execute';
 import { addMessage, forgetTab, useResultsStore } from '../results/results-store';
@@ -145,6 +146,7 @@ async function doLoad(tabId: string): Promise<void> {
         viewState: null,
       });
       entries.get(tabId)!.model.onDidChangeContent(() => syncDirty(tabId));
+      setModelOwner(entries.get(tabId)!.model, tabId);
     }
     syncDirty(tabId);
     setStatus(tabId, { phase: 'ready' });

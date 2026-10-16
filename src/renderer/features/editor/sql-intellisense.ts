@@ -1,7 +1,7 @@
 import type * as MonacoApi from 'monaco-editor/editor/editor.api';
 import type { Engine } from '@shared/connection';
-import { completionContext } from '@shared/sql-context';
-import type { CompletionContext, TableMention } from '@shared/sql-context';
+import { completionContext, dollarBodyAt } from '@shared/sql-context';
+import type { CompletionContext, DerivedRelation, TableMention } from '@shared/sql-context';
 import { functionsFor, keywordsFor, SQL_SNIPPETS } from '@shared/sql-keywords';
 import { quoteIdent } from '@shared/sql-quote';
 import { splitStatements, statementAt } from '@shared/splitter';
@@ -71,15 +71,30 @@ export function sqlContextAt(model: Model, position: Position, tabId: string | u
   const target = effectiveTarget(tab);
   const scope = catalogScope(tab?.connectionId, target.database, target.schema);
   const engine = scope?.engine;
-  const text = model.getValue();
-  const offset = model.getOffsetAt(position);
-  const statements = splitStatements(text, engine ?? 'generic', {
-    blankLineSeparator: setting('sql.statementSeparator') === 'blankLine',
-  });
-  const s = statementAt(text, statements, offset);
-  if (!s || offset < s.start) return { engine, scope, statement: text, offset };
-  const end = Math.max(s.start + s.text.length, offset);
-  return { engine, scope, statement: text.slice(s.start, end), offset: offset - s.start };
+  const at = statementContext(model.getValue(), model.getOffsetAt(position), engine);
+  return { engine, scope, ...at };
+}
+
+/** Sentencia del cursor y posición dentro de ella; en PostgreSQL, dentro de un cuerpo `$$ … $$`, la sentencia interna. */
+function statementContext(
+  text: string,
+  offset: number,
+  engine: Engine | undefined,
+): { statement: string; offset: number } {
+  const split = (source: string, at: number): { statement: string; offset: number } => {
+    const statements = splitStatements(source, engine ?? 'generic', {
+      blankLineSeparator: setting('sql.statementSeparator') === 'blankLine',
+    });
+    const s = statementAt(source, statements, at);
+    if (!s || at < s.start) return { statement: source, offset: at };
+    const end = Math.max(s.start + s.text.length, at);
+    return { statement: source.slice(s.start, end), offset: at - s.start };
+  };
+  const outer = split(text, offset);
+  if (engine !== 'postgres') return outer;
+  // Dentro del cuerpo de una función se completa con la sentencia interna (con sus FROM y alias).
+  const body = dollarBodyAt(outer.statement, outer.offset);
+  return body ? split(outer.statement.slice(body.start, body.end), outer.offset - body.start) : outer;
 }
 
 function eq(a: string, b: string): boolean {
@@ -91,17 +106,80 @@ function mentionFor(name: string, tables: TableMention[]): TableMention | undefi
   return tables.find((t) => t.alias && eq(t.alias, name)) ?? tables.find((t) => eq(t.name, name));
 }
 
+/** CTE al que se refiere una mención de tabla (sin esquema), si lo hay. */
+function cteOf(mention: TableMention, derived: DerivedRelation[]): DerivedRelation | undefined {
+  if (mention.schema) return undefined;
+  return derived.find((d) => d.kind === 'cte' && eq(d.name, mention.name));
+}
+
+/** Relación derivada a la que se refiere un calificador: un alias de CTE, el nombre de un CTE o el alias de una tabla derivada. */
+function derivedFor(name: string, c: CompletionContext): DerivedRelation | undefined {
+  const mention = c.tables.find((t) => t.alias && eq(t.alias, name));
+  const viaMention = mention ? cteOf(mention, c.derived) : undefined;
+  if (viaMention) return viaMention;
+  if (mention) return undefined; // alias de una tabla real
+  return (
+    c.derived.find((d) => eq(d.name, name) && !c.tables.some((t) => t.alias && eq(t.alias, name))) ??
+    undefined
+  );
+}
+
+/**
+ * Nombres de las columnas de una relación derivada. Los `*` se expanden con las columnas de las
+ * tablas de su cuerpo (del catálogo, o de otro CTE o tabla derivada).
+ */
+async function derivedColumnNames(
+  scope: CatalogScope | null,
+  relation: DerivedRelation,
+  all: DerivedRelation[],
+  seen: Set<DerivedRelation> = new Set(),
+): Promise<string[]> {
+  if (seen.has(relation)) return [];
+  const visiting = new Set(seen).add(relation);
+  const names: string[] = [];
+  const add = (name: string): void => {
+    if (!names.some((n) => eq(n, name))) names.push(name);
+  };
+  for (const item of relation.items) {
+    if ('name' in item) {
+      add(item.name);
+      continue;
+    }
+    for (const source of relation.sources) {
+      const qualifier = item.star.qualifier;
+      if (qualifier && !eq(qualifier, source.alias ?? source.name)) continue;
+      const inner = cteOf(source, all);
+      if (inner) {
+        for (const n of await derivedColumnNames(scope, inner, all, visiting)) add(n);
+      } else if (scope) {
+        const table = await resolveTable(scope, source);
+        if (table) for (const col of await columnsOf(scope, table)) add(col.name);
+      }
+    }
+  }
+  return names;
+}
+
 /** Resuelve el calificador de `algo.`: columnas de una tabla u objetos de un esquema. */
 async function members(
   scope: CatalogScope,
   c: CompletionContext,
-): Promise<{ table?: CatalogObject; columns?: CatalogColumn[]; schemaObjects?: CatalogObject[] }> {
+): Promise<{
+  table?: CatalogObject;
+  columns?: CatalogColumn[];
+  schemaObjects?: CatalogObject[];
+  derived?: { relation: DerivedRelation; names: string[] };
+}> {
   const q = c.qualifier.slice(-2);
   if (q.length === 2) {
     const table = await resolveTable(scope, { schema: q[0]!, name: q[1]! });
     return table ? { table, columns: await columnsOf(scope, table) } : {};
   }
   const name = q[0]!;
+  const relation = derivedFor(name, c);
+  if (relation) {
+    return { derived: { relation, names: await derivedColumnNames(scope, relation, c.derived) } };
+  }
   const mention = mentionFor(name, c.tables);
   if (mention) {
     const table = await resolveTable(scope, mention);
@@ -148,6 +226,14 @@ export async function completionItems(
     sortText: `0${col.name}`,
     range,
   });
+  const derivedColumn = (name: string, relation: string): DbCompletionItem => ({
+    label: { label: name, description: relation },
+    kind: K.Field,
+    insertText: quote(name),
+    filterText: quoted ? quote(name) : name,
+    sortText: `0${name}`,
+    range,
+  });
   const object = (o: CatalogObject): DbCompletionItem => ({
     label: { label: o.name, description: o.schema },
     kind: o.kind === 'table' ? K.Struct : K.Interface,
@@ -162,6 +248,7 @@ export async function completionItems(
   if (scope && c.kind === 'members') {
     const r = await members(scope, c);
     if (r.columns && r.table) items.push(...r.columns.map((col) => column(col, r.table!)));
+    if (r.derived) items.push(...r.derived.names.map((n) => derivedColumn(n, r.derived!.relation.name)));
     if (r.schemaObjects) items.push(...r.schemaObjects.map(object));
     return items;
   }
@@ -183,8 +270,18 @@ export async function completionItems(
   }
   if (scope && c.kind === 'columns') {
     for (const mention of c.tables) {
+      const cte = cteOf(mention, c.derived);
+      if (cte) {
+        const label = mention.alias ?? mention.name;
+        items.push(...(await derivedColumnNames(scope, cte, c.derived)).map((n) => derivedColumn(n, label)));
+        continue;
+      }
       const table = await resolveTable(scope, mention);
       if (table) items.push(...(await columnsOf(scope, table)).map((col) => column(col, table)));
+    }
+    // Tablas derivadas: `FROM (SELECT …) alias`.
+    for (const d of c.derived.filter((x) => x.kind === 'derived')) {
+      items.push(...(await derivedColumnNames(scope, d, c.derived)).map((n) => derivedColumn(n, d.name)));
     }
   }
   for (const fn of functionsFor(engine)) {

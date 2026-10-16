@@ -8,6 +8,7 @@ import { connectionById, useConnectionsStore } from '../../stores/connections-st
 import { useUiStore } from '../../stores/ui-store';
 import type { EditorTab } from '../../stores/workbench-store';
 import { loadMonaco } from '../editor/monaco/loader';
+import { registerSqlProviders } from '../editor/monaco/providers';
 import {
   loadRoutine,
   rememberRoutineViewState,
@@ -43,6 +44,8 @@ export function RoutineView({ tab }: { tab: EditorTab }): React.JSX.Element {
     void loadMonaco().then((monaco) => {
       const model = routineModel(tab.id);
       if (disposed || !containerRef.current || !model) return;
+      // Autocompletado, hover y formateo del dialecto (se registran una sola vez).
+      registerSqlProviders(monaco);
       const editor = monaco.editor.create(containerRef.current, {
         model,
         fontFamily: "'Cascadia Code', Consolas, 'Courier New', monospace",
@@ -113,7 +116,11 @@ export function RoutineView({ tab }: { tab: EditorTab }): React.JSX.Element {
           {crumbs.map((c) => (
             <span key={c.icon} className="breadcrumb-item">
               <Codicon name="chevron-right" size={14} className="breadcrumb-sep" />
-              <Codicon name={c.icon} size={14} color={c.icon === 'database' ? 'var(--icon-database)' : undefined} />
+              <Codicon
+                name={c.icon}
+                size={14}
+                color={c.icon === 'database' ? 'var(--icon-database)' : undefined}
+              />
               {c.label}
             </span>
           ))}

@@ -189,6 +189,16 @@ export class KeybindingResolver {
     this.pending = null;
   }
 
+  /** Reglas vigentes (por defecto y del usuario ya combinadas), en orden de registro. */
+  allRules(): readonly ResolvedKeybinding[] {
+    return this.rules;
+  }
+
+  /** Comandos que tienen algún atajo vigente. */
+  boundCommands(): string[] {
+    return [...new Set(this.rules.map((r) => r.command))];
+  }
+
   get pendingChord(): KeyChord | null {
     return this.pending;
   }

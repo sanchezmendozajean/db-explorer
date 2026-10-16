@@ -78,6 +78,37 @@ test('SELECT c. FROM clientes c sugiere las columnas de clientes', async () => {
   await page.keyboard.press('Escape');
 });
 
+test('un CTE sugiere sus columnas: alias propios y las de un *', async () => {
+  const sql = 'WITH x AS (SELECT id, nombre AS apodo FROM clientes), y AS (SELECT * FROM x) SELECT x. FROM x';
+  await typeInEditor(sql);
+  await cursorAfter(sql, 'SELECT x.');
+  await page.keyboard.press('Control+Space');
+  await expect(suggest()).toBeVisible();
+  await expect(suggest()).toContainText('apodo');
+  await expect(suggest()).toContainText('id');
+  // La columna original (nombre) ya no es visible a través del CTE.
+  await expect(suggest()).not.toContainText('nombre');
+  await page.keyboard.press('Escape');
+
+  // Un * dentro del CTE se expande con las columnas del CTE anterior.
+  const sql2 =
+    'WITH x AS (SELECT id, nombre AS apodo FROM clientes), y AS (SELECT * FROM x) SELECT y. FROM y';
+  await typeInEditor(sql2);
+  await cursorAfter(sql2, 'SELECT y.');
+  await page.keyboard.press('Control+Space');
+  await expect(suggest()).toContainText('apodo');
+  await page.keyboard.press('Escape');
+});
+
+test('una tabla derivada sugiere sus columnas', async () => {
+  const sql = 'SELECT d. FROM (SELECT id, nombre AS apodo FROM clientes) d';
+  await typeInEditor(sql);
+  await cursorAfter(sql, 'SELECT d.');
+  await page.keyboard.press('Control+Space');
+  await expect(suggest()).toContainText('apodo');
+  await page.keyboard.press('Escape');
+});
+
 test('un nombre con mayúsculas en Postgres se inserta entre comillas', async () => {
   await typeInEditor('select * from CRen');
   await page.keyboard.press('End');
@@ -152,6 +183,31 @@ test('reasignar Ctrl+Enter en keybindings.json surte efecto sin reiniciar', asyn
   await page.keyboard.press('Control+Enter');
   await page.waitForTimeout(500);
   await expect(page.getByTestId('results-grid')).toHaveAttribute('data-columns', 'cinco');
+});
+
+test('un acorde de keybindings.json funciona dentro del editor y el diálogo de atajos lo muestra', async () => {
+  // Acorde propio (no existe por defecto ni en Monaco): Ctrl+K Ctrl+Y abre el diálogo de atajos.
+  writeFileSync(
+    join(userData, 'keybindings.json'),
+    JSON.stringify([
+      { key: 'ctrl+e', command: 'db.executeStatement', when: 'editorTextFocus' },
+      { key: 'ctrl+enter', command: '-db.executeStatement' },
+      { key: 'ctrl+k ctrl+y', command: 'db.help.keybindings' },
+    ]),
+  );
+  await page.getByTestId('editor-tab').filter({ hasText: 'Script-2' }).click();
+  await typeInEditor('select 1');
+  await expect(async () => {
+    await page.keyboard.press('Control+K');
+    await page.keyboard.press('Control+Y');
+    await expect(page.getByRole('dialog')).toContainText('Atajos de teclado', { timeout: 500 });
+  }).toPass({ timeout: 8000 });
+  // Lista los atajos vigentes: el cambio de Ejecutar sentencia y el acorde nuevo, marcados como personalizados.
+  const row = (name: string): ReturnType<Page['locator']> => page.getByRole('row').filter({ hasText: name });
+  await expect(row('Ejecutar sentencia').first()).toContainText('personalizado');
+  await expect(row('Ejecutar sentencia').first()).toContainText('Ctrl+E');
+  await expect(row('db.help.keybindings')).toContainText('Ctrl+K Ctrl+Y');
+  await page.keyboard.press('Escape');
 });
 
 test('settings.json se abre con autocompletado de claves', async () => {

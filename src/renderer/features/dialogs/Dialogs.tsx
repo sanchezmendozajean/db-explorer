@@ -3,9 +3,9 @@ import type { IpcError, PingResult } from '@shared/ipc';
 import { Modal } from '../../components/Modal';
 import { Button } from '../../components/Button';
 import { TextInput } from '../../components/Inputs';
-import { commands, keybindings } from '../../commands/service';
+import { commands, keybindings, useKeybindingsVersion } from '../../commands/service';
 import { DEFAULT_KEYBINDINGS } from '../../commands/default-keybindings';
-import { formatSequence } from '../../commands/keybindings';
+import { formatSequence, parseKeybinding } from '../../commands/keybindings';
 import { commandTitle, es } from '../../i18n/es';
 import { useOverlayStore } from '../../stores/overlay-store';
 import { ConnectionDialog } from '../connections/ConnectionDialog';
@@ -18,6 +18,15 @@ import { ToolsDialog } from '../db-admin/ToolsDialog';
 
 type PingState =
   { status: 'pending' } | { status: 'ok'; result: PingResult } | { status: 'error'; error: IpcError };
+
+/** Atajo por defecto tal como se muestra (p. ej. `Ctrl+K Ctrl+S`). */
+function formatKey(key: string): string {
+  try {
+    return formatSequence(parseKeybinding(key));
+  } catch {
+    return key;
+  }
+}
 
 function AboutDialog({ onClose }: { onClose: () => void }): React.JSX.Element {
   const [ping, setPing] = useState<PingState>({ status: 'pending' });
@@ -70,21 +79,37 @@ function AboutDialog({ onClose }: { onClose: () => void }): React.JSX.Element {
 function KeybindingsDialog({ onClose }: { onClose: () => void }): React.JSX.Element {
   const [filter, setFilter] = useState('');
   const k = es.dialogs.keybindings;
+  // Se vuelve a calcular si cambia keybindings.json con el diálogo abierto.
+  const version = useKeybindingsVersion((s) => s.version);
   const rows = useMemo(() => {
-    const ids = [...new Set(DEFAULT_KEYBINDINGS.map((r) => r.command))];
+    void version;
+    // Los de fábrica y los que el usuario asignó a otros comandos; los quitados (`-comando`) ya no figuran.
+    const defaults = new Map<string, string>();
+    for (const r of DEFAULT_KEYBINDINGS) {
+      if (r.command.startsWith('-')) continue;
+      defaults.set(
+        r.command,
+        [...(defaults.get(r.command) ?? '').split('  ·  ').filter(Boolean), formatKey(r.key)].join('  ·  '),
+      );
+    }
+    const ids = [...new Set([...defaults.keys(), ...keybindings.boundCommands()])];
     const q = filter.toLowerCase();
     return ids
-      .map((id) => ({
-        id,
-        title: commandTitle(id),
-        keys: keybindings.lookupAll(id).map(formatSequence).join('  ·  '),
-        available: commands.has(id),
-      }))
+      .map((id) => {
+        const keys = keybindings.lookupAll(id).map(formatSequence).join('  ·  ');
+        return {
+          id,
+          title: commandTitle(id),
+          keys,
+          custom: keys !== (defaults.get(id) ?? ''),
+          available: commands.has(id),
+        };
+      })
       .filter(
         (r) =>
           !q || r.title.toLowerCase().includes(q) || r.keys.toLowerCase().includes(q) || r.id.includes(q),
       );
-  }, [filter]);
+  }, [filter, version]);
 
   return (
     <Modal title={k.title} onClose={onClose} width={720}>
@@ -111,6 +136,7 @@ function KeybindingsDialog({ onClose }: { onClose: () => void }): React.JSX.Elem
             <span role="cell">
               {r.title}
               {!r.available && <em> ({k.pending})</em>}
+              {r.custom && <em> ({k.custom})</em>}
             </span>
             <span role="cell" className="keybindings-keys">
               {r.keys}

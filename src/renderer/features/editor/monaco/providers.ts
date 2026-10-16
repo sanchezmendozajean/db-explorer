@@ -6,6 +6,7 @@ import { setting, useSettingsStore } from '../../../stores/settings-store';
 import { showToast } from '../../../stores/toast-store';
 import { useWorkbenchStore } from '../../../stores/workbench-store';
 import { allDocuments } from '../documents';
+import { modelOwner } from '../model-owners';
 import { formatFragment, formatScript } from '../sql-format';
 import { completionItems, hoverMarkdown, resolveItem } from '../sql-intellisense';
 import type { DbCompletionItem } from '../sql-intellisense';
@@ -23,7 +24,9 @@ export function modelContext(model: MonacoApi.editor.ITextModel): {
   schema?: string;
 } {
   const doc = allDocuments().find((d) => d.model === model);
-  const tab = doc ? useWorkbenchStore.getState().tabs.find((t) => t.id === doc.tabId) : undefined;
+  // Un script, o la definición de una rutina (su modelo tiene dueño propio).
+  const tabId = doc?.tabId ?? modelOwner(model);
+  const tab = tabId ? useWorkbenchStore.getState().tabs.find((t) => t.id === tabId) : undefined;
   return {
     tabId: tab?.id,
     connectionId: tab?.connectionId,
