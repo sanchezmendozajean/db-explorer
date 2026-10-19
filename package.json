@@ -1,7 +1,7 @@
 {
   "name": "db-explorer",
   "productName": "DB Explorer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Cliente de escritorio para explorar y consultar bases de datos PostgreSQL, MariaDB/MySQL, SQLite y SQL Server.",
   "author": {

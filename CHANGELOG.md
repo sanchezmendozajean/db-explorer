@@ -1,8 +1,9 @@
 # Changelog
 
-## Próxima versión
+## v0.1.1
 
 ### Novedades
+- **Diálogo de restauración** rediseñado: host de destino, opciones en dos columnas y confirmación junto a los botones.
 - **Actualización automática**: al abrir busca y descarga la versión nueva (Preferencias › Actualizaciones); el engranaje muestra un punto rojo y ofrece "Reiniciar para instalar nueva versión". "Buscar actualización" permite la búsqueda manual. No aplica a la versión portable.
 
 ## v0.1.0
