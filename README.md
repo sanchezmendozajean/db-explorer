@@ -4,6 +4,11 @@ Cliente de escritorio para explorar y consultar bases de datos PostgreSQL, Maria
 
 Las especificaciones están en [`specs/`](specs/README.md) y el registro de decisiones de implementación en [`specs/NOTAS.md`](specs/NOTAS.md).
 
+## Sitio y documentación
+
+- Sitio web: <https://sanchezmendozajean.github.io/db-explorer/>
+- Guía de uso: <https://sanchezmendozajean.github.io/db-explorer/docs/>
+
 ## Descarga
 
 Los instaladores están en [Releases](https://github.com/sanchezmendozajean/db-explorer/releases): `DB-Explorer-<versión>-instalador.exe` (instalación) y `DB-Explorer-<versión>-portable.exe` (sin instalar). Los binarios no están firmados, así que Windows SmartScreen puede mostrar un aviso: elige «Más información» › «Ejecutar de todas formas».
