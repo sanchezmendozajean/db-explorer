@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Codicon } from '../components/Codicon';
+import appIcon from '../../../resources/icon.svg';
 import { Menu } from '../components/Menu';
 import type { MenuCloseReason } from '../components/Menu';
 import { commands } from '../commands/service';
@@ -141,7 +142,7 @@ export function TitleBar(): React.JSX.Element {
   return (
     <header className="titlebar">
       <div className="titlebar-icon">
-        <Codicon name="database" color="var(--accent)" />
+        <img src={appIcon} alt="" width={20} height={20} draggable={false} />
       </div>
       <MenuBar />
       <button

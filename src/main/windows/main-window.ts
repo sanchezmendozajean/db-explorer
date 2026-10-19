@@ -2,6 +2,7 @@ import { BrowserWindow } from 'electron';
 import { join } from 'node:path';
 import type { IpcEventChannel } from '@shared/channels';
 import type { IpcEventPayload } from '@shared/ipc';
+import icon from '../../../resources/icon.png?asset';
 import { devServerUrl, devToolsEnabled, rendererIndexPath } from '../security';
 
 /** Colores de fondo iniciales (`bg.editor`) para evitar destellos al abrir. */
@@ -34,6 +35,7 @@ export function createMainWindow(options: { dark: boolean }): BrowserWindow {
     show: false,
     frame: false,
     title: 'DB Explorer',
+    icon,
     backgroundColor: options.dark ? BACKGROUND.dark : BACKGROUND.light,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
