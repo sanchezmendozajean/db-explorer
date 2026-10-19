@@ -1125,6 +1125,8 @@ export const es = {
     dbHostRestarted: 'Conexiones reiniciadas: el proceso de base de datos se reinició.',
     notAvailable: (what: string) => `"${what}" todavía no está disponible en esta versión.`,
     copied: 'Copiado al portapapeles',
+    cellsCopied: 'Celdas copiadas',
+    cellsCopiedWithHeaders: 'Celdas con cabeceras copiadas',
     close: 'Cerrar notificación',
   },
 

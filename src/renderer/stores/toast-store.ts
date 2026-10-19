@@ -14,6 +14,8 @@ export interface Toast {
   actions?: ToastAction[];
   /** No se oculta sola (avisos que piden una decisión). */
   sticky?: boolean;
+  /** Duración propia en ms, en lugar de `TOAST_TIMEOUT_MS`. */
+  durationMs?: number;
 }
 
 interface ToastStore {
@@ -34,7 +36,8 @@ export const useToastStore = create<ToastStore>((set, get) => ({
   show: (toast) => {
     const id = nextId++;
     set((s) => ({ toasts: [...s.toasts, { ...toast, id }] }));
-    if (toast.severity !== 'error' && !toast.sticky) setTimeout(() => get().dismiss(id), TOAST_TIMEOUT_MS);
+    if (toast.severity !== 'error' && !toast.sticky)
+      setTimeout(() => get().dismiss(id), toast.durationMs ?? TOAST_TIMEOUT_MS);
     return id;
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
@@ -46,9 +49,11 @@ export function showToast(
   severity: ToastSeverity,
   message: string,
   actions?: ToastAction[],
-  options: { sticky?: boolean } = {},
+  options: { sticky?: boolean; durationMs?: number } = {},
 ): number {
-  return useToastStore.getState().show({ severity, message, actions, sticky: options.sticky });
+  return useToastStore
+    .getState()
+    .show({ severity, message, actions, sticky: options.sticky, durationMs: options.durationMs });
 }
 
 export function isToastVisible(id: number | undefined): boolean {

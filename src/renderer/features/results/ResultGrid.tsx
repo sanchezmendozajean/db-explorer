@@ -131,6 +131,7 @@ function gridTheme(fontSize: number): Partial<Theme> & Record<string, string | n
     // Colores de cambios pendientes (specs/04 §2); no son claves de Glide.
     cellEdited: cssVar(st, '--bg-cell-edited'),
     rowDeleted: cssVar(st, '--bg-row-deleted'),
+    rowDeletedSelected: cssVar(st, '--bg-row-deleted-selected'),
     rowInserted: cssVar(st, '--bg-row-inserted'),
     error: cssVar(st, '--error'),
   };
@@ -293,7 +294,11 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
         align ??
         (isNumericType(column.logicalType) ? 'right' : column.logicalType === 'boolean' ? 'center' : 'left');
       const override: Partial<Theme> = {};
-      if (deleted) override.bgCell = gridTheme_['rowDeleted'] as string;
+      if (deleted && isCellSelected(selection, [col, row])) {
+        // Borrado + seleccionado: tono mezclado (Glide ya no superpone la selección encima).
+        override.bgCell = gridTheme_['rowDeletedSelected'] as string;
+        override.accentLight = '#00000000';
+      } else if (deleted) override.bgCell = gridTheme_['rowDeleted'] as string;
       else if (at.kind === 'new') override.bgCell = gridTheme_['rowInserted'] as string;
       else if (isCellEdited(pending, at, c)) override.bgCell = gridTheme_['cellEdited'] as string;
       if (pending.errors[rowKey(at)]) override.textDark = gridTheme_['error'] as string;
@@ -333,7 +338,7 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
       };
     },
     // `version`: las filas se agregan en el mismo arreglo; hay que redibujar.
-    [cols, columns, rows, pending, refAt, result, colSettings, formats, settings, gridTheme_, version], // eslint-disable-line react-hooks/exhaustive-deps
+    [cols, columns, rows, pending, refAt, result, colSettings, formats, settings, gridTheme_, version, selection], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const onCellEdited = ([col, row]: Item, cell: EditableGridCell): void => {

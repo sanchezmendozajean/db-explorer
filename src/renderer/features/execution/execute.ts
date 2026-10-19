@@ -63,14 +63,15 @@ function collectStatements(mode: ExecuteMode, dialect: SqlDialect): StatementMet
     const pos = model.getPositionAt(base + s.start);
     return { text: s.text, start: base + s.start, startLine: pos.lineNumber, startColumn: pos.column };
   };
+  // Un script es un conjunto con relación entre sí: solo el `;` separa sus sentencias. La línea en
+  // blanco como separador aplica a "Ejecutar sentencia" (cursor o selección de varias sentencias).
+  const options = mode === 'script' ? { blankLineSeparator: false } : splitOptions();
   if (selection && !selection.isEmpty()) {
     const base = model.getOffsetAt(selection.getStartPosition());
-    return splitStatements(model.getValueInRange(selection), dialect, splitOptions()).map((s) =>
-      toMeta(s, base),
-    );
+    return splitStatements(model.getValueInRange(selection), dialect, options).map((s) => toMeta(s, base));
   }
   const text = model.getValue();
-  const all = splitStatements(text, dialect, splitOptions());
+  const all = splitStatements(text, dialect, options);
   if (mode === 'script') return all.map((s) => toMeta(s, 0));
   const position = editor.getPosition();
   const current = position ? statementAt(text, all, model.getOffsetAt(position)) : undefined;

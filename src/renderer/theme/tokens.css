@@ -24,6 +24,7 @@
   --bg-grid-row-alt: #232323;
   --bg-cell-edited: #3a3d1f;
   --bg-row-deleted: #4b1818;
+  --bg-row-deleted-selected: #4a2a5e;
   --bg-row-inserted: #1e3a1e;
   --bg-button-secondary: #313131; /* (maqueta) */
   --bg-backdrop: rgba(0, 0, 0, 0.35); /* (maqueta) */
@@ -84,6 +85,7 @@
   --bg-grid-row-alt: #fafafa;
   --bg-cell-edited: #fff8c5;
   --bg-row-deleted: #fde7e9;
+  --bg-row-deleted-selected: #e3d3f2;
   --bg-row-inserted: #e6f4ea;
   --bg-button-secondary: #e5e5e5;
   --bg-backdrop: rgba(0, 0, 0, 0.2);

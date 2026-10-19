@@ -351,6 +351,11 @@ test('separador de sentencias por línea en blanco desde el menú contextual del
   await expect(page.getByTestId('results-grid')).toHaveAttribute('data-columns', 'dos');
   await expect(page.getByTestId('results-footer')).toContainText('2 filas');
 
+  // "Ejecutar script" no corta por líneas en blanco: un WITH con un hueco se ejecuta completo.
+  await typeInEditor('with a as (select 7 as siete)\n\nselect * from a');
+  await page.keyboard.press('Alt+X');
+  await expect(page.getByTestId('results-grid')).toHaveAttribute('data-columns', 'siete');
+
   // Desde el menú Consulta se vuelve al punto y coma.
   await page.getByRole('menuitem', { name: 'Consulta' }).click();
   await page.getByRole('menuitem', { name: 'Separador de sentencias' }).hover();

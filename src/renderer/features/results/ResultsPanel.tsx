@@ -33,9 +33,10 @@ import { visibleColumns, visibleRows } from './view';
 /** Confirmación antes de copiar selecciones muy grandes (specs/06). */
 const COPY_CONFIRM_CELLS = 100_000;
 
-async function writeClipboard(text: string): Promise<void> {
+async function writeClipboard(text: string): Promise<boolean> {
   const r = await window.api.app.clipboardWrite({ text });
   if (!r.ok) showToast('error', r.error.message);
+  return r.ok;
 }
 
 async function copySelection(sel: CopySelection, source: CopySource, headers: boolean): Promise<void> {
@@ -52,7 +53,13 @@ async function copySelection(sel: CopySelection, source: CopySource, headers: bo
     });
     if (answer !== 'copy') return;
   }
-  await writeClipboard(selectionToTsv(sel, source, { headers, nullAs: setting('results.copy.nullAs') }));
+  const ok = await writeClipboard(
+    selectionToTsv(sel, source, { headers, nullAs: setting('results.copy.nullAs') }),
+  );
+  if (ok)
+    showToast('success', headers ? es.toasts.cellsCopiedWithHeaders : es.toasts.cellsCopied, undefined, {
+      durationMs: 2000,
+    });
 }
 
 /** "Copiar tabla": todas las filas cargadas y columnas visibles, con orden y filtro (specs/06). */
