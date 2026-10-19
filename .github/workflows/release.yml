@@ -37,6 +37,8 @@ jobs:
           if [ ! -s notes.md ]; then echo "CHANGELOG.md no tiene la sección '## $GITHUB_REF_NAME'"; exit 1; fi
 
       - run: npm ci
+      # Electron descarga su binario al primer uso; electron-builder lo toma de node_modules/electron/dist.
+      - run: node node_modules/electron/install.js
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
