@@ -4,6 +4,20 @@ Cliente de escritorio para explorar y consultar bases de datos PostgreSQL, Maria
 
 Las especificaciones están en [`specs/`](specs/README.md) y el registro de decisiones de implementación en [`specs/NOTAS.md`](specs/NOTAS.md).
 
+## Descarga
+
+Los instaladores están en [Releases](https://github.com/sanchezmendozajean/db-explorer/releases): `DB-Explorer-<versión>-instalador.exe` (instalación) y `DB-Explorer-<versión>-portable.exe` (sin instalar). Los binarios no están firmados, así que Windows SmartScreen puede mostrar un aviso: elige «Más información» › «Ejecutar de todas formas».
+
+## Publicar una versión
+
+1. Sube `version` en `package.json` y agrega la sección `## vX.Y.Z` a `CHANGELOG.md` (sus notas son el texto del release).
+2. Haz commit, y luego `git tag vX.Y.Z && git push origin main --tags`.
+3. El flujo `.github/workflows/release.yml` valida, compila y publica el instalador y el portable en el release.
+
+## Licencia
+
+[MIT](LICENSE)
+
 ## Requisitos
 
 - Node.js 22.12 o superior.

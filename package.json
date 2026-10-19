@@ -1,9 +1,22 @@
 {
   "name": "db-explorer",
   "productName": "DB Explorer",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "description": "Cliente de escritorio para explorar y consultar bases de datos PostgreSQL, MariaDB/MySQL, SQLite y SQL Server.",
+  "author": {
+    "name": "Jean Sánchez Mendoza",
+    "url": "https://github.com/sanchezmendozajean"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/sanchezmendozajean/db-explorer",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sanchezmendozajean/db-explorer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sanchezmendozajean/db-explorer/issues"
+  },
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "node scripts/electron-vite.mjs dev",
@@ -21,7 +34,8 @@
     "package:linux": "npm run build && node scripts/electron-builder.mjs --linux",
     "package:dir": "npm run build && node scripts/electron-builder.mjs --win --dir",
     "test:packaged": "npm run package:dir && playwright test --config playwright.packaged.config.ts",
-    "measure": "node scripts/measure-startup.mjs"
+    "measure": "node scripts/measure-startup.mjs",
+    "release": "npm run build && node scripts/electron-builder.mjs --win --publish always"
   },
   "dependencies": {
     "fast-xml-parser": "^5.11.2",

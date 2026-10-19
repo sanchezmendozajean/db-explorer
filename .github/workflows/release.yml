@@ -1,0 +1,61 @@
+# Compila el instalador y el portable de Windows y los publica como GitHub Release al subir un tag de versión.
+#   1. Sube "version" en package.json (p. ej. 0.2.0), agrega la sección "## v0.2.0" a CHANGELOG.md y haz commit.
+#   2. git tag v0.2.0 && git push origin main --tags
+# El tag debe coincidir con package.json. Las notas del release son la sección del tag en CHANGELOG.md.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Verifica que el tag coincida con package.json
+        shell: bash
+        run: |
+          v=$(node -p "require('./package.json').version")
+          if [ "v$v" != "$GITHUB_REF_NAME" ]; then
+            echo "El tag $GITHUB_REF_NAME no coincide con la versión $v de package.json"; exit 1
+          fi
+
+      - name: Extrae las notas del CHANGELOG
+        shell: bash
+        run: |
+          awk -v v="## $GITHUB_REF_NAME" '$0==v{f=1;next} /^## /{f=0} f' CHANGELOG.md | sed '1{/^$/d}' > notes.md
+          if [ ! -s notes.md ]; then echo "CHANGELOG.md no tiene la sección '## $GITHUB_REF_NAME'"; exit 1; fi
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
+      # Se crea el release antes para que las subidas en paralelo de electron-builder no generen duplicados.
+      - name: Crea el release si falta
+        shell: bash
+        run: gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "${GITHUB_REF_NAME#v}" --notes-file notes.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compila y publica
+        run: npm run release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Garantiza que las notas queden visibles en el release, aunque electron-builder lo haya creado antes.
+      - name: Fija las notas del release
+        shell: bash
+        run: gh release edit "$GITHUB_REF_NAME" --notes-file notes.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

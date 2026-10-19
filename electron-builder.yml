@@ -51,3 +51,9 @@ appImage:
   artifactName: DB-Explorer-${version}.${ext}
 deb:
   artifactName: DB-Explorer-${version}.${ext}
+# Publicación en GitHub Releases (la ejecuta `npm run release` desde el flujo de GitHub Actions).
+publish:
+  provider: github
+  owner: sanchezmendozajean
+  repo: db-explorer
+  releaseType: release
