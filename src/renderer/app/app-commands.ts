@@ -5,6 +5,7 @@ import { useUiStore } from '../stores/ui-store';
 import { useOverlayStore } from '../stores/overlay-store';
 import { useWorkbenchStore } from '../stores/workbench-store';
 import { showToast } from '../stores/toast-store';
+import { checkForUpdate, installUpdate } from '../features/updates/update-actions';
 import { newConnection } from '../features/connections/actions';
 import { useSettingsStore } from '../stores/settings-store';
 import { activeEditor } from '../features/editor/editor-instance';
@@ -491,6 +492,8 @@ export function registerAppCommands(): () => void {
     })),
 
     { id: 'db.newConnection', category: cat.file, run: () => newConnection() },
+    { id: 'db.update.check', category: cat.help, run: () => checkForUpdate() },
+    { id: 'db.update.install', category: cat.help, run: () => installUpdate() },
     { id: 'db.preferences.openJson', category: cat.file, run: () => openConfigFile('settings') },
     { id: 'db.keybindings.open', category: cat.help, run: () => openConfigFile('keybindings') },
     {

@@ -110,6 +110,11 @@ const api: DbExplorerApi = {
       }
     },
   },
+  updates: {
+    getStatus: invoke('updates:get-status'),
+    check: invoke('updates:check'),
+    install: invoke('updates:install'),
+  },
   data: {
     apply: invoke('data:apply'),
     pickExportPath: invoke('data:pick-export-path'),

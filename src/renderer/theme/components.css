@@ -1019,7 +1019,13 @@ button.chip > span:not(.env-dot) {
   user-select: text;
 }
 
+.modal-footer {
+  align-items: center;
+}
+
 .modal-footer .footer-left {
+  margin-top: 0;
+  margin-bottom: 0;
   margin-right: auto;
 }
 
@@ -1049,4 +1055,31 @@ button.chip > span:not(.env-dot) {
 
 .restore-option .form-hint {
   margin-left: 24px;
+}
+
+.restore-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+
+.restore-host {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.restore-host-address {
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.form-divider {
+  height: 1px;
+  margin: 12px 0 4px;
+  border: 0;
+  background: var(--border);
 }

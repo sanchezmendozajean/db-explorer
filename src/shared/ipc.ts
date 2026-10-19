@@ -12,6 +12,7 @@ import type { TableDetails, TreeNodeData } from './metadata';
 import { ObjectKindSchema, TreeNodeRefSchema } from './metadata';
 import type { ApplyChangesResult, ExecuteSummary, ExportSummary, FetchMoreResult, QueryEvent } from './query';
 import type { Settings } from './settings';
+import type { UpdateStatus } from './updates';
 import type { FileNode, ScriptFile, WorkspaceInfo } from './workspace';
 import { WorkspaceStateSchema } from './workspace';
 
@@ -421,6 +422,12 @@ export const ipcInvokeContract = {
   /** Abre en el explorador de archivos la carpeta donde están los binarios importados; devuelve su ruta. */
   'tools:open-folder': { request: Empty, response: z.object({ path: z.string() }) },
   'tools:remove': { request: z.object({ family: ToolFamilySchema }), response: z.custom<ToolFamilyStatus>() },
+  /** Estado actual de la actualización (para pintar el engranaje al abrir la ventana). */
+  'updates:get-status': { request: Empty, response: z.custom<UpdateStatus>() },
+  /** Búsqueda manual: si hay versión nueva la descarga; responde con el estado resultante. */
+  'updates:check': { request: Empty, response: z.custom<UpdateStatus>() },
+  /** Cierra la app e instala la versión ya descargada. */
+  'updates:install': { request: Empty, response: Empty },
   'data:apply': { request: ApplyChangesSchema, response: z.custom<ApplyChangesResult>() },
   /** Diálogo "Guardar como" de una exportación; la ruta queda autorizada para `data:export`. */
   'data:pick-export-path': {
@@ -442,6 +449,7 @@ export const ipcEventContract = {
   'app:window-state': WindowStateSchema,
   /** La ventana se va a cerrar: el renderer guarda y responde con `app:close-ready`. */
   'app:before-close': Empty,
+  'updates:status': z.custom<UpdateStatus>(),
   'settings:changed': z.custom<Settings>(),
   /** `keybindings.json` cambió (al guardarlo o desde otro editor). */
   'settings:keybindings-changed': z.custom<UserKeybindings>(),

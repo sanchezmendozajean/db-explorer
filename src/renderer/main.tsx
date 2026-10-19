@@ -34,6 +34,7 @@ import {
 import { markError } from './features/execution/execute';
 import { markTransactionLost } from './features/execution/transactions';
 import { resolveEditable } from './features/results/editable';
+import { startUpdateStatus } from './features/updates/update-actions';
 
 async function bootstrap(): Promise<void> {
   // El estado de UI se carga antes del primer render para no parpadear tamaños ni tema.
@@ -50,6 +51,7 @@ async function bootstrap(): Promise<void> {
   if (settings.ok) useSettingsStore.getState().hydrate(settings.data);
   window.api.on('settings:changed', (next) => useSettingsStore.getState().hydrate(next));
 
+  void startUpdateStatus();
   registerAppCommands();
   installKeybindingHandler();
   // Atajos de keybindings.json: al iniciar y cada vez que se guarda (specs/05 §Personalización).

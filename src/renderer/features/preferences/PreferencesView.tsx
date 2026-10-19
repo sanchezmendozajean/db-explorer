@@ -26,6 +26,7 @@ const GROUP_ICONS: Record<GroupId, string> = {
   files: 'files',
   results: 'table',
   formats: 'symbol-unit',
+  updates: 'cloud-download',
   appearance: 'symbol-color',
 };
 
@@ -409,6 +410,24 @@ export function PreferencesView(): React.JSX.Element {
       ],
     },
     { id: 'formats', entries: formatEntries(settings, formatScope, setScope, connections) },
+    {
+      id: 'updates',
+      entries: [
+        keyed('updates.auto', {
+          id: 'updates-auto',
+          icon: 'cloud-download',
+          title: p.updates.auto,
+          description: p.updates.autoDescription,
+          render: () => (
+            <Checkbox
+              label={p.updates.autoLabel}
+              checked={settings['updates.auto']}
+              onChange={(e) => void update('updates.auto', e.target.checked)}
+            />
+          ),
+        }),
+      ],
+    },
     {
       id: 'appearance',
       entries: [

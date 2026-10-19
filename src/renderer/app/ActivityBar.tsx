@@ -6,6 +6,7 @@ import { SEPARATOR } from '../components/menu-types';
 import { es } from '../i18n/es';
 import { useUiStore } from '../stores/ui-store';
 import { commandEntry, themeEntries } from './menus';
+import { updateFound, useUpdateStore } from '../stores/update-store';
 
 const VIEWS: { view: SideBarView; icon: string; label: string }[] = [
   { view: 'connections', icon: 'database', label: es.activityBar.connections },
@@ -18,6 +19,8 @@ export function ActivityBar(): React.JSX.Element {
   const showView = useUiStore((s) => s.showView);
   const gearRef = useRef<HTMLButtonElement>(null);
   const [gearMenu, setGearMenu] = useState<DOMRect | null>(null);
+  const update = useUpdateStore((s) => s.status);
+  const pending = update.state === 'ready';
 
   return (
     <nav className="activitybar" aria-label={es.activityBar.manage}>
@@ -45,21 +48,26 @@ export function ActivityBar(): React.JSX.Element {
         ref={gearRef}
         type="button"
         className="activitybar-item"
-        title={es.activityBar.manage}
-        aria-label={es.activityBar.manage}
+        title={pending ? es.activityBar.manageUpdate : es.activityBar.manage}
+        aria-label={pending ? es.activityBar.manageUpdate : es.activityBar.manage}
         aria-haspopup="menu"
-        onClick={() => setGearMenu(gearRef.current?.getBoundingClientRect() ?? null)}
+        onClick={() =>
+          setGearMenu((open) => (open ? null : (gearRef.current?.getBoundingClientRect() ?? null)))
+        }
       >
         <Codicon name="settings-gear" size={24} />
+        {pending && <span className="activitybar-badge" data-testid="update-badge" />}
       </button>
       {gearMenu && (
         <Menu
           entries={[
+            ...(pending ? [commandEntry('db.update.install'), SEPARATOR] : []),
             commandEntry('db.preferences'),
             commandEntry('db.preferences.openJson'),
             commandEntry('db.help.keybindings'),
             commandEntry('db.keybindings.open'),
             commandEntry('db.tools.openFolder'),
+            ...(updateFound(update) ? [] : [commandEntry('db.update.check')]),
             SEPARATOR,
             { type: 'submenu', id: 'theme', label: es.menu.theme, entries: themeEntries() },
           ]}

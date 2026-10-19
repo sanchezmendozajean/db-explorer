@@ -104,7 +104,7 @@ test.describe('respaldo con herramientas auxiliares', () => {
     }, target);
     await node(/^dbx_e2e_admin2/).click({ button: 'right' });
     await menuItem('Restaurar base de datos…').click();
-    await expect(dialog()).toContainText('Restaurar "dbx_e2e_admin2"');
+    await expect(dialog()).toContainText('Restauración de base de datos');
     await expect(dialog()).toContainText('pg_restore.exe');
     await expect(dialog().getByTestId('backup-start')).toBeDisabled();
     // Opciones de pg_restore: la base destino parte de la elegida y las dos casillas, activas.

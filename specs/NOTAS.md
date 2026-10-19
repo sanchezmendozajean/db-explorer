@@ -562,3 +562,9 @@ Se atendieron los avisos que quedaban abiertos en M5–M8 y en la edición de ru
 - Portada estática en `site/` y documentación de usuario con VitePress en `site-docs/` (se genera en `site/docs`, que no se versiona). Mismo esquema que fast-client. Publica el flujo `.github/workflows/pages.yml` en cada push a `main` que toque esos directorios; requiere Settings → Pages → Source: "GitHub Actions".
 - Las capturas de `site/assets` se generaron con Playwright sobre el build, con una base SQLite de ejemplo; hay que regenerarlas si cambia la interfaz.
 - La portada consulta la API pública de GitHub solo para apuntar el botón de descarga al último instalador; si falla, enlaza a la página de releases.
+
+## Actualización automática (2026-10-19)
+- Pedida por el usuario; es la **única excepción** a "sin llamadas de red" fuera de las conexiones a bases de datos. Usa `electron-updater` contra GitHub Releases (`publish` de `electron-builder.yml`, archivo `latest.yml` que genera `npm run release`). No envía datos propios; solo consulta la versión publicada.
+- Preferencia `updates.auto` (Preferencias › Actualizaciones, **activada por defecto**): al abrir la app, a los 5 s busca y descarga. Al terminar la descarga el engranaje muestra un punto rojo y el menú agrega "Reiniciar para instalar nueva versión" (instala en silencio y reabre). "Buscar actualización" (siempre manual, aunque la preferencia esté desactivada) se oculta cuando ya se encontró una versión (descargando o lista).
+- No aplica a la versión **portable**, a desarrollo ni a las pruebas (perfil aislado): el estado es `unsupported` y la búsqueda manual avisa de ello. Si el usuario no reinicia, la versión se instala al cerrar la app (`autoInstallOnAppQuit`).
+- Límite: sin firma de código el instalador de Windows puede mostrar SmartScreen y electron-updater no verifica la firma del editor.

@@ -1961,3 +1961,15 @@ button.plan-warnings:hover {
   padding: 6px 8px;
   border-top: 1px solid var(--border);
 }
+
+.activitybar-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--error);
+  border: 1.5px solid var(--bg-activity-bar);
+  pointer-events: none;
+}

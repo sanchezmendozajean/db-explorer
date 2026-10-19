@@ -38,6 +38,7 @@
     "release": "npm run build && node scripts/electron-builder.mjs --win --publish always"
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "fast-xml-parser": "^5.11.2",
     "jsonc-parser": "^3.3.1",
     "mysql2": "^3.24.5",

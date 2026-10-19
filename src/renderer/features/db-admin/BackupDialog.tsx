@@ -5,6 +5,8 @@ import { Button } from '../../components/Button';
 import { Checkbox, TextInput } from '../../components/Inputs';
 import { Codicon } from '../../components/Codicon';
 import { Modal } from '../../components/Modal';
+import { dotStyle } from '../../components/env-dot';
+import { connectionAddress } from '@shared/connection';
 import { es } from '../../i18n/es';
 import { connectionById, useConnectionsStore } from '../../stores/connections-store';
 import { showToast } from '../../stores/toast-store';
@@ -137,11 +139,17 @@ export function BackupDialog({
   const canStart =
     !running && (isBackup || confirmed) && (mode === 'server' || path.trim() !== '') && restoreTarget !== '';
 
+  const warning = !isBackup && (
+    <p className="form-hint is-warning">
+      {t.restoreWarning(restoreTarget || database)} {production && es.dbAdmin.drop.production}
+    </p>
+  );
+
   return (
     <Modal
-      title={isBackup ? t.title(database) : t.restoreTitle(database)}
+      title={isBackup ? t.title(database) : t.restoreTitle}
       onClose={() => !running && onClose()}
-      width={540}
+      width={590}
       accentColor={!isBackup && production ? 'var(--error)' : undefined}
       footer={
         running ? (
@@ -157,6 +165,14 @@ export function BackupDialog({
           </>
         ) : (
           <>
+            {!isBackup && (
+              <Checkbox
+                className="form-checkbox footer-left"
+                label={t.restoreConfirm}
+                checked={confirmed}
+                onChange={(e) => setConfirmed(e.target.checked)}
+              />
+            )}
             <Button variant="secondary" onClick={onClose}>
               {es.dialogs.cancel}
             </Button>
@@ -173,9 +189,14 @@ export function BackupDialog({
       }
     >
       {!isBackup && (
-        <p className="form-hint is-warning">
-          {t.restoreWarning(restoreTarget || database)} {production && es.dbAdmin.drop.production}
-        </p>
+        <div className="form-field">
+          <span className="form-label">{t.targetHost}</span>
+          <div className="restore-host" data-testid="restore-host">
+            <span className="env-dot" style={dotStyle(conn.color ?? `var(--env-${conn.environment})`)} />
+            <strong>{conn.name}</strong>
+            <span className="restore-host-address">{connectionAddress(conn)}</span>
+          </div>
+        </div>
       )}
 
       <label className="form-field">
@@ -203,6 +224,7 @@ export function BackupDialog({
         </div>
       </label>
       {mode === 'server' && <p className="form-hint">{t.serverHint}</p>}
+      {engine === 'sqlserver' && warning}
 
       {toolFile?.installed && (
         <p className="form-hint">{t.toolVersion(toolFile.name, toolFile.version ?? '')}</p>
@@ -225,6 +247,8 @@ export function BackupDialog({
             />
             <span className="form-hint">{t.database.hint}</span>
           </label>
+          {warning}
+          <hr className="form-divider" />
           <div className="restore-option">
             <Checkbox
               className="form-checkbox"
@@ -278,27 +302,31 @@ export function BackupDialog({
             />
             <span className="form-hint">{t.dbname.hint}</span>
           </label>
-          <div className="restore-option">
-            <Checkbox
-              className="form-checkbox"
-              label={t.noOwner.label}
-              checked={noOwner}
-              disabled={running}
-              data-testid="restore-no-owner"
-              onChange={(e) => setNoOwner(e.target.checked)}
-            />
-            <span className="form-hint">{t.noOwner.hint}</span>
-          </div>
-          <div className="restore-option">
-            <Checkbox
-              className="form-checkbox"
-              label={t.noPrivileges.label}
-              checked={noPrivileges}
-              disabled={running}
-              data-testid="restore-no-privileges"
-              onChange={(e) => setNoPrivileges(e.target.checked)}
-            />
-            <span className="form-hint">{t.noPrivileges.hint}</span>
+          {warning}
+          <hr className="form-divider" />
+          <div className="restore-columns">
+            <div className="restore-option">
+              <Checkbox
+                className="form-checkbox"
+                label={t.noOwner.label}
+                checked={noOwner}
+                disabled={running}
+                data-testid="restore-no-owner"
+                onChange={(e) => setNoOwner(e.target.checked)}
+              />
+              <span className="form-hint">{t.noOwner.hint}</span>
+            </div>
+            <div className="restore-option">
+              <Checkbox
+                className="form-checkbox"
+                label={t.noPrivileges.label}
+                checked={noPrivileges}
+                disabled={running}
+                data-testid="restore-no-privileges"
+                onChange={(e) => setNoPrivileges(e.target.checked)}
+              />
+              <span className="form-hint">{t.noPrivileges.hint}</span>
+            </div>
           </div>
           {(!noOwner || !noPrivileges) && <p className="form-hint is-warning">{t.optionsHint}</p>}
         </>
@@ -320,26 +348,13 @@ export function BackupDialog({
       )}
 
       {!isBackup && (
-        <>
-          <p className="form-hint">
-            {
-              t.restoreNotes[
-                conn.engine === 'sqlserver'
-                  ? 'sqlserver'
-                  : conn.engine === 'postgres'
-                    ? 'postgres'
-                    : 'mariadb'
-              ]
-            }
-          </p>
-          <Checkbox
-            className="form-checkbox"
-            label={t.restoreConfirm}
-            checked={confirmed}
-            disabled={running}
-            onChange={(e) => setConfirmed(e.target.checked)}
-          />
-        </>
+        <p className="form-hint">
+          {
+            t.restoreNotes[
+              conn.engine === 'sqlserver' ? 'sqlserver' : conn.engine === 'postgres' ? 'postgres' : 'mariadb'
+            ]
+          }
+        </p>
       )}
 
       {running && (

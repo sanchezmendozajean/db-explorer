@@ -97,6 +97,11 @@ export interface DbExplorerApi {
     pickExportPath: Invoke<'data:pick-export-path'>;
     export: Invoke<'data:export'>;
   };
+  updates: {
+    getStatus: Invoke<'updates:get-status'>;
+    check: Invoke<'updates:check'>;
+    install: Invoke<'updates:install'>;
+  };
   /** Suscribe a un evento de main. Devuelve la función para desuscribirse. */
   on<C extends IpcEventChannel>(channel: C, listener: (payload: IpcEventPayload<C>) => void): () => void;
 }

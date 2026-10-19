@@ -77,6 +77,8 @@ export const es = {
     'db.newConnection': 'Nueva conexión…',
     'db.preferences': 'Preferencias',
     'db.keybindings.open': 'Abrir keybindings.json (atajos de teclado)',
+    'db.update.check': 'Buscar actualización',
+    'db.update.install': 'Reiniciar para instalar nueva versión',
     'db.tools.openFolder': 'Abrir carpeta de herramientas de respaldo',
     'db.preferences.openJson': 'Abrir settings.json',
     'db.window.quit': 'Salir',
@@ -151,6 +153,16 @@ export const es = {
     files: 'Archivos (Ctrl+Shift+E)',
     history: 'Historial',
     manage: 'Administrar',
+    manageUpdate: 'Administrar (hay una actualización pendiente)',
+  },
+
+  updates: {
+    checking: 'Buscando actualizaciones…',
+    upToDate: 'Ya tienes la última versión.',
+    downloading: (version: string) => `Se encontró la versión ${version}; descargándola…`,
+    ready: (version: string) => `La versión ${version} está lista: reinicia para instalarla.`,
+    failed: (message: string) => `No se pudo buscar la actualización: ${message}`,
+    unsupported: 'La actualización automática no está disponible en la versión portable ni en desarrollo.',
   },
 
   sideBar: {
@@ -598,7 +610,8 @@ export const es = {
     },
     backup: {
       title: (name: string) => `Respaldar "${name}"`,
-      restoreTitle: (name: string) => `Restaurar "${name}"`,
+      restoreTitle: 'Restauración de base de datos',
+      targetHost: 'Host de destino',
       file: 'Archivo de respaldo',
       serverFile: 'Ruta del archivo en el servidor',
       serverHint:
@@ -916,6 +929,13 @@ export const es = {
       results: 'Resultados',
       formats: 'Formatos de datos',
       appearance: 'Apariencia',
+      updates: 'Actualizaciones',
+    },
+    updates: {
+      auto: 'Actualización automática',
+      autoDescription:
+        'Al abrir el programa busca una versión nueva y la descarga; el engranaje avisa cuando está lista para instalar.',
+      autoLabel: 'Buscar y descargar actualizaciones al iniciar',
     },
     resetSetting: 'Restablecer',
     resetTo: (value: string) => `Restablecer a ${value}`,

@@ -20,6 +20,8 @@ import { SettingsStore } from './services/settings-store';
 import { WorkspaceService } from './services/workspace-service';
 import { HistoryService } from './services/history-service';
 import { KeybindingsStore } from './services/keybindings-store';
+import { UpdateService } from './services/update-service';
+import { registerUpdateHandlers } from './ipc/updates';
 
 function broadcast<C extends IpcEventChannel>(channel: C, payload: IpcEventPayload<C>): void {
   for (const win of BrowserWindow.getAllWindows()) win.webContents.send(channel, payload);
@@ -126,6 +128,21 @@ if (!app.requestSingleInstanceLock()) {
     const keybindings = new KeybindingsStore(join(userData, 'keybindings.json'));
     await keybindings.load();
     registerWorkspaceHandlers({ settings, workspace, keybindings, userData });
+
+    // Sin instalador (desarrollo, pruebas con perfil aislado, versión portable) no hay nada que actualizar.
+    // DBX_UPDATE_FAKE (solo sin empaquetar): ready | none | error, para probar la interfaz sin red.
+    const fakeEnv = app.isPackaged ? undefined : process.env['DBX_UPDATE_FAKE'];
+    const fake = fakeEnv === 'ready' || fakeEnv === 'none' || fakeEnv === 'error' ? fakeEnv : undefined;
+    const updates = new UpdateService({
+      fake,
+      supported: app.isPackaged && !userDataOverride && !process.env['PORTABLE_EXECUTABLE_DIR'],
+      onStatus: (status) => broadcast('updates:status', status),
+    });
+    registerUpdateHandlers(updates);
+    if (settings.settings['updates.auto']) {
+      // Con un respiro para no competir con el arranque; los errores de red quedan en el estado.
+      setTimeout(() => void updates.check(), 5000);
+    }
 
     const open = (): BrowserWindow => createMainWindow({ dark: nativeTheme.shouldUseDarkColors });
     open();

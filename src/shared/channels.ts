@@ -73,6 +73,9 @@ export const IPC_INVOKE_CHANNELS = [
   'query:history-list',
   'query:history-delete',
   'query:history-clear',
+  'updates:get-status',
+  'updates:check',
+  'updates:install',
 ] as const;
 
 export const IPC_EVENT_CHANNELS = [
@@ -83,6 +86,7 @@ export const IPC_EVENT_CHANNELS = [
   'settings:keybindings-changed',
   'fs:changed',
   'query:event',
+  'updates:status',
 ] as const;
 
 export type IpcInvokeChannel = (typeof IPC_INVOKE_CHANNELS)[number];
