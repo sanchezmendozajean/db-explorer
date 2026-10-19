@@ -8,3 +8,6 @@ CLAUDE.md
 # Planes reales capturados de los motores: se guardan tal cual.
 test/unit/fixtures/
 .claude
+site
+site-docs
+.github

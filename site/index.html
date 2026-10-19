@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DB Explorer · Cliente de bases de datos para escritorio</title>
+  <meta name="description" content="Explora y consulta PostgreSQL, MariaDB/MySQL, SQLite y SQL Server con el editor de VS Code, una grilla rápida y tus scripts como archivos. Gratis y de código abierto.">
+  <meta name="theme-color" content="#14161b">
+  <meta property="og:title" content="DB Explorer">
+  <meta property="og:description" content="Cliente de bases de datos para escritorio: cuatro motores, editor Monaco y todo en tu equipo.">
+  <meta property="og:image" content="https://sanchezmendozajean.github.io/db-explorer/assets/screenshot-dark.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="assets/icon.png">
+  <link rel="preload" href="assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></symbol>
+    <symbol id="i-github" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.58 9.58 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85V21c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></symbol>
+    <symbol id="i-db" viewBox="0 0 16 16"><path fill="currentColor" d="M8 1C5.149 1 3 2.075 3 3.5V12.5C3 13.925 5.149 15 8 15C10.851 15 13 13.925 13 12.5V3.5C13 2.075 10.851 1 8 1ZM8 2C10.441 2 12 2.888 12 3.5C12 4.112 10.441 5 8 5C5.559 5 4 4.112 4 3.5C4 2.888 5.558 2 8 2ZM8 14C5.558 14 4 13.111 4 12.5V5.021C5.21405 5.71872 6.60095 6.05816 8 6C9.39905 6.05816 10.7859 5.71872 12 5.021V12.5C12 13.111 10.441 14 8 14Z"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="m8 8-4 4 4 4m8-8 4 4-4 4m-2.5-11-3 14"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M3.5 9.5h17M3.5 14.5h17M9.5 4.5v15"/></symbol>
+    <symbol id="i-plan" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 4v5m0 0H6v4m6-4h6v4M6 13v0m0 0a2 2 0 1 0 0 .01M18 13a2 2 0 1 0 0 .01M12 4a1.5 1.5 0 1 0 0 .01"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3zM14 7l3 3"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M14 3v5h5M9 13h6M9 17h4"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-keys" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/></symbol>
+    <symbol id="i-export" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 15V4m0 0L8 8m4-4 4 4M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 11v5M12 8h.01"/></symbol>
+  </svg>
+
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="#top" aria-label="DB Explorer, inicio">
+        <img src="assets/icon.png" width="26" height="26" alt="">
+        <span>DB Explorer</span>
+      </a>
+      <nav class="nav-links" aria-label="Secciones">
+        <a href="#caracteristicas">Características</a>
+        <a href="docs/">Documentación</a>
+        <a href="#descargar">Descargar</a>
+        <a class="nav-gh" href="https://github.com/sanchezmendozajean/db-explorer" aria-label="Código en GitHub">
+          <svg><use href="#i-github"/></svg><span>GitHub</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="wrap hero-copy">
+        <p class="eyebrow"><span class="dot"></span> Gratis y de código abierto · Windows 10 / 11</p>
+        <h1>Tus bases de datos,<br><span class="accent">con el editor de VS Code.</span></h1>
+        <p class="lede">Explora y consulta PostgreSQL, MariaDB/MySQL, SQLite y SQL Server desde una sola aplicación ligera. Sin cuentas, sin nube y con tus scripts como archivos.</p>
+        <div class="cta">
+          <a class="btn btn-primary js-download" href="https://github.com/sanchezmendozajean/db-explorer/releases/latest">
+            <svg><use href="#i-download"/></svg>
+            <span class="js-download-label">Descargar para Windows</span>
+          </a>
+          <a class="btn btn-ghost" href="docs/">
+            <svg><use href="#i-file"/></svg><span>Leer la documentación</span>
+          </a>
+        </div>
+        <p class="meta js-release-meta">Instalador para Windows de 64 bits</p>
+      </div>
+
+      <div class="wrap shot-wrap">
+        <figure class="window">
+          <picture>
+            <source srcset="assets/screenshot-light.png" media="(prefers-color-scheme: light)">
+            <img src="assets/screenshot-dark.png" width="1440" height="900"
+                 alt="DB Explorer con un script SQL abierto, el árbol de conexiones a la izquierda y la grilla con los resultados debajo">
+          </picture>
+        </figure>
+      </div>
+    </section>
+
+    <section class="engines" aria-label="Motores compatibles">
+      <div class="wrap engines-inner">
+        <span class="engines-label">Compatible con</span>
+        <ul>
+          <li>PostgreSQL</li>
+          <li>MariaDB / MySQL</li>
+          <li>SQLite</li>
+          <li>SQL Server</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="caracteristicas" class="section">
+      <div class="wrap">
+        <h2>Lo que haces todos los días.<br><span class="muted">Hecho con cuidado.</span></h2>
+        <div class="grid">
+          <article class="card">
+            <svg class="card-icon"><use href="#i-db"/></svg>
+            <h3>Cuatro motores, una sola interfaz</h3>
+            <p>PostgreSQL, MariaDB/MySQL, SQLite y SQL Server (incluidos RDS, Aurora y Azure SQL) con el mismo árbol, editor y grilla.</p>
+          </article>
+          <article class="card">
+            <svg class="card-icon"><use href="#i-code"/></svg>
+            <h3>El editor de VS Code</h3>
+            <p>Monaco con autocompletado según tu catálogo (CTE y subconsultas incluidos), formateo, multicursor y atajos que ya conoces.</p>
+          </article>
+          <article class="card">
+            <svg class="card-icon"><use href="#i-grid"/></svg>
+            <h3>Una grilla veloz</h3>
+            <p>Miles de filas sin trabarse, con orden, filtro rápido, visor de valores y formatos de datos que se cambian en un solo lugar.</p>
+          </article>
+          <article class="card">
+            <svg class="card-icon"><use href="#i-plan"/></svg>
+            <h3>Plan de ejecución</h3>
+            <p>Ve cómo el motor ejecutará tu consulta, estimado o real, con avisos de recorridos completos y estimaciones erradas.</p>
+          </article>
+          <article class="card">
+            <svg class="card-icon"><use href="#i-edit"/></svg>
+            <h3>Edita datos y rutinas</h3>
+            <p>Cambia celdas en la grilla y guarda en una transacción. Abre procedimientos y funciones, edítalos y aplícalos con Ctrl+S.</p>
+          </article>
+          <article class="card">
+            <svg class="card-icon"><use href="#i-file"/></svg>
+            <h3>Scripts como archivos</h3>
+            <p>Cada script es un <code>.sql</code> en tu espacio de trabajo, con guardado automático y pestañas que se restauran al volver.</p>
+          </article>
+          <article class="card">
+            <svg class="card-icon"><use href="#i-export"/></svg>
+            <h3>Copiar y exportar</h3>
+            <p>Copia a Excel, CSV, JSON, Markdown o <code>INSERT</code>. Exporta a CSV, JSON, XLSX o SQL sin cargar todo en memoria.</p>
+          </article>
+          <article class="card">
+            <svg class="card-icon"><use href="#i-keys"/></svg>
+            <h3>Teclado primero</h3>
+            <p>Paleta de comandos, abrir objetos con <kbd>Ctrl</kbd>+<kbd>P</kbd> y atajos personalizables con el formato de VS Code.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section split">
+      <div class="wrap split-inner">
+        <div class="split-copy">
+          <h2>Seguro por defecto.</h2>
+          <p>Trabajas con datos sensibles, así que la protección no es un extra. Nada sale de tu equipo salvo las conexiones a tus bases.</p>
+          <ul class="checks">
+            <li>Contraseñas cifradas con el sistema (DPAPI de Windows); la interfaz nunca las recibe</li>
+            <li>Colores por entorno y confirmación antes de escribir en Producción</li>
+            <li>Modo de solo lectura, aplicado también en el servidor cuando es posible</li>
+            <li>Aviso ante <code>UPDATE</code> o <code>DELETE</code> sin <code>WHERE</code></li>
+            <li>Sin telemetría ni llamadas de red de la aplicación</li>
+          </ul>
+        </div>
+        <figure class="window">
+          <img src="assets/plan-dark.png" width="1440" height="900" loading="lazy"
+               alt="Pestaña Plan con el plan de ejecución estimado de una consulta en SQLite">
+        </figure>
+      </div>
+    </section>
+
+    <section id="descargar" class="section download">
+      <div class="wrap download-inner">
+        <img class="download-icon" src="assets/icon.png" width="72" height="72" alt="">
+        <h2>Descarga DB Explorer</h2>
+        <p class="muted">Gratis, sin cuenta y con el código abierto bajo licencia MIT.</p>
+        <a class="btn btn-primary btn-lg js-download" href="https://github.com/sanchezmendozajean/db-explorer/releases/latest">
+          <svg><use href="#i-download"/></svg>
+          <span class="js-download-label">Descargar para Windows</span>
+        </a>
+        <p class="meta js-release-meta">Instalador para Windows de 64 bits</p>
+        <p class="small">¿Prefieres no instalar? También hay una <a class="js-portable" href="https://github.com/sanchezmendozajean/db-explorer/releases/latest">versión portable</a>.</p>
+        <div class="note" role="note">
+          <svg><use href="#i-info"/></svg>
+          <p>El instalador aún no está firmado, así que Windows puede mostrar <strong>«Windows protegió su PC»</strong>. Pulsa <strong>Más información</strong> y luego <strong>Ejecutar de todos modos</strong>.</p>
+        </div>
+        <p class="small"><a href="https://github.com/sanchezmendozajean/db-explorer/releases">Todas las versiones y notas de cambios</a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <span class="brand brand-sm"><img src="assets/icon.png" width="20" height="20" alt=""> DB Explorer</span>
+      <span class="muted">Hecho por <a href="https://github.com/sanchezmendozajean">Jean Sánchez Mendoza</a> · Licencia MIT</span>
+      <span class="footer-links">
+        <a href="docs/">Documentación</a>
+        <a href="https://github.com/sanchezmendozajean/db-explorer/issues">Reportar un problema</a>
+      </span>
+    </div>
+  </footer>
+
+  <script src="script.js" defer></script>
+</body>
+</html>

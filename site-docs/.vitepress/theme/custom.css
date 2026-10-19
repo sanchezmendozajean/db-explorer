@@ -1,0 +1,84 @@
+/* Documentación de DB Explorer. La paleta y la tipografía reflejan site/styles.css. */
+
+@font-face { font-family: 'JetBrains Mono'; font-weight: 400; font-display: swap; src: url('/fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 500; font-display: swap; src: url('/fonts/jetbrains-mono-latin-500-normal.woff2') format('woff2'); }
+
+:root {
+  --vp-font-family-base: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --vp-font-family-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-alt: #f5f6f8;
+  --vp-c-bg-soft: #eef0f4;
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-divider: #e3e6ec;
+  --vp-c-gutter: #e3e6ec;
+  --vp-c-border: #d6dae2;
+  --vp-c-text-1: #1a1d24;
+  --vp-c-text-2: #586170;
+  --vp-c-text-3: #8a93a3;
+
+  --vp-c-brand-1: #005fb8;
+  --vp-c-brand-2: #0078d4;
+  --vp-c-brand-3: #0078d4;
+  --vp-c-brand-soft: rgb(0 120 212 / 0.1);
+  --vp-button-brand-text: #ffffff;
+
+  --vp-code-block-bg: #f5f6f8;
+  --vp-code-color: #005fb8;
+}
+
+.dark {
+  --vp-c-bg: #14161b;
+  --vp-c-bg-alt: #1a1d23;
+  --vp-c-bg-soft: #20242b;
+  --vp-c-bg-elv: #20242b;
+  --vp-c-divider: #2a2e37;
+  --vp-c-gutter: #0e1014;
+  --vp-c-border: #333844;
+  --vp-c-text-1: #e6e8ee;
+  --vp-c-text-2: #9aa3b2;
+  --vp-c-text-3: #6b7383;
+
+  --vp-c-brand-1: #3794ff;
+  --vp-c-brand-2: #5aa9ff;
+  --vp-c-brand-3: #3794ff;
+  --vp-c-brand-soft: rgb(55 148 255 / 0.14);
+  --vp-button-brand-text: #06182e;
+  --vp-button-brand-hover-text: #06182e;
+  --vp-button-brand-active-text: #06182e;
+
+  --vp-code-block-bg: #1a1d23;
+  --vp-code-color: #8ec5ff;
+}
+
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3 {
+  letter-spacing: -0.02em;
+}
+
+/* Atajos de teclado, con el aspecto de las pistas de la aplicación. */
+.vp-doc kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--vp-c-bg-soft);
+  box-shadow: inset 0 0 0 1px var(--vp-c-divider), inset 0 -1px 0 var(--vp-c-divider);
+  color: var(--vp-c-text-1);
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.8em;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+/* Textos de la interfaz que el lector debe encontrar en pantalla. */
+.vp-doc .ui {
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+
+.vp-doc img.shot {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+}

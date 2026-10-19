@@ -557,3 +557,8 @@ Se atendieron los avisos que quedaban abiertos en M5–M8 y en la edición de ru
 - **Editor de rutinas**: tiene autocompletado, hover y formateo con el catálogo de su conexión; en PostgreSQL también dentro del cuerpo `$$ … $$` (se completa con la sentencia interna). La marca del error en el texto ya existía; en SQL Server la posición ahora se traslada del texto con `ALTER` al original (`toAlterWithMap`) y estaba corrida una letra.
 
 - **Ícono de la aplicación**: fondo negro redondeado (misma familia que FastClient) con el glifo `database` de Codicons en azul. Fuente en `resources/icon.svg`; `npm run icon` regenera `icon.ico` e `icon.png`. Se usa en la ventana (taskbar), la barra de título y el instalador.
+
+## Sitio web (2026-10-19)
+- Portada estática en `site/` y documentación de usuario con VitePress en `site-docs/` (se genera en `site/docs`, que no se versiona). Mismo esquema que fast-client. Publica el flujo `.github/workflows/pages.yml` en cada push a `main` que toque esos directorios; requiere Settings → Pages → Source: "GitHub Actions".
+- Las capturas de `site/assets` se generaron con Playwright sobre el build, con una base SQLite de ejemplo; hay que regenerarlas si cambia la interfaz.
+- La portada consulta la API pública de GitHub solo para apuntar el botón de descarga al último instalador; si falla, enlaza a la página de releases.
