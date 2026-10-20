@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.2
+
+### Novedades
+- **Formatear sentencia** (Ctrl+Alt+F): formatea solo la sentencia bajo el cursor.
+- El formateo deja la primera tabla junto al `FROM` y los `JOIN` sin sangría.
+- Las opciones de formateo (sentencia y documento) están en el menú contextual del editor y en el botón Formatear de la barra.
+- Doble clic en la zona vacía de la barra de pestañas abre un script nuevo, como en VS Code; el menú "Mostrar pestañas abiertas" también ofrece "Nuevo script".
+- El buscador de Preferencias ocupa todo el ancho.
+
 ## v0.1.1
 
 ### Novedades
