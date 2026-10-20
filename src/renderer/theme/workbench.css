@@ -1235,7 +1235,6 @@ button.statusbar-item:hover {
 }
 
 .pref-search {
-  max-width: 760px;
   margin-bottom: 12px;
 }
 
@@ -1406,7 +1405,6 @@ button.statusbar-item:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: 760px;
 }
 
 /* ---------- M7: pestaña de objeto, edición, formato y exportación ---------- */

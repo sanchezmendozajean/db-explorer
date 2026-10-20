@@ -38,9 +38,9 @@ test.afterAll(async () => {
   await app?.close();
 });
 
-test('muestra los cinco grupos y el buscador filtra sin tildes', async () => {
+test('muestra los seis grupos y el buscador filtra sin tildes', async () => {
   await page.keyboard.press('Control+,');
-  for (const group of ['Editor', 'Archivos', 'Resultados', 'Formatos de datos', 'Apariencia']) {
+  for (const group of ['Editor', 'Archivos', 'Resultados', 'Formatos de datos', 'Actualizaciones', 'Apariencia']) {
     await expect(prefs().getByRole('heading', { name: group, exact: true })).toBeVisible();
   }
   await prefs().getByRole('textbox', { name: 'Buscar preferencias' }).fill('separador decimal');
@@ -49,7 +49,7 @@ test('muestra los cinco grupos y el buscador filtra sin tildes', async () => {
   await prefs().getByRole('textbox', { name: 'Buscar preferencias' }).fill('tabulacion');
   await expect(setting('editor-tab-size')).toBeVisible();
   await prefs().getByRole('textbox', { name: 'Buscar preferencias' }).press('Escape');
-  await expect(prefs().getByRole('heading', { level: 2 })).toHaveCount(5);
+  await expect(prefs().getByRole('heading', { level: 2 })).toHaveCount(6);
 });
 
 test('Formatos de datos: la vista previa cambia al momento y Restablecer vuelve al valor por defecto', async () => {
