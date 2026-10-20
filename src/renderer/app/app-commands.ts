@@ -21,6 +21,7 @@ import {
 import { registerConfigSchema } from '../features/editor/json-schemas';
 import * as fileActions from '../features/files/file-actions';
 import { symbolAt } from '../features/editor/sql-intellisense';
+import { formatStatementAt } from '../features/editor/monaco/providers';
 import {
   changeWorkspace,
   openRecentWorkspace,
@@ -351,6 +352,15 @@ export function registerAppCommands(): () => void {
         if (!editor) return;
         const action = hasSelection() ? 'editor.action.formatSelection' : 'editor.action.formatDocument';
         await editor.getAction(action)?.run();
+      },
+    },
+    {
+      id: 'db.formatStatement',
+      category: cat.query,
+      enabled: hasScript,
+      run: () => {
+        const editor = activeEditor();
+        if (editor) formatStatementAt(editor);
       },
     },
 

@@ -93,7 +93,7 @@ Usar exactamente estos valores (tomados de VS Code *Dark Modern* / *Light Modern
 
 ### Contenido de menús
 - **Archivo**: Nuevo script SQL (Ctrl+N), Abrir archivo… (Ctrl+O), Cambiar espacio de trabajo…, Abrir espacio reciente ▸, —, Guardar (Ctrl+S), Guardar como… (Ctrl+Shift+S), Guardar todo (Ctrl+K S), Guardado automático ✓, — , Nueva conexión…, — , Preferencias (Ctrl+,), Atajos de teclado (Ctrl+K Ctrl+S), — , Salir.
-- **Editar**: Deshacer, Rehacer, —, Cortar, Copiar, Pegar, —, Buscar (Ctrl+F), Reemplazar (Ctrl+H), —, Formatear SQL (Shift+Alt+F), Alternar comentario (Ctrl+/).
+- **Editar**: Deshacer, Rehacer, —, Cortar, Copiar, Pegar, —, Buscar (Ctrl+F), Reemplazar (Ctrl+H), —, Formatear SQL (Shift+Alt+F), Formatear sentencia actual (Ctrl+Alt+F), Alternar comentario (Ctrl+/).
 - **Ver**: Paleta de comandos (Ctrl+Shift+P), —, Conexiones (Ctrl+Shift+D), Archivos (Ctrl+Shift+E), Historial, —, Mostrar/ocultar barra lateral (Ctrl+B), Mostrar/ocultar resultados (Ctrl+J), Maximizar resultados, —, Tema ▸ (Oscuro / Claro / Sistema), Zoom +/−/restablecer.
 - **Consulta**: Ejecutar sentencia (Ctrl+Enter), Ejecutar script (Alt+X / F5), Ejecutar selección, Cancelar (Alt+Pausa / Ctrl+Shift+Q), Separador de sentencias ▸ (Línea en blanco / Punto y coma ✓), —, Commit (Ctrl+Alt+C), Rollback (Ctrl+Alt+R), Modo auto-commit ✓, —, Explicar plan (Ctrl+Alt+E), Explicar y ejecutar (Ctrl+Alt+Shift+E), Cambiar conexión activa… (Ctrl+9), Cambiar base/esquema… (Ctrl+0).
 - **Ayuda**: Atajos de teclado, Acerca de.

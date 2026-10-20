@@ -68,7 +68,8 @@ Todas las opciones de `IEditorOptions` de Monaco se aceptan tal cual (se pasan d
 | Cancelar ejecución | **Ctrl+Shift+Q** y Alt+Pausa | |
 | Explicar plan | **Ctrl+Alt+E** | Ctrl+Shift+L se deja a Monaco ("seleccionar coincidencias"). Ver `12`. |
 | Explicar y ejecutar (plan real) | **Ctrl+Alt+Shift+E** | Ejecuta la sentencia; las escrituras se revierten (`12` §4). |
-| Formatear SQL | **Shift+Alt+F** | `sql-formatter` con el dialecto de la conexión. Formatea selección si la hay. |
+| Formatear SQL | **Shift+Alt+F** | `sql-formatter` con el dialecto de la conexión. Formatea selección si la hay. La primera tabla queda junto al `FROM` y los `JOIN` sin sangría. |
+| Formatear sentencia actual | **Ctrl+Alt+F** | Solo la sentencia bajo el cursor (la misma que ejecuta Ctrl+Enter). |
 | Commit / Rollback | Ctrl+Alt+C / Ctrl+Alt+R | Solo en modo manual. |
 | Grilla: guardar cambios | Ctrl+S | Con foco en la grilla de resultados (`gridFocus`); fuera de ella, Guardar el script. |
 | Grilla: vaciar celdas / establecer NULL | Supr / Shift+Supr | Celdas seleccionadas editables (`06` §Edición de datos). |

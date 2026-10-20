@@ -141,9 +141,17 @@ test('F12 abre la pestaña de objeto de la tabla bajo el cursor', async () => {
 test('Shift+Alt+F formatea el script con el dialecto de la conexión', async () => {
   await typeInEditor('select a,b from t;');
   await page.keyboard.press('Shift+Alt+F');
-  await expect(editor().locator('.view-line')).toHaveCount(5);
+  await expect(editor().locator('.view-line')).toHaveCount(4);
   await expect(editor().locator('.view-lines')).toContainText('select');
-  await expect(editor().locator('.view-lines')).toContainText('from');
+  await expect(editor().locator('.view-lines')).toContainText('from t');
+});
+
+test('Ctrl+Alt+F formatea solo la sentencia bajo el cursor', async () => {
+  await typeInEditor('select a,b from t; select c,d from u;');
+  await page.keyboard.press('Control+End');
+  await page.keyboard.press('Control+Alt+F');
+  await expect(editor().locator('.view-line')).toHaveCount(4);
+  await expect(editor().locator('.view-line').first()).toContainText('select a,b from t;');
 });
 
 test('el historial lista lo ejecutado y doble clic lo abre en un script nuevo', async () => {

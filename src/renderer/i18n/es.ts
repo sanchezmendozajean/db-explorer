@@ -90,6 +90,7 @@ export const es = {
     'editor.action.find': 'Buscar',
     'editor.action.replace': 'Reemplazar',
     'db.formatSql': 'Formatear SQL',
+    'db.formatStatement': 'Formatear sentencia actual',
     'editor.action.commentLine': 'Alternar comentario',
     'db.view.connections': 'Conexiones',
     'db.view.files': 'Archivos',
@@ -354,6 +355,7 @@ export const es = {
     formatPartial: (n: number) =>
       `${n === 1 ? 'Una sentencia no se pudo' : `${n} sentencias no se pudieron`} formatear (revisa la sintaxis); quedaron como estaban.`,
     formatFailed: (message: string) => `No se pudo formatear la selección: ${message}`,
+    formatStatementFailed: (message: string) => `No se pudo formatear la sentencia: ${message}`,
     watermark: {
       newScript: 'Nuevo script',
       findObject: 'Buscar objeto o archivo',

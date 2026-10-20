@@ -7,7 +7,7 @@ import { showToast } from '../../../stores/toast-store';
 import { useWorkbenchStore } from '../../../stores/workbench-store';
 import { allDocuments } from '../documents';
 import { modelOwner } from '../model-owners';
-import { formatFragment, formatScript } from '../sql-format';
+import { formatFragment, formatScript, statementRangeAt } from '../sql-format';
 import { completionItems, hoverMarkdown, resolveItem } from '../sql-intellisense';
 import type { DbCompletionItem } from '../sql-intellisense';
 import type { Monaco } from './loader';
@@ -39,6 +39,39 @@ export function modelContext(model: MonacoApi.editor.ITextModel): {
 function tabWidth(): number {
   const size = useSettingsStore.getState().settings.editor['tabSize'];
   return typeof size === 'number' && size > 0 ? size : 4;
+}
+
+/**
+ * Formatea solo la sentencia bajo el cursor (la misma que ejecutaría
+ * Ctrl+Enter). Queda en la pila de deshacer como una sola edición.
+ */
+export function formatStatementAt(editor: MonacoApi.editor.ICodeEditor): void {
+  const model = editor.getModel();
+  const position = editor.getPosition();
+  if (!model || !position) return;
+  const { engine } = modelContext(model);
+  const range = statementRangeAt(model.getValue(), model.getOffsetAt(position), engine, {
+    blankLineSeparator: setting('sql.statementSeparator') === 'blankLine',
+  });
+  if (!range) return;
+  const start = model.getPositionAt(range.start);
+  const end = model.getPositionAt(range.end);
+  const target = {
+    startLineNumber: start.lineNumber,
+    startColumn: start.column,
+    endLineNumber: end.lineNumber,
+    endColumn: end.column,
+  };
+  let text: string;
+  try {
+    text = formatFragment(model.getValueInRange(target), engine, tabWidth());
+  } catch (err) {
+    showToast('error', es.editor.formatStatementFailed(err instanceof Error ? err.message : String(err)));
+    return;
+  }
+  editor.pushUndoStop();
+  editor.executeEdits('sql-formatter', [{ range: target, text }]);
+  editor.pushUndoStop();
 }
 
 let registered = false;

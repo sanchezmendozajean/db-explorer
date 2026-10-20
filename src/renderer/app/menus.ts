@@ -80,6 +80,7 @@ export const TITLE_BAR_MENUS: TopMenu[] = [
       commandEntry('editor.action.replace'),
       SEPARATOR,
       commandEntry('db.formatSql'),
+      commandEntry('db.formatStatement'),
       commandEntry('editor.action.commentLine'),
     ],
   },
