@@ -9,6 +9,7 @@ import { SEPARATOR } from '../../components/menu-types';
 import { keybindingLabel } from '../../commands/service';
 import { es } from '../../i18n/es';
 import { notAvailable } from '../../app/app-commands';
+import { commandEntry } from '../../app/menus';
 import { commands } from '../../commands/service';
 import { isInside } from '../../stores/files-store';
 import { useWorkspaceStore } from '../../stores/workspace-store';
@@ -117,6 +118,9 @@ export function EditorTabs(): React.JSX.Element {
         onWheel={(e) => {
           if (scrollRef.current && e.deltaY !== 0) scrollRef.current.scrollLeft += e.deltaY;
         }}
+        // Doble clic en la zona vacía de la barra: script nuevo (como VS Code).
+        onDoubleClick={(e) => e.target === e.currentTarget && void commands.execute('db.newScript')}
+        data-testid="editor-tabs-bar"
       >
         {tabs.map((tab, index) => {
           const active = tab.id === activeId;
@@ -205,16 +209,17 @@ export function EditorTabs(): React.JSX.Element {
           className="icon-btn"
           chevron={false}
           title={es.editor.tabs.showOpenTabs}
-          disabled={tabs.length === 0}
-          entries={() =>
-            tabs.map((t) => ({
+          entries={() => [
+            commandEntry('db.newScript', es.editor.tabs.newScript),
+            ...(tabs.length > 0 ? [SEPARATOR] : []),
+            ...tabs.map((t) => ({
               type: 'item' as const,
               id: t.id,
               label: t.title,
               checked: t.id === activeId,
               run: () => activate(t.id),
-            }))
-          }
+            })),
+          ]}
         >
           <Codicon name="ellipsis" />
         </Dropdown>

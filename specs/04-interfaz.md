@@ -163,7 +163,8 @@ Siempre hay un espacio de trabajo abierto (ver `11`). Si está vacío: mensaje c
 - Tipos de pestaña y su icono: Script SQL (`codicon-file-code`), Objeto/tabla (`codicon-table`), Archivo no SQL (`codicon-file`), Preferencias (`codicon-settings`).
 - Nombre de pestaña: script = nombre del archivo (`Script-3.sql` se muestra como "Script-3"; todo script es un archivo, ver `11`); objeto = nombre de tabla. Tooltip: ruta o `conexión › base › esquema › tabla`.
 - Pestaña en cursiva = *preview* (se reemplaza al abrir otra desde el árbol, como VS Code); doble clic la fija.
-- Al desbordar: scroll horizontal con rueda + botón `codicon-ellipsis` "Mostrar pestañas abiertas".
+- Al desbordar: scroll horizontal con rueda + botón `codicon-ellipsis` "Mostrar pestañas abiertas" (su menú empieza con "Nuevo script", `Ctrl+N`, y sigue con las pestañas).
+- Doble clic en la zona vacía de la barra de pestañas: nuevo script (como VS Code).
 - Arrastrables para reordenar. Clic central cierra. Menú contextual: Cerrar, Cerrar otras, Cerrar a la derecha, Cerrar guardadas, Cerrar todas, Copiar ruta, Mostrar en Archivos.
 - Opcional v1: dividir editor en dos grupos lado a lado (Ctrl+\). Si complica, dejar para v2.
 

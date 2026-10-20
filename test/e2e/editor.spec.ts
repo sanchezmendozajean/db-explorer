@@ -238,6 +238,21 @@ test('cerrar la pestaña de un script vacío elimina el archivo', async () => {
   await expect.poll(() => existsSync(join(workspace, 'Script-2.sql'))).toBe(false);
 });
 
+test('doble clic en la zona vacía de las pestañas y "Nuevo script" del menú crean un script', async () => {
+  const bar = page.getByTestId('editor-tabs-bar');
+  const box = (await bar.boundingBox())!;
+  await bar.dblclick({ position: { x: box.width - 10, y: box.height / 2 } });
+  await expect(page.getByTestId('editor-tab').filter({ hasText: 'Script-2' })).toBeVisible();
+  await page.keyboard.press('Control+W');
+  await expect(page.getByTestId('editor-tab').filter({ hasText: 'Script-2' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Mostrar pestañas abiertas' }).click();
+  await page.getByRole('menuitem', { name: /Nuevo script/ }).click();
+  await expect(page.getByTestId('editor-tab').filter({ hasText: 'Script-2' })).toBeVisible();
+  await page.keyboard.press('Control+W');
+  await expect(page.getByTestId('editor-tab').filter({ hasText: 'Script-2' })).toHaveCount(0);
+});
+
 test('Alt+F4 antes de 5 s guarda, y al reabrir se restauran pestaña, cursor y conexión', async () => {
   await typeInEditor('select 1;\nselect 2 as ultima;');
   await page.keyboard.press('End');

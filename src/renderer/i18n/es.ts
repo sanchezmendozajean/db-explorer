@@ -373,6 +373,7 @@ export const es = {
       revealInFiles: 'Mostrar en Archivos',
       rename: 'Renombrar…',
       showOpenTabs: 'Mostrar pestañas abiertas',
+      newScript: 'Nuevo script',
       splitEditor: 'Dividir editor',
       unsaved: 'Cambios sin guardar',
     },
