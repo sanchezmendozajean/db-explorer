@@ -3,6 +3,7 @@ import { Codicon } from '../../components/Codicon';
 import { IconButton } from '../../components/Button';
 import { Dropdown } from '../../components/Dropdown';
 import { commands } from '../../commands/service';
+import { commandEntry } from '../../app/menus';
 import { es } from '../../i18n/es';
 import { useConnectionsStore } from '../../stores/connections-store';
 import { anchorOf } from '../../stores/overlay-store';
@@ -169,11 +170,17 @@ export function EditorToolbar({ tab }: { tab: EditorTab }): React.JSX.Element {
           </>
         )}
         <span className="toolbar-spacer" />
-        <IconButton
-          icon="list-selection"
-          label={t.format}
-          onClick={() => void commands.execute('db.formatSql')}
-        />
+        <Dropdown
+          className="icon-btn"
+          chevron={false}
+          title={t.format}
+          entries={() => [
+            commandEntry('db.formatStatement', es.editor.contextMenu.formatStatement),
+            commandEntry('db.formatSql', es.editor.contextMenu.formatDocument),
+          ]}
+        >
+          <Codicon name="list-selection" />
+        </Dropdown>
         <IconButton
           icon="layout-panel"
           label={t.togglePanel}

@@ -154,6 +154,17 @@ test('Ctrl+Alt+F formatea solo la sentencia bajo el cursor', async () => {
   await expect(editor().locator('.view-line').first()).toContainText('select a,b from t;');
 });
 
+test('el botón Formatear de la barra ofrece formatear la sentencia o el documento', async () => {
+  await typeInEditor('select a,b from t; select c,d from u;');
+  await page.keyboard.press('Control+End');
+  await page.getByRole('button', { name: 'Formatear', exact: true }).click();
+  await page.getByRole('menuitem', { name: /Formatear sentencia/ }).click();
+  await expect(editor().locator('.view-line')).toHaveCount(4);
+  await page.getByRole('button', { name: 'Formatear', exact: true }).click();
+  await page.getByRole('menuitem', { name: /Formatear documento/ }).click();
+  await expect(editor().locator('.view-line')).toHaveCount(7);
+});
+
 test('el historial lista lo ejecutado y doble clic lo abre en un script nuevo', async () => {
   await page.getByRole('tab', { name: 'Historial' }).click();
   const history = page.locator('[data-view="history"] .tree');

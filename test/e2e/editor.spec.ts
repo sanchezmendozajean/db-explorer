@@ -356,6 +356,8 @@ test('separador de sentencias por línea en blanco desde el menú contextual del
   await editor().locator('.view-lines').click({ button: 'right' });
   const menu = page.locator('.menu');
   await expect(menu.getByText('Ejecutar sentencia')).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: /Formatear sentencia.*Ctrl\+Alt\+F/ })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: /Formatear documento.*Shift\+Alt\+F/ })).toBeVisible();
   await menu.getByText('Separador de sentencias').hover();
   await page.getByRole('menuitem', { name: 'Línea en blanco' }).click();
   await expect.poll(() => settingsText()).toContain('"blankLine"');

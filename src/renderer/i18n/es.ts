@@ -388,7 +388,7 @@ export const es = {
       transaction: (mode: string) => `Transacción: ${mode}`,
       auto: 'Auto',
       manual: 'Manual',
-      format: 'Formatear (Shift+Alt+F)',
+      format: 'Formatear',
       togglePanel: 'Mostrar/ocultar resultados (Ctrl+J)',
       defaultDatabase: '(predeterminada)',
       defaultSchema: '(predeterminado)',
@@ -396,6 +396,8 @@ export const es = {
     ariaLabel: 'Editor SQL',
     contextMenu: {
       changeAll: 'Cambiar todas las ocurrencias',
+      formatStatement: 'Formatear sentencia',
+      formatDocument: 'Formatear documento',
     },
     object: {
       data: 'Datos',

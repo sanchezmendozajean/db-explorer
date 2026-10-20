@@ -179,7 +179,7 @@ De izquierda a derecha:
 7. **Selector de base** (si el motor lo soporta) y **selector de esquema** (si aplica): chips iguales.
 8. Separador.
 9. **Modo de transacción**: chip "Auto" / "Manual". En Manual aparecen `codicon-check` **Commit** y `codicon-discard` **Rollback**, y un contador "3 sentencias pendientes" en `warning`.
-10. A la derecha: `codicon-symbol-keyword` Formatear, `codicon-layout-panel` Mostrar/ocultar resultados.
+10. A la derecha: `codicon-list-selection` Formatear (menú con Formatear sentencia y Formatear documento, con sus atajos), `codicon-layout-panel` Mostrar/ocultar resultados.
 
 Durante la ejecución: barra de progreso indeterminada de 2 px en `accent` bajo la barra del editor, y el cronómetro "00:03.2" junto a Cancelar.
 
@@ -189,7 +189,7 @@ Durante la ejecución: barra de progreso indeterminada de 2 px en `accent` bajo 
 - Errores de ejecución: subrayado ondulado rojo en la posición que devuelve el motor + marcador en el gutter; hover muestra el mensaje.
 - Tras ejecutar, en el gutter de la línea de inicio de cada sentencia: `codicon-pass` verde (ok) o `codicon-error` rojo, que se limpian al editar.
 - Widget de autocompletado, hover y find/replace con estilos nativos de Monaco del tema correspondiente.
-- **Menú contextual del editor**: el de la app (mismo estilo que los demás menús, con borde y sombra), no el de Monaco: Cambiar todas las ocurrencias (Ctrl+F2), —, Ejecutar sentencia, Ejecutar script, Ejecutar selección, Explicar plan, Explicar y ejecutar, Separador de sentencias ▸, —, Nuevo script SQL, —, Cortar, Copiar, Pegar, —, Paleta de comandos.
+- **Menú contextual del editor**: el de la app (mismo estilo que los demás menús, con borde y sombra), no el de Monaco: Cambiar todas las ocurrencias (Ctrl+F2), —, Ejecutar sentencia, Ejecutar script, Ejecutar selección, Explicar plan, Explicar y ejecutar, Separador de sentencias ▸, —, Formatear sentencia (Ctrl+Alt+F), Formatear documento (Shift+Alt+F), —, Nuevo script SQL, —, Cortar, Copiar, Pegar, —, Paleta de comandos.
 
 ## 9. Pestaña de objeto (tabla/vista)
 Barra superior con breadcrumb `PayBox Prod › paybox › public › CRendiciones_Conf_Generales` y subpestañas tipo "pill" pequeñas: **Datos** · **Estructura** · **DDL**.
