@@ -42,7 +42,11 @@ El selector **Límite** de la barra de resultados define cuántas filas se piden
 
 ## Menú contextual de la celda
 
-Copiar, Copiar con cabeceras, Copiar como (CSV, TSV, JSON, `INSERT`, lista `IN (…)`), Pegar, Establecer NULL, Ver valor, Filtrar por este valor y Formato de columna. Actúa sobre la selección; si haces clic derecho fuera de ella, primero selecciona esa celda.
+Copiar, Copiar con cabeceras, Copiar como (CSV, TSV, JSON, `INSERT`, lista `IN (…)`), Pegar, Establecer NULL, Generar UUID, Ver valor, Filtrar por este valor y Formato de columna. Actúa sobre la selección; si haces clic derecho fuera de ella, primero selecciona esa celda.
+
+## Menú contextual de la fila
+
+Clic derecho en el **número de fila** selecciona la fila y ofrece solo acciones de fila: Copiar filas, Copiar con cabeceras, Copiar como y, si el resultado es editable, Agregar, Duplicar y Eliminar filas.
 
 ## Varios resultados y pestañas
 

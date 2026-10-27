@@ -30,7 +30,7 @@ Si el sistema no tiene cifrado disponible, DB Explorer **no guarda contraseñas*
 
 ## ¿Por qué mi resultado no se puede editar?
 
-Un resultado solo es editable si proviene de **una sola tabla** y contiene todas las columnas de su clave primaria. Si no, la grilla es de solo lectura y un mensaje lo explica. Abre la tabla desde el árbol para editarla con seguridad. Ver [Editar datos](./edicion).
+Un resultado solo es editable si proviene de **una sola tabla** y contiene todas las columnas de su clave primaria. Las tablas **sin clave** también se editan, identificando la fila por todos sus valores y con una advertencia. Si no, la grilla es de solo lectura y un mensaje lo explica. Abre la tabla desde el árbol para editarla con seguridad. Ver [Editar datos](./edicion).
 
 ## ¿Por qué el plan real no está disponible en SQLite?
 

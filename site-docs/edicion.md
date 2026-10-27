@@ -8,6 +8,16 @@ Un resultado es editable cuando proviene de **una sola tabla** y contiene todas 
 
 Si no se puede determinar, la grilla es de **solo lectura** y un mensaje te explica por qué. Las conexiones de solo lectura nunca permiten editar.
 
+### Tablas sin clave
+
+Si la tabla **no tiene clave primaria ni índice único**, también se puede editar: cada fila se identifica por **todos sus valores** (menos las columnas JSON y binarias, que no se comparan). Como eso es menos preciso que una clave, la aplicación lo advierte:
+
+- Aparece la insignia amarilla <span class="ui">Sin clave</span> en la barra de resultados.
+- Al guardar **siempre** se muestra el SQL con un aviso, aunque no hayas pedido «Ver SQL».
+- Si hay **filas idénticas**, o los datos cambiaron desde que los leíste, no se aplica nada y se revierte todo.
+
+Si el resultado incluye pocas columnas de la tabla, la coincidencia es más laxa; conviene traer todas.
+
 ## Acciones
 
 | Acción | Cómo |
@@ -17,6 +27,7 @@ Si no se puede determinar, la grilla es de **solo lectura** y un mensaje te expl
 | Establecer `NULL` | <kbd>Shift</kbd>+<kbd>Supr</kbd> |
 | Agregar una fila | <kbd>Alt</kbd>+<kbd>Insert</kbd> |
 | Duplicar una fila | Menú contextual |
+| Generar un UUID | Menú contextual de la celda (columnas de texto o `uuid`) |
 | Eliminar filas | <kbd>Ctrl</kbd>+<kbd>Supr</kbd> |
 | Pegar desde Excel | <kbd>Ctrl</kbd>+<kbd>V</kbd> (TSV); las filas que sobran se agregan |
 | Deshacer un cambio | <kbd>Ctrl</kbd>+<kbd>Z</kbd> con el foco en la grilla |

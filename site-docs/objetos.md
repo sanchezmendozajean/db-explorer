@@ -7,7 +7,7 @@ Al hacer doble clic en una tabla o vista se abre una **pestaña de objeto** con 
 Muestra el contenido de la tabla en la misma grilla de los [resultados](./resultados).
 
 - Arriba hay dos campos de una línea: **WHERE** y **ORDER BY**. Escribes solo la condición o el orden, con autocompletado de columnas, y la consulta se vuelve a ejecutar.
-- Como la tabla es conocida, la grilla **es editable** siempre que tenga clave primaria. Ver [Editar datos](./edicion).
+- Como la tabla es conocida, la grilla **es editable**; si la tabla no tiene clave, se identifica cada fila por todos sus valores y se advierte. Ver [Editar datos](./edicion).
 - Si el resultado está truncado, puedes ordenar en el servidor para no depender de las filas ya cargadas.
 
 ## Estructura

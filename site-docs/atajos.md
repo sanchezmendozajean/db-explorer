@@ -22,6 +22,7 @@ Los atajos imitan a los de VS Code. En macOS y Linux, <kbd>Ctrl</kbd> equivale a
 | Nuevo script | <kbd>Ctrl</kbd>+<kbd>N</kbd> |
 | Abrir archivo | <kbd>Ctrl</kbd>+<kbd>O</kbd> |
 | Guardar / Guardar como | <kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> |
+| Dividir el editor | <kbd>Ctrl</kbd>+<kbd></kbd> |
 | Cerrar pestaña | <kbd>Ctrl</kbd>+<kbd>W</kbd> o <kbd>Ctrl</kbd>+<kbd>F4</kbd> |
 | Reabrir pestaña cerrada | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> |
 | Pestaña siguiente / anterior | <kbd>Ctrl</kbd>+<kbd>Tab</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Tab</kbd>, o <kbd>Ctrl</kbd>+<kbd>RePág</kbd> / <kbd>AvPág</kbd> |

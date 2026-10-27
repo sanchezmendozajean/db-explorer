@@ -10,8 +10,19 @@ DB Explorer toma la distribución de DBeaver (árbol a la izquierda, editor arri
 - **Barra de actividad.** La columna de íconos de la izquierda cambia la vista de la barra lateral: **Conexiones**, **Archivos** e **Historial**. En la parte inferior, el engranaje abre un menú con Preferencias, Atajos de teclado y Tema. Un clic en el ícono activo contrae la barra lateral.
 - **Barra lateral.** Muestra el árbol de conexiones, los archivos del espacio de trabajo o el historial de consultas.
 - **Grupo de editores.** Pestañas de scripts, de objetos (tablas y vistas), de rutinas y de preferencias. Cada pestaña de script tiene su barra con los botones de ejecución, la conexión, la base o el esquema activos y el modo de transacción.
-- **Panel de resultados.** Debajo del editor, con las pestañas <span class="ui">Resultado</span>, <span class="ui">Plan</span> y <span class="ui">Mensajes</span>.
+- **Panel de resultados.** Debajo del editor (ocupa todo el ancho aunque lo dividas), con las pestañas <span class="ui">Resultado</span>, <span class="ui">Plan</span> y <span class="ui">Mensajes</span>.
 - **Barra de estado.** Muestra la conexión activa y la versión del motor, la posición del cursor, el estado del autoguardado, la codificación, el fin de línea, el lenguaje y el modo de transacción.
+
+## Dividir el editor
+
+<kbd>Ctrl</kbd>+<kbd></kbd>, el botón de la barra de pestañas, <span class="ui">Ver › Dividir editor</span> o <span class="ui">Dividir a la derecha</span> en el menú de la pestaña abren un **segundo grupo** de pestañas al lado. Cada grupo tiene su barra de pestañas y su editor; el **panel de resultados es uno solo**, de ancho completo, y muestra el de la pestaña enfocada.
+
+- Una pestaña pertenece a un solo grupo: pásala al otro con el mismo comando, con el menú o arrastrándola a su barra de pestañas.
+- Un clic en un grupo lo enfoca; ejecutar, guardar, cerrar y <kbd>Ctrl</kbd>+<kbd>Tab</kbd> actúan sobre el grupo enfocado.
+- Si el grupo derecho se queda sin pestañas desaparece; el botón <span class="ui">Juntar con el grupo izquierdo</span> las devuelve todas al principal.
+- La división se restaura al reiniciar.
+
+La ventana también recuerda su **posición, tamaño y si estaba maximizada**; si el monitor ya no está conectado, se abre centrada.
 
 ## Colores por entorno
 
