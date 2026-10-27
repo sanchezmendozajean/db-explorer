@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.1.3
+
+### Novedades
+- **Dividir editor** (Ctrl+, botón de la barra, menú Ver y menú de la pestaña): dos grupos de pestañas lado a lado, con un único panel de resultados de ancho completo debajo que sigue a la pestaña enfocada. Las pestañas se mueven entre grupos arrastrándolas, y el estado se restaura al reiniciar.
+- La ventana recuerda su posición, su tamaño y si estaba maximizada; si el monitor ya no está, abre centrada.
+- **Tablas sin clave primaria ni índice único** ahora se pueden editar: cada fila se identifica por todos sus valores. Se avisa con la insignia "Sin clave" y al guardar siempre se muestra el SQL; si hay filas idénticas, no se aplica nada.
+- Menú de la grilla: **Generar UUID** para las celdas seleccionadas y un menú propio al hacer clic derecho en el número de fila (copiar, agregar, duplicar y eliminar filas).
+- Mayor contraste en el texto seleccionado.
+
+### Cambios
+- Renombrar base de datos se desactiva en MariaDB/MySQL (no tienen soporte nativo). En PostgreSQL y SQL Server, con una conexión de Producción, se muestra el SQL antes de aplicarlo.
+
+### Correcciones
+- El menú contextual de la grilla no se cerraba al hacer clic en otra celda.
+
 ## v0.1.2
 
 ### Novedades
