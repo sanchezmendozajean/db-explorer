@@ -9,6 +9,7 @@ import { applyThemeSource, registerIpcHandlers } from './ipc/register';
 import { DbHostClient } from './services/db-host-client';
 import { createUtilityTransport } from './services/utility-transport';
 import { UiStateStore } from './services/ui-state-store';
+import { WindowStateStore } from './services/window-state-store';
 import { ConnectionStore } from './services/connection-store';
 import { SecretStore } from './services/secret-store';
 import { registerConnectionHandlers } from './ipc/connections';
@@ -144,7 +145,10 @@ if (!app.requestSingleInstanceLock()) {
       setTimeout(() => void updates.check(), 5000);
     }
 
-    const open = (): BrowserWindow => createMainWindow({ dark: nativeTheme.shouldUseDarkColors });
+    const windowStore = new WindowStateStore(join(userData, 'window-state.json'));
+    const savedWindow = await windowStore.load();
+    const open = (): BrowserWindow =>
+      createMainWindow({ dark: nativeTheme.shouldUseDarkColors, saved: savedWindow, store: windowStore });
     open();
 
     app.on('activate', () => {
