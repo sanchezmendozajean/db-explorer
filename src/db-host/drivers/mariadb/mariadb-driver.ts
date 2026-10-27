@@ -344,80 +344,9 @@ export class MariaDbDriver implements DbDriver {
     await this.query(`DROP DATABASE ${quoteIdent('mariadb', userDatabaseName(name))}`);
   }
 
-  /**
-   * MariaDB y MySQL no tienen `RENAME DATABASE`: se crea la base nueva (con el mismo juego de
-   * caracteres y ordenamiento), se mueven las tablas con un solo `RENAME TABLE` y se elimina la
-   * antigua. Vistas, rutinas, disparadores y eventos no se pueden mover así: si los hay, se rechaza
-   * antes de tocar nada. Los privilegios a nivel de base tampoco se trasladan.
-   */
-  async renameDatabase(name: string, newName: string): Promise<void> {
-    const from = userDatabaseName(name);
-    const to = checkedDatabaseName(newName);
-    if (from === to) throw new DriverError('El nombre nuevo es igual al actual', 'invalid-name');
-
-    const taken = await this.query('SELECT 1 AS x FROM information_schema.schemata WHERE schema_name = ?', [
-      to,
-    ]);
-    if (taken.length > 0) throw new DriverError(`Ya existe una base de datos llamada "${to}"`, 'exists');
-
-    const blockers = await this.query(
-      `SELECT 'vistas' AS kind, COUNT(*) AS n FROM information_schema.views WHERE table_schema = ?
-       UNION ALL SELECT 'rutinas', COUNT(*) FROM information_schema.routines WHERE routine_schema = ?
-       UNION ALL SELECT 'disparadores', COUNT(*) FROM information_schema.triggers WHERE trigger_schema = ?
-       UNION ALL SELECT 'eventos', COUNT(*) FROM information_schema.events WHERE event_schema = ?`,
-      [from, from, from, from],
-    );
-    const found = blockers
-      .filter((r) => Number(r['n']) > 0)
-      .map((r) => `${Number(r['n'])} ${String(r['kind'])}`);
-    if (found.length > 0) {
-      throw new DriverError(
-        `No se puede renombrar automáticamente: la base tiene ${found.join(', ')}, que MariaDB/MySQL no mueve entre bases. Elimínalos o recréalos en la base nueva.`,
-        'unsupported',
-      );
-    }
-
-    const [schema] = await this.query(
-      `SELECT default_character_set_name AS charset, default_collation_name AS collation
-         FROM information_schema.schemata WHERE schema_name = ?`,
-      [from],
-    );
-    if (!schema) throw new DriverError(`No existe la base de datos "${from}"`, 'not-found');
-    const tables = await this.query(
-      `SELECT table_name AS name FROM information_schema.tables
-        WHERE table_schema = ? AND table_type IN ('BASE TABLE', 'SYSTEM VERSIONED', 'SEQUENCE')
-        ORDER BY table_name`,
-      [from],
-    );
-
-    const charset = String(schema['charset']);
-    const collation = String(schema['collation']);
-    if (!/^\w+$/.test(charset) || !/^\w+$/.test(collation)) {
-      throw new DriverError('No se pudo leer el juego de caracteres de la base', 'invalid');
-    }
-    const source = quoteIdent('mariadb', from);
-    const target = quoteIdent('mariadb', to);
-    const conn = await this.open(undefined);
-    try {
-      await this.run(conn, `CREATE DATABASE ${target} CHARACTER SET ${charset} COLLATE ${collation}`);
-      try {
-        if (tables.length > 0) {
-          await this.run(conn, 'SET SESSION foreign_key_checks = 0');
-          const moves = tables.map((t) => {
-            const table = quoteIdent('mariadb', String(t['name']));
-            return `${source}.${table} TO ${target}.${table}`;
-          });
-          await this.run(conn, `RENAME TABLE ${moves.join(', ')}`);
-        }
-      } catch (err) {
-        // El RENAME TABLE es atómico: la base nueva sigue vacía y se puede descartar.
-        await this.run(conn, `DROP DATABASE ${target}`).catch(() => undefined);
-        throw err;
-      }
-      await this.run(conn, `DROP DATABASE ${source}`);
-    } finally {
-      conn.destroy();
-    }
+  /** MariaDB y MySQL no tienen renombrado nativo de bases y la aplicación no lo simula (mover tablas con `RENAME TABLE` deja atrás vistas, rutinas, privilegios…). */
+  renameDatabase(): Promise<void> {
+    return unsupportedOperation('MariaDB/MySQL no renombra bases de datos (no hay soporte nativo)');
   }
 
   /** El respaldo de MariaDB/MySQL lo hace `mariadb-dump`/`mysqldump` (herramientas auxiliares). */

@@ -7,8 +7,8 @@ import type { TreeTarget } from '../../stores/connections-store';
 import { setting } from '../../stores/settings-store';
 import { showToast } from '../../stores/toast-store';
 import { useOverlayStore } from '../../stores/overlay-store';
-import { activeTab, useWorkbenchStore } from '../../stores/workbench-store';
-import type { EditorTab } from '../../stores/workbench-store';
+import { activeTab, groupOf, useWorkbenchStore } from '../../stores/workbench-store';
+import type { EditorGroupIndex, EditorTab } from '../../stores/workbench-store';
 import { useWorkspaceStore } from '../../stores/workspace-store';
 import { isInside, pathKey, useFilesStore } from '../../stores/files-store';
 import { askChoice } from '../dialogs/ask';
@@ -31,7 +31,7 @@ import {
   setPendingViewState,
   viewStateOf,
 } from './documents';
-import { activeEditor } from './editor-instance';
+import { activeEditor, editorShowing } from './editor-instance';
 import { monacoIfLoaded } from './monaco/loader';
 
 const wb = useWorkbenchStore.getState;
@@ -89,6 +89,7 @@ function defaultTarget(): Partial<TreeTarget> {
 export async function newScript(
   target: Partial<TreeTarget> = defaultTarget(),
   content?: string,
+  group?: EditorGroupIndex,
 ): Promise<void> {
   const r = await window.api.workspace.newScript({});
   if (!r.ok) {
@@ -97,7 +98,7 @@ export async function newScript(
   }
   // El contenido inicial (p. ej. SELECT de una tabla) se escribe antes de abrir la pestaña.
   if (content) await window.api.fs.writeScript({ path: r.data.path, content, bom: false });
-  const tab = scriptTab(r.data.path, target);
+  const tab = { ...scriptTab(r.data.path, target), group };
   wb().open(tab);
   void useFilesStore.getState().refresh([r.data.path]);
   focusEditorWhenReady(tab.id);
@@ -133,6 +134,28 @@ export async function openScript(
   const tab = { ...scriptTab(path, target), preview: !!options.preview };
   wb().open(tab);
   if (focus) focusEditorWhenReady(tab.id);
+}
+
+/**
+ * Dividir editor (Ctrl+): pasa la pestaña al otro grupo (el dividido aparece a la derecha y desaparece
+ * al quedar vacío). Si es la única pestaña del grupo principal, la vista dividida se abre con un script
+ * nuevo para no dejar vacío el lado izquierdo.
+ */
+export async function splitEditor(tabId: string | undefined = wb().activeId ?? undefined): Promise<void> {
+  const tab = wb().tabs.find((t) => t.id === tabId);
+  if (!tab) return;
+  const from = groupOf(tab);
+  const alone = wb().tabs.filter((t) => groupOf(t) === from).length === 1;
+  if (from === 0 && alone) {
+    await newScript(
+      { connectionId: tab.connectionId, database: tab.database, schema: tab.schema },
+      undefined,
+      1,
+    );
+    return;
+  }
+  wb().moveToGroup(tab.id, from === 0 ? 1 : 0);
+  if (tab.kind === 'script') focusEditorWhenReady(tab.id);
 }
 
 /**
@@ -258,9 +281,9 @@ export function focusEditorWhenReady(
   const active = document.activeElement;
   const moved = active !== origin && active !== document.body && !active?.closest('.editor-group');
   if (moved) return;
-  const editor = activeEditor();
   const doc = getDocument(tabId);
-  if (editor && doc && editor.getModel() === doc.model) editor.focus();
+  const editor = doc ? editorShowing(doc.model) : null;
+  if (editor) editor.focus();
   else if (attempts > 0) setTimeout(() => focusEditorWhenReady(tabId, attempts - 1, origin), 25);
 }
 
@@ -293,7 +316,10 @@ export function setTabTarget(tabId: string, target: Partial<TreeTarget>): void {
 export function loadWorkspaceTabs(state: WorkspaceState | null, missing: readonly string[]): void {
   fileConnections = { ...(state?.fileConnections ?? {}) };
   const tabs = (state?.tabs ?? []).map((t) => {
-    const tab = scriptTab(t.file, { connectionId: t.connectionId, database: t.database, schema: t.schema });
+    const tab = {
+      ...scriptTab(t.file, { connectionId: t.connectionId, database: t.database, schema: t.schema }),
+      group: t.group,
+    };
     setPendingViewState(tab.id, t.viewState);
     return tab;
   });
@@ -349,6 +375,7 @@ export function buildWorkspaceState(): WorkspaceState {
       connectionId: t.connectionId,
       database: t.database,
       schema: t.schema,
+      group: t.group === 1 ? 1 : undefined,
       viewState: viewStateOf(t.id),
     })),
     activeTab: scripts.findIndex((t) => t.id === activeId),

@@ -120,6 +120,7 @@ export const es = {
     'db.statementSeparator.blankLine': 'Separador de sentencias: línea en blanco',
     'db.help.keybindings': 'Atajos de teclado',
     'db.help.about': 'Acerca de',
+    'db.splitEditor': 'Dividir editor',
     'db.closeTab': 'Cerrar pestaña',
     'db.reopenClosedTab': 'Reabrir pestaña cerrada',
     'db.nextTab': 'Pestaña siguiente',
@@ -375,6 +376,9 @@ export const es = {
       showOpenTabs: 'Mostrar pestañas abiertas',
       newScript: 'Nuevo script',
       splitEditor: 'Dividir editor',
+      splitRight: 'Dividir a la derecha',
+      moveLeft: 'Mover al grupo izquierdo',
+      mergeEditors: 'Juntar con el grupo izquierdo',
       unsaved: 'Cambios sin guardar',
     },
     toolbar: {
@@ -462,6 +466,8 @@ export const es = {
       copyAs: 'Copiar como',
       paste: 'Pegar',
       setNull: 'Establecer NULL',
+      generateUuid: 'Generar UUID',
+      copyRows: 'Copiar filas',
       viewValue: 'Ver valor',
       filterByValue: 'Filtrar por este valor',
       excludeValue: 'Excluir este valor',
@@ -503,6 +509,11 @@ export const es = {
         `${n === 1 ? 'Esta sentencia se ejecutará' : `Estas ${n} sentencias se ejecutarán`} en una transacción:`,
       pendingChanges: (n: number) => `${n} ${n === 1 ? 'cambio pendiente' : 'cambios pendientes'}`,
       readOnlyBadge: 'Solo lectura',
+      keylessBadge: 'Sin clave',
+      keylessHint:
+        'La tabla no tiene clave primaria ni índice único: cada fila se identifica por todos sus valores. Si hay filas idénticas, el guardado se revierte.',
+      keylessWarning: (table: string) =>
+        `Atención: la tabla "${table}" no tiene clave primaria ni índice único. Cada fila se identifica por todos sus valores (WHERE con todas las columnas); si hay filas idénticas, o los datos cambiaron desde que se leyeron, no se aplica nada y se revierte todo.`,
       saved: (n: number) => `Cambios guardados (${n} ${n === 1 ? 'sentencia' : 'sentencias'}).`,
       savedPendingCommit: (n: number) =>
         `Cambios aplicados en la transacción (${n} ${n === 1 ? 'sentencia' : 'sentencias'}); falta Commit.`,
@@ -594,11 +605,12 @@ export const es = {
       label: 'Nombre nuevo',
       confirm: 'Renombrar',
       same: 'El nombre nuevo es igual al actual',
+      unsupported:
+        'MariaDB/MySQL no tiene renombrado nativo de bases y esta aplicación no lo simula: usa una base nueva y mueve el contenido con herramientas del servidor.',
+      productionNote: 'Se ejecutará el SQL de abajo.',
       done: (from: string, to: string) => `La base de datos "${from}" ahora se llama "${to}".`,
       notes: {
         postgres: 'Se cerrarán las conexiones activas a la base.',
-        mariadb:
-          'MariaDB/MySQL no renombra bases: se crea la nueva y se mueven las tablas. Falla si la base tiene vistas, rutinas, disparadores o eventos.',
         sqlserver:
           'Se cerrarán las conexiones activas. Cambia el nombre lógico; los archivos .mdf y .ldf conservan el suyo.',
       },
@@ -1148,7 +1160,6 @@ export const es = {
     keybindingsInvalid: (n: number) =>
       `keybindings.json tiene ${n === 1 ? 'una entrada no válida' : `${n} entradas no válidas`}; se omitieron.`,
     dbHostRestarted: 'Conexiones reiniciadas: el proceso de base de datos se reinició.',
-    notAvailable: (what: string) => `"${what}" todavía no está disponible en esta versión.`,
     copied: 'Copiado al portapapeles',
     cellsCopied: 'Celdas copiadas',
     cellsCopiedWithHeaders: 'Celdas con cabeceras copiadas',

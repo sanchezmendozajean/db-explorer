@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Codicon } from '../../components/Codicon';
 import { IconButton } from '../../components/Button';
 import { Dropdown } from '../../components/Dropdown';
@@ -8,7 +8,6 @@ import type { MenuEntry } from '../../components/menu-types';
 import { SEPARATOR } from '../../components/menu-types';
 import { keybindingLabel } from '../../commands/service';
 import { es } from '../../i18n/es';
-import { notAvailable } from '../../app/app-commands';
 import { commandEntry } from '../../app/menus';
 import { commands } from '../../commands/service';
 import { isInside } from '../../stores/files-store';
@@ -16,9 +15,9 @@ import { useWorkspaceStore } from '../../stores/workspace-store';
 import { startRename } from '../files/file-actions';
 import { useConnectionsStore } from '../../stores/connections-store';
 import { showToast } from '../../stores/toast-store';
-import { closeTabs, focusEditorWhenReady } from './scripts';
-import type { EditorTab } from '../../stores/workbench-store';
-import { useWorkbenchStore } from '../../stores/workbench-store';
+import { closeTabs, focusEditorWhenReady, splitEditor } from './scripts';
+import type { EditorGroupIndex, EditorTab } from '../../stores/workbench-store';
+import { groupOf, useWorkbenchStore } from '../../stores/workbench-store';
 
 const TAB_ICON: Record<EditorTab['kind'], { icon: string; color: string }> = {
   script: { icon: 'file-code', color: 'var(--fg-muted)' },
@@ -28,7 +27,8 @@ const TAB_ICON: Record<EditorTab['kind'], { icon: string; color: string }> = {
 };
 
 function tabMenu(tab: EditorTab): MenuEntry[] {
-  const tabs = useWorkbenchStore.getState().tabs;
+  // Las opciones de cierre actúan sobre las pestañas del mismo grupo.
+  const tabs = useWorkbenchStore.getState().tabs.filter((x) => groupOf(x) === groupOf(tab));
   const t = es.editor.tabs;
   const ids = (list: EditorTab[]): string[] => list.map((x) => x.id);
   const index = tabs.findIndex((x) => x.id === tab.id);
@@ -92,6 +92,13 @@ function tabMenu(tab: EditorTab): MenuEntry[] {
         startRename(tab.path);
       },
     },
+    SEPARATOR,
+    {
+      type: 'item',
+      id: 'split',
+      label: groupOf(tab) === 0 ? t.splitRight : t.moveLeft,
+      run: () => void splitEditor(tab.id),
+    },
   ];
 }
 
@@ -99,10 +106,13 @@ function isInsideWorkspace(path: string): boolean {
   return isInside(useWorkspaceStore.getState().path, path);
 }
 
-export function EditorTabs(): React.JSX.Element {
-  const tabs = useWorkbenchStore((s) => s.tabs);
-  const activeId = useWorkbenchStore((s) => s.activeId);
-  const { activate, pin, move } = useWorkbenchStore.getState();
+export function EditorTabs({ group }: { group: EditorGroupIndex }): React.JSX.Element {
+  const allTabs = useWorkbenchStore((s) => s.tabs);
+  const tabs = useMemo(() => allTabs.filter((t) => groupOf(t) === group), [allTabs, group]);
+  // La pestaña seleccionada de cada grupo; solo la del grupo enfocado lleva el acento de "activa".
+  const activeId = useWorkbenchStore((s) => s.groupActive[group]);
+  const focused = useWorkbenchStore((s) => groupOf(s.tabs.find((t) => t.id === s.activeId)) === group);
+  const { activate, pin, move, moveToGroup, mergeGroups } = useWorkbenchStore.getState();
   const connections = useConnectionsStore((s) => s.connections);
   const close = (id: string): void => void closeTabs([id]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -120,10 +130,22 @@ export function EditorTabs(): React.JSX.Element {
         }}
         // Doble clic en la zona vacía de la barra: script nuevo (como VS Code).
         onDoubleClick={(e) => e.target === e.currentTarget && void commands.execute('db.newScript')}
+        // Soltar una pestaña en la zona vacía la deja al final de este grupo.
+        onDragOver={(e) => {
+          if (e.target === e.currentTarget && e.dataTransfer.types.includes('application/x-db-tab')) {
+            e.preventDefault();
+          }
+        }}
+        onDrop={(e) => {
+          const id = e.dataTransfer.getData('application/x-db-tab');
+          if (e.target === e.currentTarget && id) moveToGroup(id, group);
+        }}
         data-testid="editor-tabs-bar"
       >
-        {tabs.map((tab, index) => {
+        {tabs.map((tab) => {
           const active = tab.id === activeId;
+          // Posición en la lista completa (las pestañas de ambos grupos comparten el orden).
+          const globalIndex = allTabs.indexOf(tab);
           const conn = connections.find((c) => c.id === tab.connectionId);
           const env = conn ? (conn.color ?? `var(--env-${conn.environment})`) : undefined;
           // Los archivos de texto que no son SQL usan el ícono de archivo genérico.
@@ -143,6 +165,7 @@ export function EditorTabs(): React.JSX.Element {
               className={[
                 'editor-tab',
                 active ? 'is-active' : '',
+                active && !focused ? 'is-unfocused' : '',
                 tab.preview ? 'is-preview' : '',
                 tab.dirty ? 'is-dirty' : '',
                 dragOver === tab.id ? 'is-drop-target' : '',
@@ -175,7 +198,7 @@ export function EditorTabs(): React.JSX.Element {
               onDrop={(e) => {
                 const id = e.dataTransfer.getData('application/x-db-tab');
                 setDragOver(null);
-                if (id) move(id, index);
+                if (id) move(id, globalIndex, group);
               }}
             >
               <Codicon name={icon.icon} color={icon.color} size={16} />
@@ -200,11 +223,15 @@ export function EditorTabs(): React.JSX.Element {
         })}
       </div>
       <div className="editor-tabs-actions">
-        <IconButton
-          icon="split-horizontal"
-          label={es.editor.tabs.splitEditor}
-          onClick={() => notAvailable(es.editor.tabs.splitEditor)}
-        />
+        {group === 0 ? (
+          <IconButton
+            icon="split-horizontal"
+            label={es.editor.tabs.splitEditor}
+            onClick={() => void splitEditor()}
+          />
+        ) : (
+          <IconButton icon="arrow-left" label={es.editor.tabs.mergeEditors} onClick={() => mergeGroups()} />
+        )}
         <Dropdown
           className="icon-btn"
           chevron={false}

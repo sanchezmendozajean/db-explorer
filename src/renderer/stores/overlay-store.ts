@@ -107,7 +107,13 @@ export type DialogState =
       onResult: (choice: ExportChoice | null) => void;
     }
   /** Sentencias que generará el guardado de la grilla ("Ver SQL"): Cancelar / Aplicar. */
-  | { id: 'sqlPreview'; statements: string[]; language: string; onResult: (apply: boolean) => void }
+  | {
+      id: 'sqlPreview';
+      statements: string[];
+      language: string;
+      warning?: string;
+      onResult: (apply: boolean) => void;
+    }
   /** Respaldo o restauración de una base de datos (archivo, contraseña y progreso). */
   | { id: 'backup'; connectionId: string; database: string; kind: 'backup' | 'restore' }
   /** Pide los binarios auxiliares de una familia (pg_dump, mysqldump…); `onDone(true)` si quedaron todos. */

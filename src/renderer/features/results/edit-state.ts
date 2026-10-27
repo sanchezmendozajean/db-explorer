@@ -41,8 +41,10 @@ export interface EditableInfo {
   table: { database: string; schema: string; name: string };
   /** Por columna del resultado: su nombre en la tabla, o `null` si no se puede editar (expresiones). */
   columnNames: (string | null)[];
-  /** Columnas del resultado que forman la clave (PK o índice único no nulo). */
+  /** Columnas del resultado que forman la clave (PK o índice único no nulo; sin clave, todas las comparables). */
   keyColumns: number[];
+  /** La tabla no tiene clave: cada fila se identifica por todos sus valores (puede coincidir con filas iguales). */
+  keyless?: boolean;
 }
 
 export function rowKey(ref: RowRef): string {

@@ -353,6 +353,12 @@ function ResultsToolbar({
       )}
       {editable ? (
         <>
+          {editable.keyless && (
+            <span className="readonly-badge keyless-badge" title={r.edit.keylessHint} data-testid="keyless">
+              <Codicon name="warning" size={14} />
+              {r.edit.keylessBadge}
+            </span>
+          )}
           <IconButton
             icon="add"
             label={`${r.addRow} (Alt+Insert)`}

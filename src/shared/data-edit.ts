@@ -56,7 +56,13 @@ export function buildStatements(table: EditTable, operations: EditOperation[]): 
       return placeholder(engine, params.length);
     };
     const where = (key: CellValue[]): string =>
-      table.keyColumns.map((column, i) => `${ident(column)} = ${bind(column, key[i] ?? null)}`).join(' AND ');
+      table.keyColumns
+        .map((column, i) => {
+          const value = key[i] ?? null;
+          // Sin clave se compara por todas las columnas, y `= NULL` nunca coincide.
+          return value === null ? `${ident(column)} IS NULL` : `${ident(column)} = ${bind(column, value)}`;
+        })
+        .join(' AND ');
 
     let sql: string;
     if (op.kind === 'update') {

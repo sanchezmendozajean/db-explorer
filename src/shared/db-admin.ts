@@ -1,4 +1,5 @@
 import type { Engine } from './connection';
+import { quoteIdent } from './sql-quote';
 
 /**
  * Administración de bases de datos: crear, eliminar, renombrar, respaldar y restaurar.
@@ -29,6 +30,33 @@ export function toolFamilyOf(engine: Engine, product: string | undefined): ToolF
   if (engine === 'postgres') return 'postgres';
   if (engine === 'mariadb') return /^mysql/i.test(product ?? '') ? 'mysql' : 'mariadb';
   return null;
+}
+
+/** ¿El motor renombra bases de forma nativa? MariaDB/MySQL no (y no se simula); SQLite no aplica. */
+export function canRenameDatabase(engine: Engine): boolean {
+  return engine === 'postgres' || engine === 'sqlserver';
+}
+
+/**
+ * Sentencias que ejecuta el renombrado de una base, para mostrarlas antes de aplicarlo.
+ * Reflejan las de los drivers (`renameDatabase` en postgres y sqlserver).
+ */
+export function renameDatabaseStatements(engine: Engine, from: string, to: string): string[] {
+  if (engine === 'postgres') {
+    return [
+      `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${from.replace(/'/g, "''")}' AND pid <> pg_backend_pid()`,
+      `ALTER DATABASE ${quoteIdent('postgres', from)} RENAME TO ${quoteIdent('postgres', to)}`,
+    ];
+  }
+  if (engine === 'sqlserver') {
+    const [a, b] = [from, to].map((n) => `[${n.replace(/]/g, ']]')}]`) as [string, string];
+    return [
+      `ALTER DATABASE ${a} SET SINGLE_USER WITH ROLLBACK IMMEDIATE`,
+      `ALTER DATABASE ${a} MODIFY NAME = ${b}`,
+      `ALTER DATABASE ${b} SET MULTI_USER`,
+    ];
+  }
+  return [];
 }
 
 /** Cómo respalda y restaura cada motor. */

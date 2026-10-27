@@ -231,18 +231,58 @@ test('exporta los datos a CSV', async () => {
   expect(readFileSync(path, 'utf8')).toBe('id;nombre;importe\r\n3;Carla;\r\n');
 });
 
-test('una tabla sin clave queda de solo lectura con la explicación', async () => {
+test('una tabla sin clave se edita identificando la fila por todos sus valores, con advertencia', async () => {
   await node(/^sin_clave/).dblclick();
   await expect(grid()).toHaveAttribute('data-columns', 'a,b');
-  await expect(grid()).toHaveAttribute('data-editable', 'false');
-  await expect(page.getByTestId('read-only')).toHaveAttribute('title', /no tiene clave primaria/);
-  // El visor de valor de una celda de solo lectura no se puede editar.
+  await expect(grid()).toHaveAttribute('data-editable', 'true');
+  await expect(page.getByTestId('keyless')).toHaveAttribute('title', /no tiene clave primaria/);
+
+  await editCell(0, 0, 'z');
+  // Guardar siempre muestra el SQL con la advertencia (sin clave no hay otra forma de ver cómo se identifica la fila).
+  await page.getByTestId('save-changes').click();
+  await expect(page.getByTestId('keyless-warning')).toContainText('no tiene clave primaria');
+  await expect(page.getByTestId('sql-preview')).toContainText(
+    "UPDATE sin_clave SET a = 'z' WHERE a = 'x' AND b = 'y';",
+  );
+  await page.getByRole('dialog').getByRole('button', { name: 'Aplicar' }).click();
+  await expect(page.getByTestId('pending-changes')).toHaveCount(0);
+  expect((await copiedTable()).trim().split(/\r?\n/)).toEqual(['a\tb', 'z\ty']);
+});
+
+test('el menú contextual de la grilla se cierra al hacer clic en otra celda', async () => {
+  // El menú se abre a la derecha del clic: se prueba con una celda a su izquierda.
+  const a = await cell(1, 0);
+  await page.mouse.click(a.x, a.y, { button: 'right' });
+  await expect(page.getByRole('menu')).toBeVisible();
+  const b = await cell(0, 0);
+  await page.mouse.click(b.x, b.y);
+  await expect(page.getByRole('menu')).toHaveCount(0);
+});
+
+test('el menú del número de fila ofrece solo acciones de fila', async () => {
+  const box = (await grid().boundingBox())!;
+  const p = await cell(0, 0);
+  await page.mouse.click(box.x + 20, p.y, { button: 'right' });
+  await expect(page.getByRole('menuitem', { name: 'Duplicar fila' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Eliminar filas' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Filtrar por este valor' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toHaveCount(0);
+});
+
+test('"Generar UUID" rellena las celdas seleccionadas con UUID distintos', async () => {
   const p = await cell(0, 0);
   await page.mouse.click(p.x, p.y, { button: 'right' });
-  await page.getByRole('menuitem', { name: 'Ver valor' }).click();
-  await expect(page.getByTestId('value-viewer')).toBeVisible();
-  await expect(page.getByTestId('value-apply')).toHaveCount(0);
-  await page.getByTestId('value-viewer').getByRole('button', { name: 'Cerrar' }).click();
+  await page.getByRole('menuitem', { name: 'Generar UUID' }).click();
+  await page.getByRole('button', { name: 'Ver SQL' }).click();
+  // La fila quedó seleccionada por la prueba anterior: ambas celdas reciben un UUID v4, distinto cada una.
+  const sql = (await page.getByTestId('sql-preview').textContent())!;
+  const uuids = sql.match(/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}/g) ?? [];
+  expect(uuids).toHaveLength(2);
+  expect(uuids[0]).not.toBe(uuids[1]);
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancelar' }).click();
+  await page.getByRole('button', { name: 'Descartar cambios' }).click();
+  await expect(page.getByTestId('pending-changes')).toHaveCount(0);
 });
 
 test('modo manual: Rollback descarta y Commit confirma', async () => {

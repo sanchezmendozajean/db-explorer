@@ -152,3 +152,50 @@ test('el menú de configuración abre la carpeta de las herramientas importadas'
     .poll(() => app.evaluate(() => (globalThis as { __opened?: string }).__opened))
     .toBe(join(userData, 'tools'));
 });
+
+test('en Producción, renombrar muestra el SQL y solo se aplica al confirmar', async () => {
+  await page.getByRole('button', { name: 'Nueva conexión' }).first().click();
+  await dialog().getByRole('button', { name: 'PostgreSQL' }).click();
+  await dialog().getByLabel('Nombre', { exact: true }).fill('PG Prod');
+  await dialog().getByLabel('Entorno').selectOption({ label: 'Producción' });
+  await dialog().getByLabel('Host').fill(pg.host);
+  await dialog().getByLabel('Puerto').fill(String(pg.port));
+  await dialog().getByLabel('Base de datos (opcional)').fill(pg.database);
+  await dialog().getByLabel('Usuario').fill(pg.user);
+  await dialog().getByLabel('Contraseña', { exact: true }).fill(pg.password);
+  await dialog().getByRole('button', { name: 'Guardar' }).click();
+  await node(/PG Prod/).dblclick();
+  // Las dos conexiones muestran la base predeterminada: esperar a que la nueva termine de conectar.
+  await expect(node(new RegExp(`^${pg.database}`))).toHaveCount(2);
+
+  await node(/PG Prod/).click({ button: 'right' });
+  await menuItem('Crear base de datos…').click();
+  await dialog().getByLabel('Nombre de la base de datos').fill('dbx_e2e_prod');
+  await dialog().getByRole('button', { name: 'Crear' }).click();
+  await expect(node(/^dbx_e2e_prod/)).toBeVisible();
+
+  await node(/^dbx_e2e_prod/).click();
+  await tree().press('F2');
+  await dialog().getByLabel('Nombre nuevo').fill('dbx_e2e_prod2');
+  await dialog().getByRole('button', { name: 'Renombrar' }).click();
+  // Antes de aplicar: se muestra el SQL y cancelar no cambia nada.
+  await expect(dialog()).toContainText('Confirmar ejecución en Producción');
+  await expect(dialog()).toContainText('ALTER DATABASE dbx_e2e_prod RENAME TO dbx_e2e_prod2');
+  await dialog().getByRole('button', { name: 'Cancelar' }).click();
+  await expect(node(/^dbx_e2e_prod(?!2)/)).toBeVisible();
+
+  await tree().press('F2');
+  await dialog().getByLabel('Nombre nuevo').fill('dbx_e2e_prod2');
+  await dialog().getByRole('button', { name: 'Renombrar' }).click();
+  await dialog().getByRole('button', { name: 'Ejecutar' }).click();
+  await expect(node(/^dbx_e2e_prod2/)).toBeVisible();
+
+  // Limpieza.
+  await node(/^dbx_e2e_prod2/).click();
+  await tree().press('Delete');
+  await dialog()
+    .getByLabel(/Para confirmar/)
+    .fill('dbx_e2e_prod2');
+  await dialog().getByRole('button', { name: 'Eliminar' }).click();
+  await expect(node(/^dbx_e2e_prod2/)).toHaveCount(0);
+});

@@ -163,11 +163,13 @@ export function WriteConfirmDialog({
 export function SqlPreviewDialog({
   statements,
   language,
+  warning,
   onResult,
   onClose,
 }: {
   statements: string[];
   language: string;
+  warning?: string;
   onResult: (apply: boolean) => void;
   onClose: () => void;
 }): React.JSX.Element {
@@ -192,6 +194,11 @@ export function SqlPreviewDialog({
         </>
       }
     >
+      {warning && (
+        <p className="dialog-warning" data-testid="keyless-warning">
+          {warning}
+        </p>
+      )}
       <p>{es.results.edit.previewMessage(statements.length)}</p>
       <div className="sql-preview-scroll" data-testid="sql-preview">
         <SqlPreview sql={statements.join('\n')} language={language} maxLines={Infinity} />

@@ -3,6 +3,7 @@ import type { ConnectionConfig, Environment } from '@shared/connection';
 import { connectionAddress } from '@shared/connection';
 import type { TreeNodeData, TreeNodeRef } from '@shared/metadata';
 import { nodeKey } from '@shared/metadata';
+import { canRenameDatabase } from '@shared/db-admin';
 import { qualifiedName, quoteIdent } from '@shared/sql-quote';
 import { Codicon } from '../../components/Codicon';
 import { Button, IconButton } from '../../components/Button';
@@ -430,6 +431,9 @@ export function ConnectionsView(): React.JSX.Element {
     };
     if (ref.kind === 'database') {
       const m = es.dbAdmin.menu;
+      const renamable = canRenameDatabase(
+        connections.find((x) => x.id === node.connectionId)?.engine ?? 'postgres',
+      );
       return [
         {
           type: 'item',
@@ -457,6 +461,9 @@ export function ConnectionsView(): React.JSX.Element {
           id: 'rename-db',
           label: m.rename,
           keybinding: 'F2',
+          // MariaDB/MySQL no renombran bases de forma nativa y no se simula.
+          disabled: !renamable,
+          title: renamable ? undefined : es.dbAdmin.rename.unsupported,
           run: () => dbAdmin.renameDatabase(node.connectionId, ref.database),
         },
         {

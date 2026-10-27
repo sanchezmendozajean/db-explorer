@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { newConnectionDefaults } from '@shared/connection';
 import {
   backupModeOf,
+  canRenameDatabase,
   majorVersion,
   parseToolVersion,
+  renameDatabaseStatements,
   suggestedBackupName,
   toolFamilyOf,
   toolFileNames,
@@ -364,5 +366,27 @@ describe('SQL Server: restauración y validaciones', () => {
     });
     expect(move[0]!.target).toBe('/var/opt/mssql/data/v_a.mdf');
     expect(() => planFileMoves('v', [{ logical: 'l', type: 'L' }], { data: '/d', log: undefined })).toThrow();
+  });
+});
+
+describe('renombrar bases', () => {
+  it('solo PostgreSQL y SQL Server lo permiten (MariaDB/MySQL y SQLite no)', () => {
+    expect(canRenameDatabase('postgres')).toBe(true);
+    expect(canRenameDatabase('sqlserver')).toBe(true);
+    expect(canRenameDatabase('mariadb')).toBe(false);
+    expect(canRenameDatabase('sqlite')).toBe(false);
+    expect(renameDatabaseStatements('mariadb', 'a', 'b')).toEqual([]);
+  });
+
+  it('muestra las sentencias reales, con los nombres entrecomillados', () => {
+    expect(renameDatabaseStatements('postgres', 'Ventas', 'ventas2')).toEqual([
+      "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'Ventas' AND pid <> pg_backend_pid()",
+      'ALTER DATABASE "Ventas" RENAME TO ventas2',
+    ]);
+    expect(renameDatabaseStatements('sqlserver', 'a', 'b]c')).toEqual([
+      'ALTER DATABASE [a] SET SINGLE_USER WITH ROLLBACK IMMEDIATE',
+      'ALTER DATABASE [a] MODIFY NAME = [b]]c]',
+      'ALTER DATABASE [b]]c] SET MULTI_USER',
+    ]);
   });
 });

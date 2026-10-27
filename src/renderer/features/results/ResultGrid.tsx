@@ -41,7 +41,9 @@ import type { GridHandle } from './grid-edit';
 import { editPending, isEditableColumn, setActiveGrid } from './grid-edit';
 import {
   addRow,
+  canHoldUuid,
   clearSelectedCells,
+  generateUuids,
   deleteSelectedRows,
   duplicateSelectedRows,
   pasteIntoGrid,
@@ -338,6 +340,7 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
       };
     },
     // `version`: las filas se agregan en el mismo arreglo; hay que redibujar.
+    // prettier-ignore
     [cols, columns, rows, pending, refAt, result, colSettings, formats, settings, gridTheme_, version, selection], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
@@ -543,6 +546,7 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
       item('paste', c.paste, () => void pasteIntoGrid(), { keybinding: 'Ctrl+V', disabled: !editable }),
       SEPARATOR,
       item('null', c.setNull, setSelectedNull, { keybinding: 'Shift+Supr', disabled: !canEdit }),
+      item('uuid', c.generateUuid, generateUuids, { disabled: !canEdit || !canHoldUuid(result, column) }),
       item('view', c.viewValue, () => onViewValue(valueAt(cell)), { keybinding: 'Ctrl+Shift+Enter' }),
       SEPARATOR,
       item('filter', c.filterByValue, () => filter(false)),
@@ -574,6 +578,39 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
         item('add', es.results.addRow, addRow, { keybinding: 'Alt+Insert' }),
         item('dup', c.duplicateRow, duplicateSelectedRows, { disabled: !at }),
         item('del', es.results.deleteRows, deleteSelectedRows, { keybinding: 'Ctrl+Supr', disabled: !at }),
+      );
+    }
+    return entries;
+  };
+
+  /** Menú del número de fila: solo lo que se aplica a filas completas. */
+  const rowMenu = (): MenuEntry[] => {
+    const c = es.results.cell;
+    const item = (id: string, label: string, run: () => void, extra: Partial<MenuEntry> = {}): MenuEntry =>
+      ({ type: 'item', id, label, run, ...extra }) as MenuEntry;
+    const entries: MenuEntry[] = [
+      item('copy', c.copyRows, () => copySelection(false), { keybinding: 'Ctrl+C' }),
+      item('copyh', c.copyWithHeaders, () => copySelection(true), { keybinding: 'Ctrl+Shift+C' }),
+      {
+        type: 'submenu',
+        id: 'copyAs',
+        label: c.copyAs,
+        entries: [
+          item('csv', 'CSV', () => copyAs('csv')),
+          item('tsv', 'TSV', () => copyAs('tsv')),
+          item('json', 'JSON', () => copyAs('json')),
+          item('md', 'Markdown', () => copyAs('markdown')),
+          item('insert', 'INSERT', () => copyAs('insert')),
+          item('in', es.results.inList, () => copyAs('in')),
+        ],
+      },
+    ];
+    if (editable) {
+      entries.push(
+        SEPARATOR,
+        item('add', es.results.addRow, addRow, { keybinding: 'Alt+Insert' }),
+        item('dup', c.duplicateRow, duplicateSelectedRows),
+        item('del', es.results.deleteRows, deleteSelectedRows, { keybinding: 'Ctrl+Supr' }),
       );
     }
     return entries;
@@ -668,7 +705,26 @@ export const ResultGrid = forwardRef<ResultGridHandle, Props>(function ResultGri
         }}
         onCellContextMenu={(cell, event) => {
           event.preventDefault();
-          if (cell[0] < 0) return;
+          if (cell[1] < 0) return;
+          if (cell[0] < 0) {
+            // Número de fila: se selecciona la fila entera (si no lo estaba) y se ofrece el menú de filas.
+            if (!selection.rows.hasIndex(cell[1])) {
+              updateSelection({
+                current: undefined,
+                rows: CompactSelection.fromSingleSelection(cell[1]),
+                columns: CompactSelection.empty(),
+              });
+            }
+            showContextMenu(
+              {
+                clientX: event.bounds.x + event.localEventX,
+                clientY: event.bounds.y + event.localEventY,
+                preventDefault: () => undefined,
+              },
+              rowMenu(),
+            );
+            return;
+          }
           // Clic derecho fuera de la selección: primero se selecciona esa celda (specs/04 §10).
           if (!isCellSelected(selection, cell)) {
             updateSelection({

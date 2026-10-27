@@ -1,8 +1,10 @@
-import { backupModeOf, toolFamilyOf } from '@shared/db-admin';
+import { backupModeOf, canRenameDatabase, renameDatabaseStatements, toolFamilyOf } from '@shared/db-admin';
 import { es } from '../../i18n/es';
 import { connectionById, useConnectionsStore } from '../../stores/connections-store';
 import { useOverlayStore } from '../../stores/overlay-store';
 import { showToast } from '../../stores/toast-store';
+import { askWriteConfirm } from '../dialogs/ask';
+import { languageFor } from '../editor/documents';
 import { invalidateDetails } from '../objects/object-details';
 
 const store = useConnectionsStore.getState;
@@ -52,23 +54,39 @@ export function createDatabase(connectionId: string): void {
 
 export function renameDatabase(connectionId: string, database: string): void {
   const conn = connectionById(connectionId);
-  if (!conn || !writable(connectionId)) return;
+  if (!conn) return;
+  if (!canRenameDatabase(conn.engine)) {
+    showToast('info', t.rename.unsupported);
+    return;
+  }
+  if (!writable(connectionId)) return;
   overlay().openDialog({
     id: 'prompt',
     title: t.rename.title(database),
     label: t.rename.label,
-    message:
-      t.rename.notes[conn.engine === 'postgres' || conn.engine === 'sqlserver' ? conn.engine : 'mariadb'],
+    message: t.rename.notes[conn.engine === 'sqlserver' ? 'sqlserver' : 'postgres'],
     initialValue: database,
     confirmLabel: t.rename.confirm,
     validate: (v) => (!v.trim() ? es.connections.nameRequired : v.trim() === database ? t.rename.same : null),
     onSubmit: (value) => {
       const newName = value.trim();
-      void window.api.dbadmin.rename({ connectionId, database, newName }).then((r) => {
-        if (!r.ok) return fail('rename', r.error.message);
-        showToast('success', t.rename.done(database, newName));
-        refreshConnection(connectionId);
-      });
+      const apply = (): void => {
+        void window.api.dbadmin.rename({ connectionId, database, newName }).then((r) => {
+          if (!r.ok) return fail('rename', r.error.message);
+          showToast('success', t.rename.done(database, newName));
+          refreshConnection(connectionId);
+        });
+      };
+      if (conn.environment !== 'prod') return apply();
+      // En Producción se muestra el SQL que se va a ejecutar y hay que confirmarlo.
+      void askWriteConfirm({
+        connectionName: conn.name,
+        production: true,
+        statements: renameDatabaseStatements(conn.engine, database, newName),
+        unbounded: false,
+        language: languageFor(conn.engine),
+        allowSkip: false,
+      }).then((answer) => answer.confirmed && apply());
     },
   });
 }

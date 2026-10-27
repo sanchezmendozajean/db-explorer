@@ -47,6 +47,7 @@ export const DEFAULT_KEYBINDINGS: readonly KeybindingRule[] = [
   { key: 'ctrl+v', command: 'db.results.paste', when: 'gridFocus && !inputFocus' },
 
   // Pestañas
+  { key: 'ctrl+\\', command: 'db.splitEditor' },
   { key: 'ctrl+w', command: 'db.closeTab' },
   { key: 'ctrl+f4', command: 'db.closeTab' },
   { key: 'ctrl+shift+t', command: 'db.reopenClosedTab' },

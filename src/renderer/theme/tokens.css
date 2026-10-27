@@ -18,6 +18,7 @@
   --bg-input: #313131;
   --bg-hover: #2a2d2e;
   --bg-selection: #04395e;
+  --bg-text-selection: #264f78;
   --bg-selection-inactive: #37373d;
   --bg-menu: #1f1f1f;
   --bg-grid-header: #252526;
@@ -79,6 +80,7 @@
   --bg-input: #ffffff;
   --bg-hover: #f2f2f2;
   --bg-selection: #e4f0fb;
+  --bg-text-selection: #99c9ef;
   --bg-selection-inactive: #e4e6f1;
   --bg-menu: #ffffff;
   --bg-grid-header: #f3f3f3;

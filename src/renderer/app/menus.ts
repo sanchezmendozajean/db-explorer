@@ -97,6 +97,7 @@ export const TITLE_BAR_MENUS: TopMenu[] = [
       commandEntry('db.toggleSidebar'),
       commandEntry('db.togglePanel'),
       commandEntry('db.maximizePanel'),
+      commandEntry('db.splitEditor'),
       SEPARATOR,
       { type: 'submenu', id: 'theme', label: es.menu.theme, entries: themeEntries() },
       {

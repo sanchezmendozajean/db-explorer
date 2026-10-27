@@ -7,6 +7,8 @@ Desde el árbol puedes **crear, renombrar, eliminar, respaldar y restaurar** bas
 - **Crear**: menú contextual de la conexión.
 - **Respaldar, Restaurar, Renombrar y Eliminar**: menú contextual de la base. <kbd>F2</kbd> renombra y <kbd>Supr</kbd> elimina.
 
+**Renombrar** no está disponible en MariaDB/MySQL (no tienen soporte nativo y la aplicación no lo simula). En PostgreSQL y SQL Server, si la conexión es de **Producción**, antes de aplicar se muestra el SQL que se va a ejecutar y hay que confirmarlo.
+
 Las conexiones de **solo lectura** no pueden crear, eliminar, renombrar ni restaurar.
 
 ## Respaldar y restaurar

@@ -452,6 +452,11 @@
   background: var(--border-focus);
 }
 
+/* En un grupo sin el foco, la pestaña visible pierde la línea de foco (como VS Code). */
+.editor-tab.is-unfocused:not(.has-env)::before {
+  background: transparent;
+}
+
 .editor-tab.has-env::before {
   height: 2px;
   background: var(--tab-env);
@@ -1067,11 +1072,13 @@ button.statusbar-item:hover {
 
 /* Resultados maximizados: el editor se oculta sin desmontarse (conserva la instancia de Monaco). */
 .split.is-results-maximized > [data-testid='editor'],
+.split.is-results-maximized > [data-testid='editor-2'],
 .split.is-results-maximized > .sash {
   display: none;
 }
 
-.split.is-results-maximized > [data-testid='results'] {
+.split.is-results-maximized > [data-testid='results'],
+.split.is-results-maximized > [data-testid='results-2'] {
   flex: 1 1 100% !important;
 }
 
@@ -1530,6 +1537,10 @@ button.statusbar-item:hover {
 
 .readonly-badge {
   cursor: help;
+}
+
+.keyless-badge {
+  color: var(--warning);
 }
 
 .filter-chip {

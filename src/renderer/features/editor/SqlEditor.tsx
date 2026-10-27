@@ -6,7 +6,7 @@ import { showContextMenu } from '../../components/ContextMenuHost';
 import { connectionById } from '../../stores/connections-store';
 import { useSettingsStore } from '../../stores/settings-store';
 import { useUiStore } from '../../stores/ui-store';
-import type { EditorTab } from '../../stores/workbench-store';
+import type { EditorGroupIndex, EditorTab } from '../../stores/workbench-store';
 import { useWorkbenchStore } from '../../stores/workbench-store';
 import { EMPTY_TAB_RESULTS, useResultsStore } from '../results/results-store';
 import { clearMarkers, dialectOf } from '../execution/execute';
@@ -62,7 +62,7 @@ function nestedOptions(flat: Record<string, unknown>): Record<string, unknown> {
 const ACTIVE_STATEMENT_DEBOUNCE_MS = 150;
 
 /** Editor SQL del grupo: una instancia de Monaco; cada pestaña aporta su modelo (specs/05 §Integración). */
-export function SqlEditor({ tab }: { tab: EditorTab }): React.JSX.Element {
+export function SqlEditor({ tab, group }: { tab: EditorTab; group: EditorGroupIndex }): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const [instance, setInstance] = useState<{ monaco: Monaco; editor: CodeEditor } | null>(null);
   const theme = useUiStore((s) => s.effectiveTheme);
@@ -88,7 +88,9 @@ export function SqlEditor({ tab }: { tab: EditorTab }): React.JSX.Element {
         contextmenu: false,
       });
       registerSqlProviders(monaco);
-      const detach = attachEditor(monaco, editor);
+      const detach = attachEditor(monaco, editor, group);
+      // Al enfocar el editor, su grupo pasa a ser el enfocado (y su pestaña, la activa).
+      const focus = editor.onDidFocusEditorWidget(() => useWorkbenchStore.getState().focusGroup(group));
       // Menú contextual propio (ver editor-menu.ts); el de Monaco queda desactivado.
       const menu = editor.onContextMenu((e) =>
         showContextMenu(e.event.browserEvent, editorContextMenu(editor), {
@@ -101,6 +103,7 @@ export function SqlEditor({ tab }: { tab: EditorTab }): React.JSX.Element {
         const current = docRef.current;
         if (current && editor.getModel() === current.model) current.viewState = editor.saveViewState();
         menu.dispose();
+        focus.dispose();
         detach();
         editor.dispose();
       };
@@ -109,7 +112,7 @@ export function SqlEditor({ tab }: { tab: EditorTab }): React.JSX.Element {
       disposed = true;
       cleanup?.();
     };
-  }, []);
+  }, [group]);
 
   // Tema y opciones.
   useEffect(() => {
@@ -142,10 +145,11 @@ export function SqlEditor({ tab }: { tab: EditorTab }): React.JSX.Element {
       if (editor.getModel() === next.model) return;
       editor.setModel(next.model);
       if (next.viewState) editor.restoreViewState(next.viewState);
-      // Al cambiar de pestaña el foco pasa al editor solo si estaba en el grupo de editor (o en ninguna parte):
-      // no se lo quita a un menú, la paleta, un diálogo o el árbol.
+      // Al cambiar de pestaña el foco pasa al editor solo si estaba en su grupo de editor (o en ninguna parte):
+      // no se lo quita a otro grupo, un menú, la paleta, un diálogo o el árbol.
       const active = document.activeElement;
-      if (!active || active === document.body || active.closest('.editor-group')) editor.focus();
+      const own = containerRef.current?.closest('.editor-group');
+      if (!active || active === document.body || (own && own.contains(active))) editor.focus();
     });
     return () => {
       alive = false;

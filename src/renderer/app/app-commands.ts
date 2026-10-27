@@ -14,6 +14,7 @@ import {
   changeEol,
   closeActiveTab,
   newScript,
+  splitEditor,
   openFileWithDialog,
   openScript,
   saveActiveAs,
@@ -220,6 +221,7 @@ export function registerAppCommands(): () => void {
       run: () => void window.api.app.edit({ action }),
     })),
 
+    { id: 'db.splitEditor', category: cat.tabs, run: () => void splitEditor() },
     { id: 'db.closeTab', category: cat.tabs, enabled: hasTabs, run: () => void closeActiveTab() },
 
     // Archivos (specs/11)
@@ -548,9 +550,4 @@ async function openConfigFile(file: 'settings' | 'keybindings'): Promise<void> {
   }
   registerConfigSchema(file, r.data.path);
   await openScript(r.data.path);
-}
-
-/** Aviso para acciones visibles en la maqueta que llegan en hitos posteriores. */
-export function notAvailable(what: string): void {
-  showToast('info', es.toasts.notAvailable(what));
 }

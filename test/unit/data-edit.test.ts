@@ -34,6 +34,18 @@ describe('literales SQL', () => {
 });
 
 describe('sentencias de la edición en grilla', () => {
+  it('sin clave compara por todas las columnas y usa IS NULL para los nulos', () => {
+    const keyless: EditTable = { ...table('postgres'), keyColumns: [0, 1] };
+    const [update, remove] = buildStatements(keyless, [
+      { kind: 'update', key: [7, null], changes: [{ column: 1, value: 'x' }] },
+      { kind: 'delete', key: [7, 'a'] },
+    ]);
+    expect(update!.literal).toBe("UPDATE ventas.\"Clientes\" SET nombre = 'x' WHERE id = 7 AND nombre IS NULL;");
+    expect(update!.statement.params).toEqual(['x', 7]);
+    expect(update!.statement.expectOne).toBe(true);
+    expect(remove!.literal).toBe("DELETE FROM ventas.\"Clientes\" WHERE id = 7 AND nombre = 'a';");
+  });
+
   it('UPDATE, INSERT y DELETE parametrizados con su versión literal', () => {
     const [update, insert, remove, empty] = buildStatements(table('postgres'), [
       { kind: 'update', key: [7], changes: [{ column: 1, value: "O'Neil" }] },

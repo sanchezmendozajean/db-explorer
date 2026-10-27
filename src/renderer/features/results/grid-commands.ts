@@ -49,6 +49,23 @@ export function setSelectedNull(): void {
   setSelected(() => null);
 }
 
+/** Un UUID v4 distinto en cada celda seleccionada (solo columnas de texto o uuid). */
+export function generateUuids(): void {
+  const c = current();
+  if (!c?.result.editable) return;
+  const cells = c.grid
+    .selectedCells()
+    .filter(({ column }) => canHoldUuid(c.result, column))
+    .map(({ ref, column }) => ({ ref, column, value: crypto.randomUUID() as CellValue }));
+  editPending(c.grid.tabId, c.grid.resultId, (pending, result) => setCells(result.rows, pending, cells));
+}
+
+/** ¿La columna admite un UUID? Editable y de tipo uuid o texto. */
+export function canHoldUuid(result: ResultSet, column: number): boolean {
+  const type = result.columns[column]?.logicalType;
+  return isEditableColumn(result, column) && (type === 'uuid' || type === 'text');
+}
+
 export function addRow(): void {
   const c = current();
   if (!c?.result.editable) return;
@@ -65,7 +82,7 @@ export function addRow(): void {
 export function duplicateSelectedRows(): void {
   const c = current();
   if (!c?.result.editable) return;
-  const keys = new Set(c.result.editable.keyColumns);
+  const keys = new Set(c.result.editable.keyless ? [] : c.result.editable.keyColumns);
   const editable = c.result.editable.columnNames.flatMap((n, i) => (n !== null && !keys.has(i) ? [i] : []));
   const values = c.grid.selectedRows().map((ref) => {
     const row: Record<number, CellValue> = {};

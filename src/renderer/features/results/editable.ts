@@ -75,15 +75,23 @@ export async function resolveEditable(tabId: string, resultId: string): Promise<
   } catch (err) {
     return readOnly(r.noDetails(err instanceof Error ? err.message : String(err)));
   }
-  if (!keys) return readOnly(r.noKey(ref.name));
-  const keyColumns = keys.map((k) => columnNames.findIndex((n) => n !== null && sameName(n, k)));
-  const missing = keys.filter((_, i) => keyColumns[i]! < 0);
+  // Sin clave, la fila se identifica por todas las columnas comparables (no JSON ni binarias).
+  const keyless = !keys;
+  const keyColumns = keys
+    ? keys.map((k) => columnNames.findIndex((n) => n !== null && sameName(n, k)))
+    : columnNames.flatMap((n, i) => {
+        const type = result.columns[i]?.logicalType;
+        return n !== null && type !== 'json' && type !== 'binary' ? [i] : [];
+      });
+  if (keyless && keyColumns.length === 0) return readOnly(r.noKey(ref.name));
+  const missing = (keys ?? []).filter((_, i) => keyColumns[i]! < 0);
   if (missing.length > 0) return readOnly(r.keyMissing(missing.join(', ')));
   const info: EditableInfo = {
     engine: conn.engine,
     table: { database: ref.database, schema: ref.schema, name: ref.name },
     columnNames,
     keyColumns,
+    keyless: keyless || undefined,
   };
   updateResult(tabId, resultId, { editable: info, readOnlyReason: undefined });
 }

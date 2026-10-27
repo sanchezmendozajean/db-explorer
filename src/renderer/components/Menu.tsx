@@ -83,6 +83,7 @@ export function Menu({
   // Solo el menú raíz escucha clics fuera; los submenús se cierran con él.
   useEffect(() => {
     if (level > 0) return;
+    // `pointerdown` además de `mousedown`: la grilla (canvas) cancela el puntero y el navegador no emite el `mousedown`.
     const onDown = (e: MouseEvent): void => {
       const target = e.target as Element | null;
       if (!target) return;
@@ -92,9 +93,11 @@ export function Menu({
     };
     const onBlur = (): void => onClose('outside');
     document.addEventListener('mousedown', onDown, true);
+    document.addEventListener('pointerdown', onDown, true);
     window.addEventListener('blur', onBlur);
     return () => {
       document.removeEventListener('mousedown', onDown, true);
+      document.removeEventListener('pointerdown', onDown, true);
       window.removeEventListener('blur', onBlur);
     };
   }, [level, onClose, isInsideAnchor]);

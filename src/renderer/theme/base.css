@@ -41,8 +41,9 @@ textarea {
   outline-offset: -1px;
 }
 
+/* Texto seleccionado (campos, editor de celda): más contraste que la selección de listas. */
 ::selection {
-  background: var(--bg-selection);
+  background: var(--bg-text-selection);
 }
 
 ::-webkit-scrollbar {

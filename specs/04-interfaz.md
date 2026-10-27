@@ -144,7 +144,7 @@ Interacciones:
 - Teclado: flechas, ←/→ colapsa/expande, Enter abre, F2 renombra (conexiones y carpetas), Supr elimina conexión (con confirmación), F5 refresca nodo.
 
 Menú contextual de **conexión**: Conectar / Desconectar, Nuevo script SQL (Ctrl+]), —, Editar conexión… (F4), Duplicar, Renombrar (F2), Mover a carpeta ▸, Eliminar, —, Refrescar, Copiar nombre.
-Menú contextual de **base de datos** (PostgreSQL, MariaDB/MySQL, SQL Server): Nuevo script SQL (Ctrl+]), —, Respaldar base de datos…, Restaurar base de datos…, —, Renombrar base de datos… (F2), Eliminar base de datos… (Supr), —, Refrescar, Copiar nombre. La conexión suma "Crear base de datos…" (no en SQLite). Eliminar pide escribir el nombre de la base.
+Menú contextual de **base de datos** (PostgreSQL, MariaDB/MySQL, SQL Server): Nuevo script SQL (Ctrl+]), —, Respaldar base de datos…, Restaurar base de datos…, —, Renombrar base de datos… (F2; desactivada en MariaDB/MySQL, que no la tienen de forma nativa; en Producción muestra el SQL y pide confirmar), Eliminar base de datos… (Supr), —, Refrescar, Copiar nombre. La conexión suma "Crear base de datos…" (no en SQLite). Eliminar pide escribir el nombre de la base.
 Menú contextual de **tabla**: Ver datos, Ver estructura, Nuevo script ▸ (SELECT, INSERT, UPDATE, DELETE, DDL), —, Copiar nombre, Copiar nombre calificado, —, Refrescar, Contar filas.
 
 ## 7. Side bar — vista Archivos (ver `07`)
@@ -166,7 +166,7 @@ Siempre hay un espacio de trabajo abierto (ver `11`). Si está vacío: mensaje c
 - Al desbordar: scroll horizontal con rueda + botón `codicon-ellipsis` "Mostrar pestañas abiertas" (su menú empieza con "Nuevo script", `Ctrl+N`, y sigue con las pestañas).
 - Doble clic en la zona vacía de la barra de pestañas: nuevo script (como VS Code).
 - Arrastrables para reordenar. Clic central cierra. Menú contextual: Cerrar, Cerrar otras, Cerrar a la derecha, Cerrar guardadas, Cerrar todas, Copiar ruta, Mostrar en Archivos.
-- Opcional v1: dividir editor en dos grupos lado a lado (Ctrl+\). Si complica, dejar para v2.
+- Dividir editor (Ctrl+\, botón `codicon-split-horizontal` de la barra, menú Ver y "Dividir a la derecha" del menú contextual de la pestaña): dos grupos lado a lado, cada uno con su barra de pestañas y su panel de resultados. Una pestaña pertenece a un solo grupo; se pasa de uno a otro con el mismo comando, el menú contextual o arrastrándola a la barra del otro. El grupo derecho desaparece al quedar sin pestañas (botón "Juntar con el grupo izquierdo"). Un clic en un grupo lo enfoca; los comandos (ejecutar, guardar, cerrar, Ctrl+Tab, Alt+N) actúan sobre el grupo enfocado.
 
 ### Barra del editor SQL (30 px, fondo `bg.editor`, borde inferior `border`)
 De izquierda a derecha:

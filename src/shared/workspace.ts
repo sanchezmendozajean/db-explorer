@@ -14,6 +14,8 @@ export const ScriptTabStateSchema = z.object({
   connectionId: z.string().max(64).optional(),
   database: Name.optional(),
   schema: Name.optional(),
+  /** Grupo del editor dividido (1 = derecho); sin valor, el principal. */
+  group: z.literal(1).optional(),
   /** `ICodeEditorViewState` de Monaco (cursor, scroll, plegados); opaco para main. */
   viewState: z.unknown().optional(),
 });

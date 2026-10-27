@@ -253,6 +253,36 @@ test('doble clic en la zona vacía de las pestañas y "Nuevo script" del menú c
   await expect(page.getByTestId('editor-tab').filter({ hasText: 'Script-2' })).toHaveCount(0);
 });
 
+test('Dividir editor (Ctrl+barra invertida) abre un segundo grupo, enfoca cada editor con un clic y se vuelve a juntar', async () => {
+  await page.keyboard.press('Control+N');
+  await expect(page.getByTestId('editor-tab').filter({ hasText: 'Script-2' })).toBeVisible();
+  await page.keyboard.press('Control+Backslash');
+  const groups = page.locator('.editor-group');
+  await expect(groups).toHaveCount(2);
+  await expect(groups.nth(1).getByTestId('editor-tab')).toHaveText(/Script-2/);
+  await expect(groups.nth(0).getByTestId('editor-tab')).toHaveText(/Script-1/);
+  await expect(editor()).toHaveCount(2);
+  await shot('editor-dividido');
+  // Cada grupo conserva su editor: escribir en el derecho no toca el izquierdo.
+  await groups.nth(1).getByTestId('sql-editor').locator('.view-lines').click();
+  await page.keyboard.type('select 99;');
+  await expect(groups.nth(1).getByTestId('sql-editor')).toContainText('select 99;');
+  await expect(groups.nth(0).getByTestId('sql-editor')).not.toContainText('select 99;');
+  // Un clic en el grupo izquierdo lo enfoca: su pestaña pasa a ser la activa.
+  await groups.nth(0).getByTestId('sql-editor').locator('.view-lines').click();
+  await expect(groups.nth(0).getByTestId('editor-tab')).toHaveAttribute('aria-selected', 'true');
+  // Juntar los grupos devuelve todo al izquierdo.
+  await groups.nth(1).getByRole('button', { name: 'Juntar con el grupo izquierdo' }).click();
+  await expect(groups).toHaveCount(1);
+  await expect(page.getByTestId('editor-tab')).toHaveCount(2);
+  // Se deja el espacio como estaba: Script-2 vacío se elimina al cerrarlo.
+  await page.getByTestId('editor-tab').filter({ hasText: 'Script-2' }).click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.press('Delete');
+  await page.keyboard.press('Control+W');
+  await expect(page.getByTestId('editor-tab').filter({ hasText: 'Script-2' })).toHaveCount(0);
+});
+
 test('Alt+F4 antes de 5 s guarda, y al reabrir se restauran pestaña, cursor y conexión', async () => {
   await typeInEditor('select 1;\nselect 2 as ultima;');
   await page.keyboard.press('End');

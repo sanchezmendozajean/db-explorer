@@ -3,7 +3,7 @@ import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels';
 import { ConnectionsView } from '../features/connections/ConnectionsView';
 import { FilesView } from '../features/files/FilesView';
 import { HistoryView } from '../features/history/HistoryView';
-import { EditorGroup } from '../features/editor/EditorGroup';
+import { EditorArea } from '../features/editor/EditorGroup';
 import { useSettingsStore } from '../stores/settings-store';
 import { useUiStore } from '../stores/ui-store';
 import { ActivityBar } from './ActivityBar';
@@ -64,12 +64,12 @@ export function Workbench(): React.JSX.Element {
             </Panel>
             <Separator className="sash sash-vertical" />
             <Panel id="editor-area" minSize={300}>
-              <EditorGroup />
+              <EditorArea />
             </Panel>
           </Group>
         ) : (
           <div className="split">
-            <EditorGroup />
+            <EditorArea />
           </div>
         )}
       </div>

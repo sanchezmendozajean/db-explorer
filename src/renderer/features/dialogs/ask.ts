@@ -29,7 +29,11 @@ export function askWriteConfirm(options: {
 }
 
 /** "Ver SQL" de la grilla: muestra las sentencias y resuelve `true` si se elige Aplicar. */
-export function askSqlPreview(options: { statements: string[]; language: string }): Promise<boolean> {
+export function askSqlPreview(options: {
+  statements: string[];
+  language: string;
+  warning?: string;
+}): Promise<boolean> {
   return new Promise((resolve) => {
     useOverlayStore.getState().openDialog({ id: 'sqlPreview', ...options, onResult: resolve });
   });

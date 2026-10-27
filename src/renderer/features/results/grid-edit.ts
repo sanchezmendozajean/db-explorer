@@ -137,7 +137,11 @@ export async function saveChanges(
   const generated = buildStatements(table, operations);
   const literals = generated.map((g) => g.literal);
   const language = languageFor(conn.engine);
-  if (options.preview && !(await askSqlPreview({ statements: literals, language }))) return false;
+  // Sin clave siempre se muestra el SQL: el usuario ve cómo se identifica la fila antes de aplicar.
+  const warning = result.editable.keyless ? es.results.edit.keylessWarning(table.name) : undefined;
+  if ((options.preview || warning) && !(await askSqlPreview({ statements: literals, language, warning }))) {
+    return false;
+  }
   if (conn.confirmWrites) {
     const answer = await askWriteConfirm({
       connectionName: conn.name,

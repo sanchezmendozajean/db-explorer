@@ -49,3 +49,8 @@ description: Lecciones del renderer de DB Explorer (React 19, zustand, Monaco 0.
 - Los proveedores SQL de Monaco (`registerSqlProviders`) se registran al montar cada editor que los necesite (SqlEditor, ClauseEditor, RoutineView): si una vista nueva no lo hace, el autocompletado cae en las palabras del texto. Un modelo que no es documento del espacio se asocia a su pestaña con `setModelOwner`.
 - Los acordes de dos teclas dentro de Monaco se registran con `syncAppChords` a partir de `keybindings.allRules()`; no reemplazan a los que Monaco ya trae (p. ej. Ctrl+K Ctrl+J).
 - La grilla Glide es un canvas: tras abrir el visor de valor la grilla se angosta; las pruebas deben recalcular coordenadas (usar la primera columna) y para deshacer usar el botón "Descartar cambios".
+
+## Editor dividido (dos grupos)
+- Un editor Monaco por grupo: `activeEditor()` devuelve el del grupo enfocado (el de la pestaña activa); para hallar el que muestra un documento usar `editorShowing(model)`. No guardar una referencia "actual" global.
+- `useWorkbenchStore.activeId` es la pestaña enfocada; la visible de cada grupo es `groupActive[g]`. Toda escritura pasa por `normalize` en el store: no tocar `groupActive` a mano. Las operaciones por posición (Ctrl+Tab, Alt+N) deben limitarse al grupo enfocado.
+- Hay dos `.editor-group` a la vez: los selectores de foco y las pruebas e2e deben acotar por grupo (`.editor-group[data-group="1"]` o `.nth()`); los `id` de los paneles del grupo derecho llevan sufijo `-2` (el `data-testid` sale del `id`).

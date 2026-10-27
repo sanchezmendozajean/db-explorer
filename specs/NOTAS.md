@@ -78,7 +78,7 @@ Completado con datos falsos (tomados de `specs/maqueta`). Criterios de aceptaci�
 
 ### Pendientes / avisos
 - Los datos de ejemplo (`renderer/sample/`, `stores/sample-store.ts`) se eliminan a medida que lleguen datos reales (M2 conexiones, M3 editor/resultados, M5 archivos).
-- No se persiste el tamaño/posición de la ventana (no lo pide la spec); se puede añadir a `ui-state.json` si se desea.
+- ~~No se persiste el tamaño/posición de la ventana~~ → resuelto, ver "Posición y tamaño de la ventana" (2026-10-27).
 - El bundle del renderer pesa ~1,1 MB sin dividir; se revisará en M9.
 
 ---
@@ -524,7 +524,7 @@ Pedida por el usuario: crear, eliminar, renombrar, respaldar y restaurar bases. 
 - **Dónde**: menú contextual de la base (y de la conexión para crear), F2 y Supr sobre una base. Canales `dbadmin:*` y `tools:*`; `DbDriver` suma `createDatabase`, `dropDatabase`, `renameDatabase`, `backupDatabase`, `restoreDatabase`. SQLite no aplica (el archivo es la conexión). Las conexiones de solo lectura no pueden crear, eliminar, renombrar ni restaurar (también se valida en el db-host); sí respaldar.
 - **Eliminar**: pide escribir el nombre. No se tocan bases del sistema (`postgres`, `template*`, `mysql`, `sys`, `master`…) ni la base a la que está conectada la conexión (PostgreSQL y SQL Server; hay que editar la conexión).
   - PostgreSQL: cierra las conexiones propias y ajenas a la base (`pg_terminate_backend`) y reintenta mientras siga "en uso" (55006). SQL Server: `SINGLE_USER WITH ROLLBACK IMMEDIATE` y vuelve a `MULTI_USER` si falla.
-- **Renombrar**: PostgreSQL `ALTER DATABASE … RENAME` (cierra conexiones). SQL Server `MODIFY NAME` (los .mdf/.ldf conservan su nombre físico). MariaDB/MySQL no tienen `RENAME DATABASE`: se crea la base nueva con el mismo juego de caracteres, se mueven las tablas con un solo `RENAME TABLE` y se elimina la antigua; **se rechaza** si hay vistas, rutinas, disparadores o eventos, y los privilegios a nivel de base no se trasladan.
+- **Renombrar**: PostgreSQL `ALTER DATABASE … RENAME` (cierra conexiones). SQL Server `MODIFY NAME` (los .mdf/.ldf conservan su nombre físico). MariaDB/MySQL no tienen `RENAME DATABASE`: ~~se creaba la base nueva y se movían las tablas~~ **desactivado el 2026-10-27** (ver §Renombrar bases).
 - **Crear**: solo el nombre; juego de caracteres, ordenamiento, dueño, etc. quedan en los valores del servidor.
 - **Respaldo con herramientas auxiliares** (PostgreSQL, MariaDB, MySQL): ver `08`. Modal "Herramientas auxiliares" la primera vez (zona de arrastre + selector); si ya están, va directo al diálogo de respaldo. Formatos: PostgreSQL `pg_dump --format=custom` (`.backup`); MariaDB/MySQL script `.sql` (`--single-transaction --routines --triggers --events`; MySQL además `--no-tablespaces --set-gtid-purged=OFF`, sin lo cual el script no se puede recargar en el mismo servidor). Sin `--databases`: el script no trae `CREATE DATABASE`, así que se puede restaurar sobre cualquier base.
 - **Restauración**: pide confirmar el reemplazo. PostgreSQL: `pg_restore --clean --if-exists --no-owner --no-privileges --single-transaction` (atómica; los objetos quedan a nombre del usuario conectado; solo formato personalizado, no `.sql` plano). MariaDB/MySQL: el script reemplaza sus tablas; lo que exista y no esté en el respaldo se conserva. SQL Server: `RESTORE … WITH REPLACE` con `MOVE` de los archivos junto a los actuales de la base (`<base>_<lógico>.mdf/.ndf/.ldf`); `COPY_ONLY` y `CHECKSUM` al respaldar.
@@ -568,3 +568,37 @@ Se atendieron los avisos que quedaban abiertos en M5–M8 y en la edición de ru
 - Preferencia `updates.auto` (Preferencias › Actualizaciones, **activada por defecto**): al abrir la app, a los 5 s busca y descarga. Al terminar la descarga el engranaje muestra un punto rojo y el menú agrega "Reiniciar para instalar nueva versión" (instala en silencio y reabre). "Buscar actualización" (siempre manual, aunque la preferencia esté desactivada) se oculta cuando ya se encontró una versión (descargando o lista).
 - No aplica a la versión **portable**, a desarrollo ni a las pruebas (perfil aislado): el estado es `unsupported` y la búsqueda manual avisa de ello. Si el usuario no reinicia, la versión se instala al cerrar la app (`autoInstallOnAppQuit`).
 - Límite: sin firma de código el instalador de Windows puede mostrar SmartScreen y electron-updater no verifica la firma del editor.
+
+## Dividir editor (2026-10-27)
+Era el último botón de la maqueta que mostraba "todavía no está disponible" (opcional en `04` §Pestañas). Se implementó con dos grupos como máximo.
+- **Modelo**: cada `EditorTab` lleva `group?: 1` (sin valor, grupo principal). `workbench-store` conserva `activeId` (la pestaña con el foco) y agrega `groupActive` (la visible de cada grupo); `normalize` los mantiene coherentes tras cualquier cambio (el grupo derecho vacío desaparece; sin pestañas a la izquierda, las de la derecha pasan a ella). Así todo lo que usa `activeId` (ejecutar, guardar, barra de estado) sigue valiendo para el grupo enfocado.
+- **Una pestaña, un grupo** (decisión: la opción más simple; VS Code permite el mismo archivo en ambos y aquí no): "Dividir editor" mueve la pestaña activa al otro grupo. Si es la única del grupo izquierdo, abre un script nuevo a la derecha (con la misma conexión) para no dejar vacío el izquierdo.
+- Un editor Monaco por grupo (`editor-instance.ts`: `activeEditor()` es el del grupo enfocado; las acciones de Monaco de la paleta actúan sobre él). Al enfocar un editor o hacer clic en un grupo, ese grupo pasa a ser el enfocado.
+- Atajo `Ctrl+\` (spec). En teclados en español exige AltGr; el comando también está en Ver › Dividir editor y en la paleta, y se puede reasignar en `keybindings.json`.
+- Persistencia: `group` se guarda en el estado del espacio de trabajo (`specs/11` §3); al restaurar, la pestaña visible del grupo derecho es la última (solo se guarda una `activeTab`).
+- Límites: no se crea el grupo arrastrando una pestaña al borde del editor (solo con el comando o el menú); el ancho de los grupos y la altura de resultados del derecho no se recuerdan al reiniciar.
+- Pruebas: unitarias del store (`workbench-store.test.ts`, 7 casos) y e2e en `editor.spec.ts`.
+
+## Renombrar bases (2026-10-27)
+- **MariaDB/MySQL ya no renombran bases** (pedido del usuario): no hay soporte nativo y el truco de crear la base nueva y mover las tablas con `RENAME TABLE` deja atrás vistas, rutinas, disparadores, eventos y privilegios; no se parchea con procesos auxiliares para no perjudicar a usuarios. El ítem del menú queda desactivado con el motivo como tooltip, F2 solo avisa y el driver rechaza la operación (`unsupported`). Se eliminó el código de la simulación.
+- **Producción**: en PostgreSQL y SQL Server, si la conexión es de entorno Producción, tras escribir el nombre nuevo se muestra el SQL real (`renameDatabaseStatements` en `shared/db-admin.ts`, reflejo de lo que ejecuta el driver) en el diálogo de confirmación de escrituras; Cancelar no cambia nada.
+- Pruebas: unitarias (`db-admin.test.ts`) y e2e en `db-admin.spec.ts` (Producción: ver SQL, cancelar, confirmar).
+
+## Posición y tamaño de la ventana (2026-10-27)
+- A pedido del usuario, la ventana recuerda su posición, su tamaño y si estaba maximizada. Se guarda en `userData/window-state.json` (archivo aparte de `ui-state.json`: lo escribe solo el proceso main y el renderer no puede pisarlo).
+- Se guardan las dimensiones **normales** (`getNormalBounds()`), no las de maximizada, para que al desmaximizar vuelva a su sitio. Se escribe con retardo de 500 ms al mover, redimensionar o maximizar, y de forma síncrona al cerrar.
+- Al abrir (`resolveWindowBounds`, en `src/main/windows/window-bounds.ts`): si lo guardado no cae sobre ningún monitor conectado (al menos 100×100 px visibles), se abre con 1400×900 centrada; si excede el área visible se reduce (sin bajar del mínimo 1024×640) y se desplaza para que quepa. Archivo ausente o dañado: valores por defecto.
+- Probado con pruebas unitarias de la validación; no hay e2e (depende de los monitores de la máquina).
+
+## Edición de tablas sin clave (2026-10-27)
+- **Cambia la decisión de `00-decisiones`** ("solo en tablas con clave primaria o única"), a pedido del usuario: una tabla sin PK ni índice único sin nulos **ya no es de solo lectura**; cada fila se identifica por **todas las columnas del resultado**, salvo las JSON y binarias (no comparables en todos los motores). Un resultado solo editable si queda al menos una columna comparable.
+- `WHERE` con `col = valor` y, para los nulos, `col IS NULL` (`= NULL` nunca coincide). Se usan los valores **originales** de la fila, no los editados.
+- **Seguridad**: toda sentencia de UPDATE/DELETE ya exigía afectar exactamente una fila (`expectOne`); con filas idénticas o datos que cambiaron desde la lectura, el guardado se revierte entero con "La clave no identifica una fila única (n filas afectadas)". Con pocas columnas en el resultado (p. ej. `select a, b`) la coincidencia es más laxa, pero esa misma comprobación la acota.
+- **Advertencia**: insignia amarilla "Sin clave" en la barra de resultados (con explicación en el tooltip) y, al guardar, **siempre** se muestra el diálogo con el SQL y un aviso explícito, aunque no se haya elegido "Ver SQL". "Duplicar fila" copia también las columnas que antes eran clave.
+- Pruebas: unitaria (`IS NULL` y `WHERE` con todas las columnas) y e2e en `data.spec.ts` (reemplaza la de solo lectura). Los demás motivos de solo lectura siguen igual.
+
+## Menú de la grilla: UUID, menú de fila y cierre (2026-10-27)
+- **"Generar UUID"** en el menú de celda: rellena cada celda seleccionada y editable de tipo uuid o texto con un UUID v4 distinto (`crypto.randomUUID()`), como cambio pendiente (se puede deshacer). Deshabilitado en otras columnas o si el resultado no es editable.
+- **Menú del número de fila** (clic derecho en la columna de números): selecciona la fila entera si no lo estaba y ofrece solo acciones de fila: copiar filas, con cabeceras, copiar como, y (si es editable) agregar, duplicar y eliminar filas. Sin acciones de celda o columna (NULL, filtrar por valor, formato…).
+- **Corrección**: el menú contextual no se cerraba al hacer clic en otra celda de la grilla; el canvas de Glide cancela `pointerdown` y el navegador no emite `mousedown`. `Menu` ahora también escucha `pointerdown` en captura.
+

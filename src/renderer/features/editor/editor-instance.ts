@@ -8,20 +8,30 @@ import {
   useKeybindingsVersion,
 } from '../../commands/service';
 import { evaluateWhen } from '../../commands/keybindings';
+import type { EditorGroupIndex } from '../../stores/workbench-store';
+import { groupOf, useWorkbenchStore } from '../../stores/workbench-store';
 import type { Monaco } from './monaco/loader';
 
 export type CodeEditor = MonacoApi.editor.IStandaloneCodeEditor;
 
-let current: CodeEditor | null = null;
+/** Un editor Monaco por grupo (cambiar de pestaña = `setModel`). */
+const editors = new Map<EditorGroupIndex, CodeEditor>();
 
-/** Editor Monaco del grupo (uno solo; cambiar de pestaña = `setModel`). */
+/** Editor del grupo enfocado (nulo si ese grupo muestra una pestaña sin editor de texto). */
 export function activeEditor(): CodeEditor | null {
-  return current;
+  const { tabs, activeId } = useWorkbenchStore.getState();
+  return editors.get(groupOf(tabs.find((t) => t.id === activeId))) ?? null;
+}
+
+/** Editor que muestra el modelo dado, en cualquiera de los grupos. */
+export function editorShowing(model: unknown): CodeEditor | null {
+  for (const editor of editors.values()) if (editor.getModel() === model) return editor;
+  return null;
 }
 
 /** Inserta texto en el cursor del editor activo (p. ej. desde el historial). Devuelve false si no hay editor. */
 export function insertIntoActiveEditor(text: string): boolean {
-  const editor = current;
+  const editor = activeEditor();
   const selection = editor?.getSelection();
   if (!editor || !selection || !editor.getModel()) return false;
   editor.executeEdits('db-explorer', [{ range: selection, text, forceMoveMarkers: true }]);
@@ -141,9 +151,9 @@ function syncAppChords(monaco: Monaco): void {
 let disposeRegistration: (() => void) | null = null;
 
 /** Registra el editor como activo: contexto `editorTextFocus`, cursor y acciones de Monaco en la paleta. */
-export function attachEditor(monaco: Monaco, editor: CodeEditor): () => void {
+export function attachEditor(monaco: Monaco, editor: CodeEditor, group: EditorGroupIndex): () => void {
   setupGlobal(monaco);
-  current = editor;
+  editors.set(group, editor);
 
   const disposers: (() => void)[] = [];
   disposers.push(registerContextProvider(() => (editor.hasTextFocus() ? ['editorTextFocus'] : [])));
@@ -155,23 +165,27 @@ export function attachEditor(monaco: Monaco, editor: CodeEditor): () => void {
     const selected = selection.isEmpty() ? 0 : model.getValueLengthInRange(selection);
     useCursorStore.getState().set(selection.positionLineNumber, selection.positionColumn, selected);
   };
-  const sub = editor.onDidChangeCursorSelection(updateCursor);
-  const subModel = editor.onDidChangeModel(updateCursor);
+  // Solo el editor del grupo enfocado alimenta la status bar.
+  const focused = (): boolean => activeEditor() === editor;
+  const sub = editor.onDidChangeCursorSelection(() => focused() && updateCursor());
+  const subModel = editor.onDidChangeModel(() => focused() && updateCursor());
+  const subFocus = editor.onDidFocusEditorWidget(updateCursor);
   disposers.push(
     () => sub.dispose(),
     () => subModel.dispose(),
+    () => subFocus.dispose(),
   );
 
-  disposeRegistration?.();
-  disposeRegistration = registerEditorActions(editor);
-  disposers.push(() => {
-    disposeRegistration?.();
-    disposeRegistration = null;
-  });
+  // Las acciones de Monaco se registran una vez (con el primer editor) y actúan sobre el enfocado.
+  disposeRegistration ??= registerEditorActions(editor);
 
   return () => {
     disposers.forEach((d) => d());
-    if (current === editor) current = null;
+    if (editors.get(group) === editor) editors.delete(group);
+    if (editors.size === 0) {
+      disposeRegistration?.();
+      disposeRegistration = null;
+    }
   };
 }
 
@@ -184,10 +198,11 @@ function registerEditorActions(editor: CodeEditor): () => void {
     id: action.id,
     title: action.label,
     category: 'Editor',
-    enabled: () => current !== null && current.getModel() !== null,
+    enabled: () => activeEditor()?.getModel() != null,
     run: () => {
-      editor.focus();
-      void editor.getAction(action.id)?.run();
+      const target = activeEditor();
+      target?.focus();
+      void target?.getAction(action.id)?.run();
     },
   }));
   return commands.registerMany(list);
