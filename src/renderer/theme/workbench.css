@@ -1072,13 +1072,11 @@ button.statusbar-item:hover {
 
 /* Resultados maximizados: el editor se oculta sin desmontarse (conserva la instancia de Monaco). */
 .split.is-results-maximized > [data-testid='editor'],
-.split.is-results-maximized > [data-testid='editor-2'],
 .split.is-results-maximized > .sash {
   display: none;
 }
 
-.split.is-results-maximized > [data-testid='results'],
-.split.is-results-maximized > [data-testid='results-2'] {
+.split.is-results-maximized > [data-testid='results'] {
   flex: 1 1 100% !important;
 }
 

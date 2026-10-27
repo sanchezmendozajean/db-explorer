@@ -262,6 +262,13 @@ test('Dividir editor (Ctrl+barra invertida) abre un segundo grupo, enfoca cada e
   await expect(groups.nth(1).getByTestId('editor-tab')).toHaveText(/Script-2/);
   await expect(groups.nth(0).getByTestId('editor-tab')).toHaveText(/Script-1/);
   await expect(editor()).toHaveCount(2);
+  // El panel de resultados sigue de una pieza, de ancho completo bajo los dos grupos (como el panel de VS Code).
+  await expect(page.getByTestId('results')).toHaveCount(1);
+  const [left, right, results] = await Promise.all(
+    [groups.nth(0), groups.nth(1), page.getByTestId('results')].map((l) => l.boundingBox()),
+  );
+  expect(results!.width).toBeGreaterThanOrEqual(left!.width + right!.width - 2);
+  expect(results!.y).toBeGreaterThan(Math.max(left!.y + left!.height, right!.y + right!.height) - 2);
   await shot('editor-dividido');
   // Cada grupo conserva su editor: escribir en el derecho no toca el izquierdo.
   await groups.nth(1).getByTestId('sql-editor').locator('.view-lines').click();

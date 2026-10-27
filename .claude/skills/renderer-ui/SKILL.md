@@ -53,4 +53,4 @@ description: Lecciones del renderer de DB Explorer (React 19, zustand, Monaco 0.
 ## Editor dividido (dos grupos)
 - Un editor Monaco por grupo: `activeEditor()` devuelve el del grupo enfocado (el de la pestaña activa); para hallar el que muestra un documento usar `editorShowing(model)`. No guardar una referencia "actual" global.
 - `useWorkbenchStore.activeId` es la pestaña enfocada; la visible de cada grupo es `groupActive[g]`. Toda escritura pasa por `normalize` en el store: no tocar `groupActive` a mano. Las operaciones por posición (Ctrl+Tab, Alt+N) deben limitarse al grupo enfocado.
-- Hay dos `.editor-group` a la vez: los selectores de foco y las pruebas e2e deben acotar por grupo (`.editor-group[data-group="1"]` o `.nth()`); los `id` de los paneles del grupo derecho llevan sufijo `-2` (el `data-testid` sale del `id`).
+- Hay dos `.editor-group` a la vez: los selectores de foco y las pruebas e2e deben acotar por grupo (`.editor-group[data-group="1"]` o `.nth()`). El panel de resultados es uno solo (`data-testid="results"`), fuera de los grupos, y sigue a la pestaña enfocada (`EditorArea`).

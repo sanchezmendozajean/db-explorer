@@ -602,3 +602,8 @@ Era el último botón de la maqueta que mostraba "todavía no está disponible" 
 - **Menú del número de fila** (clic derecho en la columna de números): selecciona la fila entera si no lo estaba y ofrece solo acciones de fila: copiar filas, con cabeceras, copiar como, y (si es editable) agregar, duplicar y eliminar filas. Sin acciones de celda o columna (NULL, filtrar por valor, formato…).
 - **Corrección**: el menú contextual no se cerraba al hacer clic en otra celda de la grilla; el canvas de Glide cancela `pointerdown` y el navegador no emite `mousedown`. `Menu` ahora también escucha `pointerdown` en captura.
 
+## Panel de resultados único con el editor dividido (2026-10-27)
+- Al dividir el editor, el panel de resultados/mensajes **ya no se parte**: es uno solo, de ancho completo bajo los dos grupos (como el panel inferior de VS Code), y muestra el de la pestaña **enfocada**. Un clic en el otro grupo cambia lo que muestra.
+- Si la pestaña enfocada no tiene panel (objeto, preferencias, archivos que no son SQL), el panel se oculta en todo el ancho. Los tamaños guardados (`editor`/`results`) siguen valiendo; desaparecen los ids `editor-2`/`results-2`.
+- Sustituye lo dicho en "Dividir editor" sobre un panel de resultados por grupo.
+
