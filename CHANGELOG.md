@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.4
+
+### Novedades
+- Al pegar un valor único con varias celdas seleccionadas en la grilla (rango, columnas o filas enteras), se pega en todas las celdas editables.
+
+### Correcciones
+- El editor de procedimientos y funciones y la vista DDL no respetaban las preferencias del editor (tamaño de fuente, tabulación, ajuste de línea, etc.).
+
 ## v0.1.3
 
 ### Novedades
