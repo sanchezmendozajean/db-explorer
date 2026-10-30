@@ -149,18 +149,35 @@ function pastedValue(result: ResultSet, column: number, text: string): CellValue
   return text;
 }
 
-/** Pega TSV (de Excel o de la grilla) desde la celda con foco; las filas que sobran se agregan como nuevas. */
+/**
+ * Pega TSV (de Excel o de la grilla) desde la celda con foco; las filas que sobran se agregan como nuevas.
+ * Un valor único con varias celdas seleccionadas se pega en todas ellas.
+ */
 export async function pasteIntoGrid(): Promise<void> {
   const c = current();
   if (!c?.result.editable) return;
+  const selected = c.grid.selectedCells();
   const start = c.grid.focusedCell();
-  if (!start) return;
+  if (!start && selected.length === 0) return;
   const r = await window.api.app.clipboardRead({});
   if (!r.ok) {
     showToast('error', r.error.message);
     return;
   }
   const matrix = parseTsv(r.data.text);
+  if (selected.length > 1 && matrix.length <= 1 && (matrix[0]?.length ?? 1) === 1) {
+    const text = matrix[0]?.[0] ?? '';
+    const fill = selected
+      .filter(({ column }) => isEditableColumn(c.result, column))
+      .map(({ ref, column }) => ({ ref, column, value: pastedValue(c.result, column, text) }));
+    if (fill.length === 0) {
+      showToast('info', es.results.edit.nothingToPaste);
+      return;
+    }
+    editPending(c.grid.tabId, c.grid.resultId, (pending, result) => setCells(result.rows, pending, fill));
+    return;
+  }
+  if (!start) return;
   const cols = c.grid.visibleColumns();
   const cells: { ref: RowRef; column: number; value: CellValue }[] = [];
   const extra: Record<number, CellValue>[] = [];

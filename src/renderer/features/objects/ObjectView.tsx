@@ -6,10 +6,12 @@ import { Codicon } from '../../components/Codicon';
 import { dotStyle } from '../../components/env-dot';
 import { es } from '../../i18n/es';
 import { connectionById, useConnectionsStore } from '../../stores/connections-store';
+import { useSettingsStore } from '../../stores/settings-store';
 import { useUiStore } from '../../stores/ui-store';
 import type { EditorTab } from '../../stores/workbench-store';
 import { useWorkbenchStore } from '../../stores/workbench-store';
 import { languageFor } from '../editor/documents';
+import { editorOptions } from '../editor/editor-options';
 import { loadMonaco } from '../editor/monaco/loader';
 import { newScript } from '../editor/scripts';
 import { cancelExecution } from '../execution/execute';
@@ -323,6 +325,7 @@ function DdlView({ tab }: { tab: EditorTab }): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const theme = useUiStore((s) => s.effectiveTheme);
   const engine = connectionById(tab.connectionId)?.engine;
+  const editorSettings = useSettingsStore((s) => s.settings.editor);
 
   useEffect(() => {
     let alive = true;
@@ -344,10 +347,8 @@ function DdlView({ tab }: { tab: EditorTab }): React.JSX.Element {
       const model = monaco.editor.createModel(ddl, languageFor(engine));
       const editor = monaco.editor.create(containerRef.current, {
         model,
+        ...editorOptions(editorSettings),
         readOnly: true,
-        fontFamily: "'Cascadia Code', Consolas, 'Courier New', monospace",
-        fontSize: 13,
-        minimap: { enabled: false },
         automaticLayout: true,
         scrollBeyondLastLine: false,
         contextmenu: false,
@@ -363,7 +364,7 @@ function DdlView({ tab }: { tab: EditorTab }): React.JSX.Element {
       disposed = true;
       cleanup?.();
     };
-  }, [ddl, engine, theme]);
+  }, [ddl, engine, theme, editorSettings]);
 
   return (
     <div className="ddl-view">

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import type * as MonacoApi from 'monaco-editor/editor/editor.api';
 import { splitStatements, statementAt } from '@shared/splitter';
 import { es } from '../../i18n/es';
 import { showContextMenu } from '../../components/ContextMenuHost';
@@ -15,49 +14,11 @@ import { ensureDocument, getDocument, onDocumentChange } from './documents';
 import type { CodeEditor } from './editor-instance';
 import { attachEditor } from './editor-instance';
 import { editorContextMenu } from './editor-menu';
+import { DEFAULT_OPTIONS, editorOptions } from './editor-options';
 import { loadMonaco } from './monaco/loader';
 import { registerSqlProviders } from './monaco/providers';
 import type { Monaco } from './monaco/loader';
 import { scheduleWorkspaceSave } from './scripts';
-
-/** Opciones por defecto de specs/05 (sobrescribibles con `editor.*` en settings.json). */
-const DEFAULT_OPTIONS: MonacoApi.editor.IEditorOptions & MonacoApi.editor.IGlobalEditorOptions = {
-  fontFamily: "'Cascadia Code', Consolas, 'Courier New', monospace",
-  fontSize: 13,
-  fontLigatures: false,
-  tabSize: 4,
-  insertSpaces: true,
-  wordWrap: 'off',
-  minimap: { enabled: false },
-  renderWhitespace: 'selection',
-  lineNumbers: 'on',
-  cursorBlinking: 'smooth',
-  smoothScrolling: true,
-  bracketPairColorization: { enabled: true },
-  guides: { indentation: true },
-  folding: true,
-  quickSuggestions: { other: true, comments: false, strings: false },
-  suggestOnTriggerCharacters: true,
-  acceptSuggestionOnEnter: 'on',
-  formatOnPaste: false,
-  stickyScroll: { enabled: false },
-  multiCursorModifier: 'alt',
-};
-
-/** Convierte claves planas (`minimap.enabled`) en el objeto anidado que espera Monaco. */
-function nestedOptions(flat: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(flat)) {
-    const parts = key.split('.');
-    let target = out;
-    parts.slice(0, -1).forEach((p) => {
-      target[p] = typeof target[p] === 'object' && target[p] !== null ? target[p] : {};
-      target = target[p] as Record<string, unknown>;
-    });
-    target[parts[parts.length - 1]!] = value;
-  }
-  return out;
-}
 
 const ACTIVE_STATEMENT_DEBOUNCE_MS = 150;
 
@@ -120,8 +81,7 @@ export function SqlEditor({ tab, group }: { tab: EditorTab; group: EditorGroupIn
   }, [instance, theme]);
   useEffect(() => {
     instance?.editor.updateOptions({
-      ...DEFAULT_OPTIONS,
-      ...nestedOptions(editorSettings),
+      ...editorOptions(editorSettings),
       contextmenu: false,
     });
   }, [instance, editorSettings]);

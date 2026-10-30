@@ -1,12 +1,15 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '../../components/Button';
 import { Codicon } from '../../components/Codicon';
 import { dotStyle } from '../../components/env-dot';
 import { es } from '../../i18n/es';
 import { askChoice } from '../dialogs/ask';
 import { connectionById, useConnectionsStore } from '../../stores/connections-store';
+import { useSettingsStore } from '../../stores/settings-store';
 import { useUiStore } from '../../stores/ui-store';
 import type { EditorTab } from '../../stores/workbench-store';
+import type { CodeEditor } from '../editor/editor-instance';
+import { editorOptions } from '../editor/editor-options';
 import { loadMonaco } from '../editor/monaco/loader';
 import { registerSqlProviders } from '../editor/monaco/providers';
 import {
@@ -26,6 +29,8 @@ export function RoutineView({ tab }: { tab: EditorTab }): React.JSX.Element {
   const connected = useConnectionsStore((s) => s.status[tab.connectionId ?? '']?.state === 'connected');
   const status = useRoutineStore((s) => s.byTab[tab.id]);
   const theme = useUiStore((s) => s.effectiveTheme);
+  const editorSettings = useSettingsStore((s) => s.settings.editor);
+  const [editor, setEditor] = useState<CodeEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const phase = status?.phase ?? 'loading';
   const ready = phase === 'ready';
@@ -47,25 +52,20 @@ export function RoutineView({ tab }: { tab: EditorTab }): React.JSX.Element {
       // Autocompletado, hover y formateo del dialecto (se registran una sola vez).
       registerSqlProviders(monaco);
       const editor = monaco.editor.create(containerRef.current, {
+        ...editorOptions(useSettingsStore.getState().settings.editor),
         model,
-        fontFamily: "'Cascadia Code', Consolas, 'Courier New', monospace",
-        fontSize: 13,
-        fontLigatures: false,
-        tabSize: 4,
-        insertSpaces: true,
-        minimap: { enabled: false },
         automaticLayout: true,
         scrollBeyondLastLine: false,
-        renderWhitespace: 'selection',
-        bracketPairColorization: { enabled: true },
         theme: theme === 'light' ? 'db-light' : 'db-dark',
         ariaLabel: tab.title,
       });
+      setEditor(editor);
       const view = routineViewState(tab.id);
       if (view) editor.restoreViewState(view);
       editor.focus();
       cleanup = () => {
         rememberRoutineViewState(tab.id, editor.saveViewState());
+        setEditor(null);
         editor.dispose();
       };
     });
@@ -74,6 +74,11 @@ export function RoutineView({ tab }: { tab: EditorTab }): React.JSX.Element {
       cleanup?.();
     };
   }, [ready, tab.id, tab.title, theme]);
+
+  // Preferencias del editor (tamaño de fuente, tabulación…), igual que en el editor SQL.
+  useEffect(() => {
+    editor?.updateOptions(editorOptions(editorSettings));
+  }, [editor, editorSettings]);
 
   if (!object || !conn) {
     return (
