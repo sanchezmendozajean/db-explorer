@@ -51,7 +51,10 @@ function readChildren(connectionId: string, ref: TreeNodeRef) {
 /** Ctrl+9 / chip de conexión: lista filtrable de conexiones (specs/04 §8). */
 export function pickConnection(tabId: string, anchor?: PickAnchor): void {
   const tab = tabById(tabId);
-  const items: QuickPickItem[] = useConnectionsStore.getState().connections.map((c) => ({
+  const sorted = [...useConnectionsStore.getState().connections].sort((a, b) =>
+    a.name.localeCompare(b.name, 'es', { sensitivity: 'base', numeric: true }),
+  );
+  const items: QuickPickItem[] = sorted.map((c) => ({
     id: c.id,
     label: c.name,
     // Relleno = conectada; hueco = cerrada (igual que el punto del árbol).
