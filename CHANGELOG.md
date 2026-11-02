@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.1.5
+
+### Novedades
+- Botón **Conectar** en la barra del editor, junto al selector de conexión: conecta el motor de la pestaña sin pasar por el árbol (muestra un indicador mientras conecta y se oculta una vez conectado).
+- Al instalar una actualización se muestra una ventana de avance ("Actualizando a la versión X…") hasta que el programa vuelve a abrirse.
+
+### Cambios
+- Buscar actualización usa una sola notificación con indicador animado, que se reemplaza por el resultado en lugar de dejar la anterior en pantalla.
+- La lista de conexiones del selector de la pestaña se ordena alfabéticamente.
+
 ## v0.1.4
 
 ### Novedades
