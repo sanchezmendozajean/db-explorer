@@ -387,6 +387,8 @@ export const es = {
       cancel: 'Cancelar (Ctrl+Shift+Q)',
       explain: 'Explicar plan (Ctrl+Alt+E) · Explicar y ejecutar (Ctrl+Alt+Shift+E)',
       connection: 'Conexión',
+      connect: (name: string) => `Conectar a ${name}`,
+      connecting: (name: string) => `Conectando a ${name}…`,
       database: 'Base de datos',
       schema: 'Esquema',
       transaction: (mode: string) => `Transacción: ${mode}`,

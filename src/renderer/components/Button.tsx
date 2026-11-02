@@ -31,16 +31,18 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
   active?: boolean;
   color?: string;
   size?: number;
+  /** Gira el ícono (indicador de progreso). */
+  spin?: boolean;
 }
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
-  { icon, label, active, color, size = 16, className, type = 'button', ...rest },
+  { icon, label, active, color, size = 16, spin, className, type = 'button', ...rest },
   ref,
 ) {
   const classes = ['icon-btn', active ? 'is-active' : '', className ?? ''].filter(Boolean).join(' ');
   return (
     <button ref={ref} type={type} className={classes} title={label} aria-label={label} {...rest}>
-      <Codicon name={icon} size={size} color={color} />
+      <Codicon name={icon} size={size} color={color} spin={spin} />
     </button>
   );
 });

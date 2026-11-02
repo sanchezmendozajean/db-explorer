@@ -10,6 +10,7 @@ import { anchorOf } from '../../stores/overlay-store';
 import { dotStyle } from '../../components/env-dot';
 import type { EditorTab } from '../../stores/workbench-store';
 import { EMPTY_TAB_RESULTS, useResultsStore } from '../results/results-store';
+import { connect } from '../connections/actions';
 import { endTransaction, setTransactionMode, useTransaction } from '../execution/transactions';
 import {
   effectiveTarget,
@@ -42,6 +43,9 @@ export function EditorToolbar({ tab }: { tab: EditorTab }): React.JSX.Element {
   // Suscripción al estado para refrescar base/esquema predeterminados al conectar.
   const connected = useConnectionsStore(
     (s) => !!tab.connectionId && s.status[tab.connectionId]?.state === 'connected',
+  );
+  const connecting = useConnectionsStore(
+    (s) => !!tab.connectionId && s.status[tab.connectionId]?.state === 'connecting',
   );
   const running = useResultsStore((s) => (s.byTab[tab.id] ?? EMPTY_TAB_RESULTS).running);
   const elapsed = useElapsed(running?.startedAt);
@@ -85,6 +89,16 @@ export function EditorToolbar({ tab }: { tab: EditorTab }): React.JSX.Element {
           onClick={() => void commands.execute('db.explainPlan')}
         />
         <span className="toolbar-separator" />
+        {conn && !connected && (
+          <IconButton
+            icon={connecting ? 'loading' : 'plug'}
+            spin={connecting}
+            label={connecting ? t.connecting(conn.name) : t.connect(conn.name)}
+            disabled={connecting}
+            data-testid="connect-button"
+            onClick={() => void connect(conn.id)}
+          />
+        )}
         <button
           type="button"
           className="chip"
