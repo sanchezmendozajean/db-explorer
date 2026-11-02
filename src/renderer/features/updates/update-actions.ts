@@ -1,24 +1,29 @@
 import { es } from '../../i18n/es';
-import { showToast } from '../../stores/toast-store';
+import { showToast, useToastStore } from '../../stores/toast-store';
 import { useUpdateStore } from '../../stores/update-store';
 
 const t = es.updates;
 
-/** Búsqueda manual: avisa del resultado; el engranaje se actualiza solo con el estado de main. */
+/**
+ * Búsqueda manual: una sola notificación que pasa de "Buscando…" (con indicador animado) al
+ * resultado; el engranaje se actualiza solo con el estado de main.
+ */
 export async function checkForUpdate(): Promise<void> {
-  showToast('info', t.checking);
+  const { replace, dismiss } = useToastStore.getState();
+  const id = showToast('info', t.checking, undefined, { loading: true });
   const r = await window.api.updates.check({});
   if (!r.ok) {
-    showToast('error', r.error.message);
+    replace(id, { severity: 'error', message: r.error.message });
     return;
   }
   useUpdateStore.getState().setStatus(r.data);
   const s = r.data;
-  if (s.state === 'none') showToast('success', t.upToDate);
-  else if (s.state === 'downloading') showToast('info', t.downloading(s.version));
-  else if (s.state === 'ready') showToast('success', t.ready(s.version));
-  else if (s.state === 'error') showToast('error', t.failed(s.message));
-  else if (s.state === 'unsupported') showToast('info', t.unsupported);
+  if (s.state === 'none') replace(id, { severity: 'success', message: t.upToDate });
+  else if (s.state === 'downloading') replace(id, { severity: 'info', message: t.downloading(s.version) });
+  else if (s.state === 'ready') replace(id, { severity: 'success', message: t.ready(s.version) });
+  else if (s.state === 'error') replace(id, { severity: 'error', message: t.failed(s.message) });
+  else if (s.state === 'unsupported') replace(id, { severity: 'info', message: t.unsupported });
+  else dismiss(id);
 }
 
 export async function installUpdate(): Promise<void> {

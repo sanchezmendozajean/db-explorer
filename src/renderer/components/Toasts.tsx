@@ -19,7 +19,11 @@ export function Toasts(): React.JSX.Element {
     <div className="toasts" role="region" aria-live="polite">
       {toasts.map((t) => (
         <div key={t.id} className="toast" role={t.severity === 'error' ? 'alert' : 'status'}>
-          <Codicon name={ICONS[t.severity].name} color={ICONS[t.severity].color} />
+          {t.loading ? (
+            <Codicon name="loading" spin color={ICONS.info.color} />
+          ) : (
+            <Codicon name={ICONS[t.severity].name} color={ICONS[t.severity].color} />
+          )}
           <div className="toast-body">
             <div className="toast-message">{t.message}</div>
             {t.actions && t.actions.length > 0 && (

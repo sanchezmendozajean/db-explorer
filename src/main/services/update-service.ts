@@ -1,5 +1,6 @@
 import { autoUpdater } from 'electron-updater';
 import type { UpdateStatus } from '@shared/updates';
+import { showUpdateProgress } from './update-progress';
 
 interface Options {
   /** Falso en desarrollo, en pruebas y en la versión portable: no hay instalador que actualizar. */
@@ -86,6 +87,11 @@ export class UpdateService {
 
   install(): void {
     if (this.options.fake) return;
-    if (this.status.state === 'ready') autoUpdater.quitAndInstall(true, true);
+    if (this.status.state !== 'ready') return;
+    showUpdateProgress({
+      title: 'DB Explorer',
+      message: `Actualizando a la versión ${this.status.version}…`,
+    });
+    autoUpdater.quitAndInstall(true, true);
   }
 }
