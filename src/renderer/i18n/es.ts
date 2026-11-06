@@ -1097,7 +1097,7 @@ export const es = {
     completed: (command: string) => `${command}: completado`,
     cancelled: 'Consulta cancelada por el usuario.',
     transactionLost:
-      'SQLite terminó la sesión al detener la consulta: la transacción manual abierta se revirtió y no hay cambios pendientes.',
+      'La sesión se cerró al detener la consulta o al perder la conexión: la transacción manual abierta se perdió y no hay cambios pendientes.',
     detail: (text: string) => `Detalle: ${text}`,
     hint: (text: string) => `Sugerencia: ${text}`,
     statementOk: 'Sentencia ejecutada',

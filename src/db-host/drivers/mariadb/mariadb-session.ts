@@ -229,6 +229,20 @@ export class MariaDbSession implements DbSession {
     await this.killQuery(this.connection.threadId);
   }
 
+  abandon(): void {
+    this.running = null;
+    this.closed = true;
+    this.connection.destroy();
+  }
+
+  async ping(): Promise<void> {
+    if (this.closed) throw new DriverError('Se perdió la conexión con el servidor', 'disconnected');
+    await new Promise<void>((resolve, reject) => {
+      // Ping de protocolo: no abre transacciones ni depende del estado de la sesión.
+      this.connection.ping((err) => (err ? reject(toMariaDbError(err)) : resolve()));
+    });
+  }
+
   async close(): Promise<void> {
     this.running = null;
     this.closed = true;

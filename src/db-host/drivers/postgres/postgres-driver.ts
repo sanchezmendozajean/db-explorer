@@ -14,9 +14,14 @@ import type { LogicalType, ResultColumn } from '@shared/query';
 import { qualifiedName, quoteIdent } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
-import { checkedDatabaseName, formatRowEstimate, unsupportedOperation } from '../common';
+import { checkedDatabaseName, formatRowEstimate, unsupportedOperation, withTimeout } from '../common';
 import { toDriverError } from './errors';
-import { PostgresSession } from './postgres-session';
+import { destroyClient, PostgresSession } from './postgres-session';
+
+/** Espera máxima a que la conexión de metadatos envíe la cancelación antes de darla por caída. */
+const CANCEL_REQUEST_MS = 3000;
+/** Con TCP keepalive Windows detecta una conexión muerta en ~10 s después de este silencio. */
+const KEEP_ALIVE_DELAY_MS = 10_000;
 
 /** Tipo lógico por OID de tipo (specs/03). */
 const LOGICAL_BY_OID: Record<number, LogicalType> = {
@@ -531,7 +536,13 @@ export class PostgresDriver implements DbDriver {
       db,
       (fields) => this.describeFields(db, fields),
       async (pid) => {
-        await this.query(this.defaultDatabase, 'SELECT pg_cancel_backend($1)', [pid]);
+        const meta = this.defaultDatabase;
+        // Si la conexión de metadatos tampoco responde, se descarta para que la siguiente consulta reconecte.
+        await withTimeout(this.query(meta, 'SELECT pg_cancel_backend($1)', [pid]), CANCEL_REQUEST_MS, () => {
+          const stale = this.clients.get(meta);
+          this.clients.delete(meta);
+          void stale?.then(destroyClient, () => undefined);
+        });
       },
     );
     await session.setSchema(schema);
@@ -641,6 +652,8 @@ export class PostgresDriver implements DbDriver {
       database,
       ssl: await sslOptions(cfg),
       connectionTimeoutMillis: cfg.connectTimeoutSec * 1000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: KEEP_ALIVE_DELAY_MS,
       application_name: applicationName,
       types: rawTypes(),
     });

@@ -13,9 +13,14 @@ import type {
 import { qualifiedName, quoteIdent } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
-import { checkedDatabaseName, formatRowEstimate, unsupportedOperation } from '../common';
+import { checkedDatabaseName, formatRowEstimate, unsupportedOperation, withTimeout } from '../common';
 import { toMariaDbError } from './errors';
 import { MariaDbSession } from './mariadb-session';
+
+/** Espera máxima a que la conexión de metadatos envíe `KILL QUERY` antes de darla por caída. */
+const CANCEL_REQUEST_MS = 3000;
+/** Con TCP keepalive Windows detecta una conexión muerta en ~10 s después de este silencio. */
+const KEEP_ALIVE_DELAY_MS = 10_000;
 
 const SYSTEM_DATABASES = new Set(['information_schema', 'mysql', 'performance_schema', 'sys']);
 
@@ -378,7 +383,15 @@ export class MariaDbDriver implements DbDriver {
       connection,
       database ?? '',
       async (threadId) => {
-        await this.query(`KILL QUERY ${Number(threadId)}`);
+        const stale = this.metadata;
+        // Si la conexión de metadatos tampoco responde, se descarta para que la siguiente consulta reconecte.
+        await withTimeout(this.query(`KILL QUERY ${Number(threadId)}`), CANCEL_REQUEST_MS, () => {
+          if (this.metadata === stale) this.metadata = null;
+          void stale?.then(
+            (conn) => conn.destroy(),
+            () => undefined,
+          );
+        });
       },
       this.isMariaDb,
     );
@@ -430,6 +443,8 @@ export class MariaDbDriver implements DbDriver {
       database,
       ssl: await sslOptions(cfg),
       connectTimeout: cfg.connectTimeoutSec * 1000,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: KEEP_ALIVE_DELAY_MS,
       charset: 'UTF8MB4_UNICODE_CI',
       // Valores crudos: fechas, DECIMAL y BIGINT como texto (sin pérdida ni cambio de zona).
       dateStrings: true,

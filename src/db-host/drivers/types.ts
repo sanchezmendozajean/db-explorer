@@ -54,6 +54,14 @@ export interface DbSession {
   closeCursor(): Promise<void>;
   /** Cancela la sentencia en curso con el mecanismo nativo del motor. */
   cancel(): Promise<void>;
+  /**
+   * Destruye la conexión de inmediato, sin esperar al servidor ni confirmar nada. Es la salida cuando la
+   * red cayó sin aviso (suspensión del equipo) y ni `cancel` ni `close` responden. Cualquier operación
+   * pendiente queda sin resolver: quien la espera debe haberla descartado antes.
+   */
+  abandon(): void;
+  /** Comprueba que el servidor responde (sin abrir transacciones). Rechaza si la conexión está caída. */
+  ping(): Promise<void>;
   close(): Promise<void>;
   /**
    * Modo de transacción (specs/04 §8). En manual, cada sentencia abre una

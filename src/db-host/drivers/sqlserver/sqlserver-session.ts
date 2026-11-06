@@ -180,6 +180,21 @@ export class SqlServerSession implements DbSession {
     this.connection.cancel();
   }
 
+  abandon(): void {
+    this.running = null;
+    this.closed = true;
+    try {
+      // `close` descarta el socket sin esperar al servidor (tedious no tiene un `destroy` propio).
+      this.connection.close();
+    } catch {
+      // Ya estaba cerrada.
+    }
+  }
+
+  async ping(): Promise<void> {
+    await this.batch('SELECT 1');
+  }
+
   async close(): Promise<void> {
     this.running = null;
     this.closed = true;

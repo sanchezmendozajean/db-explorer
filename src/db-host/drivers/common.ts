@@ -19,6 +19,29 @@ export function unsupportedOperation(message: string): Promise<never> {
 }
 
 /**
+ * Espera `work` como máximo `ms`. Si el servidor no responde (conexión caída sin aviso, p. ej. tras
+ * suspender el equipo) rechaza con código `timeout` y llama a `onTimeout`; `work` queda a su suerte.
+ */
+export function withTimeout<T>(work: Promise<T>, ms: number, onTimeout?: () => void): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      onTimeout?.();
+      reject(new DriverError('El servidor no responde', 'timeout'));
+    }, ms);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err: unknown) => {
+        clearTimeout(timer);
+        reject(err instanceof Error ? err : new Error(String(err)));
+      },
+    );
+  });
+}
+
+/**
  * Utilidades compartidas por los drivers que no reciben del motor la
  * etiqueta del comando (MariaDB, SQLite y SQL Server).
  */

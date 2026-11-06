@@ -175,6 +175,15 @@ export class SqliteSession implements DbSession {
     return this.abort(new DriverError('Consulta cancelada', 'cancelled'));
   }
 
+  abandon(): void {
+    const worker = this.worker;
+    this.reset();
+    void worker?.terminate();
+  }
+
+  /** El archivo es local: no hay red que pueda caer. */
+  async ping(): Promise<void> {}
+
   async close(): Promise<void> {
     const worker = this.worker;
     this.reset();

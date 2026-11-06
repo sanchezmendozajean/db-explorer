@@ -14,21 +14,74 @@ import type {
 import type { ExecutionPlan } from '@shared/plan';
 import type { DbDriver, DbSession, ExplainOptions, StatementSink } from './drivers/types';
 import { DriverError } from './drivers/types';
+import { withTimeout } from './drivers/common';
 import { FileExporter } from './export/file-exporter';
 import { TRANSACTION_SQL } from './transaction-sql';
 
 /** Filas por lote al exportar re-ejecutando la consulta (se espera al disco entre lotes). */
 const EXPORT_CHUNK = 5000;
 
+/** Plazos para tratar con servidores que dejaron de responder (p. ej. tras suspender el equipo). */
+export interface RunnerTimings {
+  /** Tras pedir la cancelación, espera a que el motor termine la sentencia antes de abandonar la sesión. */
+  cancelGraceMs: number;
+  /** Máximo de espera a la comprobación de una sesión que podría haber quedado muerta. */
+  pingMs: number;
+  /** Máximo de espera al cierre ordenado de una sesión. */
+  closeMs: number;
+}
+
+const DEFAULT_TIMINGS: RunnerTimings = { cancelGraceMs: 5000, pingMs: 3000, closeMs: 3000 };
+
+const LOST_TRANSACTION_MESSAGE =
+  'Se restableció la conexión con el servidor: la transacción manual abierta se perdió y no hay cambios pendientes. Vuelve a ejecutar.';
+const RESTORED_SESSION_MESSAGE =
+  'Se restableció la conexión con el servidor (las variables y tablas temporales de la sesión anterior se perdieron).';
+
+/**
+ * Ejecución en curso de una sesión. Además de la bandera de cancelación ofrece una salida de emergencia:
+ * `abort` hace fallar cualquier espera protegida con `guard` aunque el servidor ya no conteste.
+ */
+class Run {
+  cancelled = false;
+  private rejectAborted!: (err: Error) => void;
+  private readonly aborted = new Promise<never>((_, reject) => {
+    this.rejectAborted = reject;
+  });
+  private markFinished!: () => void;
+  /** Se resuelve cuando la ejecución terminó (con éxito, con error o abandonada). */
+  readonly finished = new Promise<void>((resolve) => {
+    this.markFinished = resolve;
+  });
+
+  constructor(readonly queryId: string) {
+    this.aborted.catch(() => undefined);
+  }
+
+  guard<T>(work: Promise<T>): Promise<T> {
+    return Promise.race([work, this.aborted]);
+  }
+
+  abort(err: Error): void {
+    this.rejectAborted(err);
+  }
+
+  end(): void {
+    this.markFinished();
+  }
+}
+
 interface SessionEntry {
   connectionId: string;
   database: string | undefined;
   session: DbSession;
   /** Ejecución en curso (una por sesión). */
-  running: { queryId: string; cancelled: boolean } | null;
+  running: Run | null;
   /** Sentencia cuyo cursor quedó abierto para "Cargar más". */
   openCursor: { queryId: string; statementIndex: number } | null;
   autoCommit: boolean;
+  /** El equipo estuvo suspendido: antes de usar la sesión hay que comprobar que sigue viva. */
+  stale: boolean;
 }
 
 export type EmitQueryEvent = (event: QueryEvent) => void;
@@ -46,14 +99,31 @@ export class QueryRunner {
     private readonly driverOf: (connectionId: string) => DbDriver,
     private readonly emit: EmitQueryEvent,
     private readonly now: () => number = () => performance.now(),
-  ) {}
+    timings: Partial<RunnerTimings> = {},
+  ) {
+    this.timings = { ...DEFAULT_TIMINGS, ...timings };
+  }
+
+  private readonly timings: RunnerTimings;
+
+  /** El equipo estuvo suspendido: las conexiones de las sesiones pudieron morir sin aviso. */
+  markStale(): void {
+    for (const entry of this.sessions.values()) entry.stale = true;
+  }
 
   async execute(req: ExecuteRequest): Promise<ExecuteSummary> {
-    const entry = await this.sessionFor(req);
+    let entry = await this.sessionFor(req);
     if (entry.running) {
       throw new DriverError('La pestaña ya está ejecutando una consulta', 'busy');
     }
-    const run = { queryId: req.queryId, cancelled: false };
+    // Una sesión que pudo morir durante la suspensión se comprueba antes de enviarle la consulta.
+    let revival: { notice: string; error: DriverError | null } | null = null;
+    if (entry.stale) {
+      const checked = await this.revive(req, entry);
+      entry = checked.entry;
+      revival = checked.revival;
+    }
+    const run = new Run(req.queryId);
     entry.running = run;
     this.forgetCursor(entry);
     this.queries.set(req.queryId, req.sessionId);
@@ -61,22 +131,34 @@ export class QueryRunner {
     let executed = 0;
     let failed = false;
     try {
-      await entry.session.closeCursor();
-      await this.applyMode(entry, req.autoCommit);
-      await entry.session.setSchema(req.schema);
+      await run.guard(entry.session.closeCursor());
+      await run.guard(this.applyMode(entry, req.autoCommit));
+      await run.guard(entry.session.setSchema(req.schema));
       for (let index = 0; index < req.statements.length; index++) {
         if (run.cancelled) break;
         executed++;
         const statementStart = this.now();
         this.emit({ type: 'statement-start', queryId: req.queryId, index, startedAt: Date.now() });
         try {
+          if (revival?.error) throw revival.error;
+          if (revival && index === 0) {
+            this.emit({
+              type: 'message',
+              queryId: req.queryId,
+              index,
+              severity: 'warning',
+              text: revival.notice,
+            });
+          }
           if (req.explain) {
-            const plan = await this.explain(
-              entry,
-              req.connectionId,
-              req.statements[index]!,
-              req.explain,
-              this.sink(req.queryId, index),
+            const plan = await run.guard(
+              this.explain(
+                entry,
+                req.connectionId,
+                req.statements[index]!,
+                req.explain,
+                this.sink(req.queryId, index),
+              ),
             );
             if (run.cancelled) throw new DriverError('Consulta cancelada', 'cancelled');
             this.emit({ type: 'plan', queryId: req.queryId, index, plan });
@@ -92,15 +174,13 @@ export class QueryRunner {
             });
             continue;
           }
-          const outcome = await entry.session.execute(
-            req.statements[index]!,
-            req.maxRows,
-            this.sink(req.queryId, index),
+          const outcome = await run.guard(
+            entry.session.execute(req.statements[index]!, req.maxRows, this.sink(req.queryId, index)),
           );
           const isLast = index === req.statements.length - 1;
           const hasMore = outcome.truncated && isLast;
           if (hasMore) entry.openCursor = { queryId: req.queryId, statementIndex: index };
-          else if (outcome.truncated) await entry.session.closeCursor();
+          else if (outcome.truncated) await run.guard(entry.session.closeCursor());
           this.emit({
             type: 'statement-done',
             queryId: req.queryId,
@@ -133,6 +213,7 @@ export class QueryRunner {
       }
     } finally {
       entry.running = null;
+      run.end();
       if (entry.openCursor?.queryId !== req.queryId) this.queries.delete(req.queryId);
     }
     const summary: ExecuteSummary = {
@@ -157,12 +238,14 @@ export class QueryRunner {
       );
     }
     if (entry.running) throw new DriverError('La pestaña ya está ejecutando una consulta', 'busy');
-    const run = { queryId: req.queryId, cancelled: false };
+    const run = new Run(req.queryId);
     entry.running = run;
     const done = (result: FetchMoreResult | null, error?: string): void =>
       this.emit({ type: 'fetch-done', queryId: req.queryId, index: req.statementIndex, result, error });
     try {
-      const result = await entry.session.fetchMore(req.count, this.sink(req.queryId, req.statementIndex));
+      const result = await run.guard(
+        entry.session.fetchMore(req.count, this.sink(req.queryId, req.statementIndex)),
+      );
       if (!result.hasMore) this.forgetCursor(entry);
       done(result);
       return result;
@@ -173,6 +256,7 @@ export class QueryRunner {
       throw error;
     } finally {
       entry.running = null;
+      run.end();
     }
   }
 
@@ -227,7 +311,8 @@ export class QueryRunner {
   async apply(req: ApplyChangesRequest): Promise<ApplyChangesResult> {
     const entry = await this.sessionFor(req);
     if (entry.running) throw new DriverError('La pestaña ya está ejecutando una consulta', 'busy');
-    entry.running = { queryId: `guardar:${req.sessionId}`, cancelled: false };
+    const run = new Run(`guardar:${req.sessionId}`);
+    entry.running = run;
     try {
       this.forgetCursor(entry);
       await entry.session.closeCursor();
@@ -270,6 +355,7 @@ export class QueryRunner {
       return { ok: true, affected };
     } finally {
       entry.running = null;
+      run.end();
     }
   }
 
@@ -312,7 +398,7 @@ export class QueryRunner {
   ): Promise<boolean> {
     const sessionId = `${source.sessionId}#exportar`;
     const entry = await this.sessionFor({ ...source, sessionId, autoCommit: true });
-    const run = { queryId: exportId, cancelled: false };
+    const run = new Run(exportId);
     entry.running = run;
     this.queries.set(exportId, sessionId);
     let pending: CellValue[][] = [];
@@ -335,12 +421,12 @@ export class QueryRunner {
       progress();
     };
     try {
-      await entry.session.setSchema(source.schema);
-      const outcome = await entry.session.execute(source.sql, EXPORT_CHUNK, sink);
+      await run.guard(entry.session.setSchema(source.schema));
+      const outcome = await run.guard(entry.session.execute(source.sql, EXPORT_CHUNK, sink));
       await flush();
       let more = outcome.truncated;
       while (more && !run.cancelled) {
-        const r = await entry.session.fetchMore(EXPORT_CHUNK, sink);
+        const r = await run.guard(entry.session.fetchMore(EXPORT_CHUNK, sink));
         await flush();
         more = r.hasMore;
       }
@@ -350,6 +436,7 @@ export class QueryRunner {
       throw err;
     } finally {
       entry.running = null;
+      run.end();
       this.queries.delete(exportId);
       await this.closeSession(sessionId);
     }
@@ -358,9 +445,67 @@ export class QueryRunner {
   async cancel(queryId: string): Promise<void> {
     const sessionId = this.queries.get(queryId);
     const entry = sessionId ? this.sessions.get(sessionId) : undefined;
-    if (!entry?.running || entry.running.queryId !== queryId) return;
-    entry.running.cancelled = true;
-    await entry.session.cancel();
+    if (!sessionId || !entry?.running || entry.running.queryId !== queryId) return;
+    const run = entry.running;
+    run.cancelled = true;
+    // Cancelación nativa del motor; si el servidor no responde, el error se ignora y se abandona la sesión.
+    void entry.session.cancel().catch(() => undefined);
+    const finished = await Promise.race([
+      run.finished.then(() => true),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), this.timings.cancelGraceMs)),
+    ]);
+    // El motor no terminó la sentencia (conexión caída sin aviso): se descarta la sesión y se libera la pestaña.
+    if (!finished && entry.running === run) this.abandon(sessionId, entry, run);
+  }
+
+  /** Descarta la sesión sin esperar al servidor y hace fallar la ejecución en curso como cancelada. */
+  private abandon(sessionId: string, entry: SessionEntry, run: Run): void {
+    if (this.sessions.get(sessionId) === entry) this.sessions.delete(sessionId);
+    this.forgetCursor(entry);
+    const lost = !entry.autoCommit;
+    run.abort(new DriverError('Consulta cancelada', 'cancelled', lost ? { transactionLost: true } : {}));
+    try {
+      entry.session.abandon();
+    } catch {
+      // La conexión ya estaba destruida.
+    }
+  }
+
+  /**
+   * Comprueba que una sesión marcada como dudosa sigue viva. Si no responde se descarta y se abre otra:
+   * con una transacción manual abierta la ejecución falla (se perdió), si no, sigue con la sesión nueva.
+   */
+  private async revive(
+    req: SessionTarget,
+    entry: SessionEntry,
+  ): Promise<{ entry: SessionEntry; revival: { notice: string; error: DriverError | null } | null }> {
+    entry.stale = false;
+    const alive = await withTimeout(
+      entry.session.closeCursor().then(() => entry.session.ping()),
+      this.timings.pingMs,
+    ).then(
+      () => true,
+      () => false,
+    );
+    if (alive) return { entry, revival: null };
+    const lost = !entry.autoCommit;
+    if (this.sessions.get(req.sessionId) === entry) this.sessions.delete(req.sessionId);
+    this.forgetCursor(entry);
+    try {
+      entry.session.abandon();
+    } catch {
+      // La conexión ya estaba destruida.
+    }
+    const fresh = await this.sessionFor(req);
+    return {
+      entry: fresh,
+      revival: {
+        notice: RESTORED_SESSION_MESSAGE,
+        error: lost
+          ? new DriverError(LOST_TRANSACTION_MESSAGE, 'disconnected', { transactionLost: true })
+          : null,
+      },
+    };
   }
 
   async closeSession(sessionId: string): Promise<void> {
@@ -368,8 +513,9 @@ export class QueryRunner {
     if (!entry) return;
     this.sessions.delete(sessionId);
     this.forgetCursor(entry);
-    if (entry.running) await entry.session.cancel().catch(() => undefined);
-    await entry.session.close().catch(() => undefined);
+    if (entry.running) void entry.session.cancel().catch(() => undefined);
+    // Con el servidor caído el cierre ordenado no termina nunca: pasado el plazo se destruye la conexión.
+    await withTimeout(entry.session.close(), this.timings.closeMs).catch(() => entry.session.abandon());
   }
 
   /** Cierra todas las sesiones de una conexión (al desconectarla o editarla). */
@@ -404,6 +550,7 @@ export class QueryRunner {
       running: null,
       openCursor: null,
       autoCommit: true,
+      stale: false,
     };
     this.sessions.set(req.sessionId, entry);
     return entry;

@@ -245,8 +245,32 @@ export class PostgresSession implements DbSession {
     await this.cancelBackend(pid);
   }
 
+  abandon(): void {
+    this.open = null;
+    destroyClient(this.client);
+  }
+
+  async ping(): Promise<void> {
+    try {
+      await this.client.query('SELECT 1');
+    } catch (err) {
+      // Un error del servidor (p. ej. transacción abortada) prueba que responde; los de socket, no.
+      if (!(err instanceof Error && 'severity' in err)) throw toDriverError(err);
+    }
+  }
+
   async close(): Promise<void> {
     await this.closeCursor();
     await this.client.end().catch(() => undefined);
+  }
+}
+
+/** Cierra el socket de un cliente `pg` sin esperar al servidor (la consulta pendiente falla con "Connection terminated"). */
+export function destroyClient(client: pg.Client): void {
+  const stream = (client as unknown as { connection?: { stream?: { destroy(): void } } }).connection?.stream;
+  try {
+    stream?.destroy();
+  } catch {
+    // Ya estaba cerrado.
   }
 }
