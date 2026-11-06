@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.1.6
+
+### Correcciones
+- **Detener** ya libera la pestaña cuando la conexión se cayó sin aviso (p. ej. al suspender el equipo): si el servidor no responde en 5 s, la sesión se descarta y la siguiente ejecución abre una nueva. Antes la consulta quedaba "Ejecutando…" para siempre.
+- Cerrar una sesión con el servidor caído ya no se queda esperando.
+
+### Cambios
+- Las conexiones de PostgreSQL y MariaDB/MySQL activan TCP keepalive: una consulta sobre una conexión muerta falla sola en unos segundos en lugar de esperar indefinidamente.
+- Tras suspender el equipo, la primera ejecución comprueba la sesión y reconecta si no responde, con un aviso en Mensajes (las variables y tablas temporales anteriores se pierden). Con una transacción manual abierta, esa ejecución falla avisando que la transacción se perdió, en lugar de correr fuera de ella.
+
 ## v0.1.5
 
 ### Novedades
