@@ -607,3 +607,15 @@ Era el último botón de la maqueta que mostraba "todavía no está disponible" 
 - Si la pestaña enfocada no tiene panel (objeto, preferencias, archivos que no son SQL), el panel se oculta en todo el ancho. Los tamaños guardados (`editor`/`results`) siguen valiendo; desaparecen los ids `editor-2`/`results-2`.
 - Sustituye lo dicho en "Dividir editor" sobre un panel de resultados por grupo.
 
+
+## Conexiones caídas sin aviso: Detener y suspensión del equipo (2026-11-05)
+Tras suspender el equipo, el socket de la sesión queda "a medias": el servidor ya lo cerró pero Windows no lo sabe. La consulta nunca fallaba y **Detener** tampoco funcionaba, porque la cancelación nativa (`pg_cancel_backend`, `KILL QUERY`) viaja por la conexión de metadatos, que estaba igual de muerta.
+- **Detener con plazo y abandono** (`QueryRunner.cancel`): se pide la cancelación nativa y se espera hasta 5 s a que termine la sentencia. Si no termina, la sesión se **abandona** (`DbSession.abandon()` destruye el socket sin esperar al servidor), se descarta y la ejecución falla como cancelada (`Run.abort` + `Run.guard` hacen fallar toda espera protegida). La pestaña queda libre y la siguiente ejecución abre una sesión nueva. Con transacción manual abierta se informa `transactionLost`.
+- **Cancelación por la conexión de metadatos con plazo de 3 s** (PostgreSQL y MariaDB/MySQL): si no responde, se descarta esa conexión para que la siguiente consulta reconecte. SQL Server cancela por la propia conexión de la sesión; SQLite termina el hilo.
+- **TCP keepalive**: `pg` (`keepAlive`, 10 s) y `mysql2` (`enableKeepAlive`, 10 s). `tedious` ya lo activa por defecto (30 s). Una consulta sobre un socket muerto ahora falla sola en ~10–40 s en vez de esperar para siempre.
+- **Suspensión del equipo**: `watchSuspension` (db-host) compara el reloj de pared entre ticks de 5 s; un salto de más de 20 s marca las sesiones como dudosas (`markStale`). Antes de la siguiente ejecución se hace `closeCursor` + `ping()` con plazo de 3 s: si no responde se descarta la sesión y se abre otra, con un aviso en Mensajes (las variables y tablas temporales se pierden). Si había transacción manual abierta, esa ejecución **falla** con `transactionLost` en vez de correr fuera de la transacción perdida; la sesión nueva queda lista para reintentar.
+- `closeSession` ya no se queda esperando el cierre ordenado: pasados 3 s destruye la conexión.
+- Se eligió `watchSuspension` por reloj de pared en vez de `powerMonitor` de Electron para no añadir protocolo entre main y db-host.
+- Pendiente: las conexiones de **metadatos** (árbol) no se verifican al reanudar; se recuperan por keepalive/errores de socket (la siguiente consulta reconecta).
+- El texto `execution.transactionLost` ya no menciona solo a SQLite.
+- Pruebas: `test/unit/query-runner-dead-connection.test.ts` (sesión simulada con conexión muerta).

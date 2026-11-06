@@ -62,3 +62,9 @@ Arquitectura en `specs/02` y `specs/03`; decisiones por hito en `specs/NOTAS.md`
 - `fast-xml-parser` corta en 100 etiquetas anidadas por defecto: los planes de SQL Server (RelOp → operador → RelOp) lo superan con ~30 operadores; `plan.ts` fija `maxNestedTags`.
 - SQLite no expone los CHECK en un PRAGMA: se leen del `CREATE TABLE` de `sqlite_schema` (`checks.ts`). Cancelar termina el hilo y revierte la transacción manual: `DriverError.extra.transactionLost` lo informa al renderer.
 - SQL Server informa los errores de `ALTER` sobre el texto ya transformado: `toAlterWithMap` traslada la posición al texto original del editor. PostgreSQL informa `position` relativa a todo el `CREATE`, incluso dentro de un cuerpo `$$`.
+
+## Conexiones caídas sin aviso (suspensión del equipo)
+- Un socket muerto no falla ni responde: ningún `await` del driver termina. Por eso `DbSession` tiene `abandon()` (destruir socket sin esperar) y `ping()`, y `QueryRunner` protege las esperas con `Run.guard` y abandona la sesión si Detener no surte efecto en 5 s.
+- La cancelación nativa de PostgreSQL y MariaDB usa la conexión de metadatos: envolverla siempre en `withTimeout` (`drivers/common.ts`) y descartar esa conexión si vence.
+- `pg`: `keepAlive: true` + `keepAliveInitialDelayMillis`; `mysql2`: `enableKeepAlive` + `keepAliveInitialDelay`; `tedious` ya trae keepalive de 30 s y no es configurable. `pg` no tiene `destroy`: se cierra `client.connection.stream`.
+- `ping()` de PostgreSQL acepta errores del servidor (los `DatabaseError` tienen `severity`; p. ej. transacción abortada): solo los de socket cuentan como conexión caída. Con un cursor de `pg-cursor` abierto las demás consultas del cliente quedan en cola: cerrar el cursor antes del ping.
