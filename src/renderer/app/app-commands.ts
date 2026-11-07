@@ -548,12 +548,17 @@ export function registerAppCommands(): () => void {
       run: () => {
         const tab = wb().tabs.find((t) => t.id === wb().activeId);
         const conn = connectionById(tab?.connectionId);
-        // SQLite no tiene bases ni esquemas: el diagrama es el de `main`. Los demás motores lo abren desde el árbol.
-        if (conn && supportsDiagram(conn.engine) && conn.engine === 'sqlite') {
-          openDiagramTab(conn.id, { database: 'main', schema: 'main' });
-        } else {
+        if (!tab || !conn || !supportsDiagram(conn.engine)) {
           showToast('info', es.diagram.noTarget);
+          return;
         }
+        // SQLite no tiene bases ni esquemas (todo es `main`); MariaDB/MySQL usan la base como esquema.
+        let database = tab.object?.database ?? tab.database;
+        let schema = tab.object?.schema ?? tab.schema;
+        if (conn.engine === 'sqlite') database = schema = 'main';
+        else if (conn.engine === 'mariadb') schema = database;
+        if (database && schema) void openDiagramTab(conn.id, { database, schema });
+        else showToast('info', es.diagram.noTarget);
       },
     },
     {

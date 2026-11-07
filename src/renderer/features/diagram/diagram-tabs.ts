@@ -6,11 +6,8 @@ import { useWorkbenchStore } from '../../stores/workbench-store';
 import { ensureConnected } from '../connections/actions';
 import { findDiagramFile, openDiagramFile } from './diagram-file';
 
-/**
- * Motores con diagrama ER ya construido (hito M10, motor por motor). Quitar de aquí el motor que falte
- * cuando su driver implemente `getSchemaDiagram`.
- */
-export const DIAGRAM_ENGINES: readonly Engine[] = ['sqlite'];
+/** Motores con diagrama ER (hito M10): los cuatro. */
+export const DIAGRAM_ENGINES: readonly Engine[] = ['postgres', 'mariadb', 'sqlite', 'sqlserver'];
 
 export function supportsDiagram(engine: Engine | undefined): boolean {
   return !!engine && DIAGRAM_ENGINES.includes(engine);

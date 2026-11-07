@@ -673,3 +673,22 @@ A pedido del usuario, el diagrama se guarda en el espacio de trabajo en un JSON 
 
 - **Cambio a pedido del usuario**: el diagrama se guarda **al abrirlo** (como un `Script-N.sql` nuevo), sin botón de guardar; *Ver diagrama* reabre el archivo existente del esquema en vez de crear otro y lo actualiza desde la base si la conexión ya está abierta. Esto resuelve el pendiente anterior. Autoguardado y Ctrl+S como antes.
 - **Intermitencia vista**: en dos corridas completas del e2e `diagram.spec.ts` fallaron una vez el primer test (el diagrama tardó más de 5 s en aparecer) y otra vez el arrastre de la caja (la caja se movió 334 px de más); no se pudo reproducir en las 8 corridas siguientes (todas en verde). Sin causa conocida: si reaparece, sospechar de la carga inicial (`fit` con el tamaño del lienzo aún no estable).
+
+
+## M10 — Diagrama ER: PostgreSQL, SQL Server y MariaDB/MySQL (2026-11-06)
+`getSchemaDiagram` y `ConstraintInfo.references` implementados en los tres motores que faltaban; *Ver diagrama* ya sale en los cuatro (`DIAGRAM_ENGINES`).
+
+| Motor | Estado | Cómo se verificó |
+|---|---|---|
+| PostgreSQL | ✅ | Suite común de integración (PostgreSQL temporal local: clave foránea compuesta, columnas, PK, nulabilidad, `references` en la pestaña Estructura) y e2e `diagram-pg.spec.ts` (menú del esquema y de la tabla, archivo guardado) |
+| SQLite | ✅ | Igual que antes, más la suite común |
+| SQL Server | ⚠️ **sin probar en vivo** | No había servidor accesible (`127.0.0.1:51433`). Las consultas reutilizan las de `getColumns`/`getConstraints`, ya probadas, sobre `sys.columns`, `sys.foreign_keys` y `sys.foreign_key_columns` |
+| MariaDB / MySQL | ⚠️ **sin probar en vivo** | Sin servidor local ni Docker; los compartidos son de solo lectura o no responden. Consultas sobre `information_schema.columns` y `key_column_usage`, las mismas tablas que ya usa `getConstraints` |
+
+La prueba común `devuelve el diagrama ER…` (en `common-suite.test.ts`) corre sola en SQL Server y MySQL cuando haya servidor escribible; MariaDB de solo lectura la salta. **Antes de dar M10 por cerrado hay que correrla en esos dos motores.**
+
+- **PostgreSQL**: tablas `r` y `p` (particionadas) sin sus particiones (`relispartition`); claves foráneas leídas de `pg_constraint` (`conkey`/`confkey` con `WITH ORDINALITY`, `attname::text`), no de `pg_get_constraintdef`.
+- **MariaDB/MySQL**: el "esquema" del diagrama es la base; una clave foránea a otra base se dibuja como tabla externa atenuada.
+- **SQL Server**: las claves foráneas cruzan esquemas, no bases. El texto del tipo de columna se compartió en `COLUMN_TYPE_SQL`.
+- **Menús**: *Ver diagrama* en el nodo de esquema (PostgreSQL y SQL Server), en el de base (MariaDB/MySQL), en las tablas y en la conexión (SQLite). El comando de la paleta usa la base y el esquema de la pestaña activa.
+- **Intermitencia vista**: `postgres-query.test.ts › rechaza una segunda ejecución en la misma sesión mientras corre` falló 2 de 4 corridas (pasó las demás) y es ajena a este cambio (no toca sesiones ni el ejecutor).

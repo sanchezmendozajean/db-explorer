@@ -349,7 +349,7 @@ export function ConnectionsView(): React.JSX.Element {
             ]
           : []),
         // SQLite: la conexión es el archivo y su único esquema es `main`.
-        ...(supportsDiagram(cfg.engine) && cfg.engine === 'sqlite'
+        ...(cfg.engine === 'sqlite'
           ? [
               {
                 type: 'item',
@@ -441,6 +441,19 @@ export function ConnectionsView(): React.JSX.Element {
       keybinding: 'F5',
       run: () => refresh(node),
     };
+    if (ref.kind === 'schema') {
+      return [
+        {
+          type: 'item',
+          id: 'diagram',
+          label: t.viewDiagram,
+          run: () => void openDiagramTab(node.connectionId, { database: ref.database, schema: ref.schema }),
+        },
+        SEPARATOR,
+        refreshEntry,
+        copyName,
+      ];
+    }
     if (ref.kind === 'database') {
       const m = es.dbAdmin.menu;
       const renamable = canRenameDatabase(
@@ -454,6 +467,18 @@ export function ConnectionsView(): React.JSX.Element {
           keybinding: 'Ctrl+]',
           run: () => void newScript(targetOfRef(node.connectionId, ref)),
         },
+        ...(connections.find((x) => x.id === node.connectionId)?.engine === 'mariadb'
+          ? [
+              {
+                type: 'item',
+                id: 'diagram',
+                label: t.viewDiagram,
+                // Sin nivel de esquema, la base es el esquema.
+                run: () =>
+                  void openDiagramTab(node.connectionId, { database: ref.database, schema: ref.database }),
+              } satisfies MenuEntry,
+            ]
+          : []),
         SEPARATOR,
         {
           type: 'item',
