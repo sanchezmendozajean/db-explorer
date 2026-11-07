@@ -53,6 +53,7 @@ export function createHandlers(
     },
     'meta.table': ({ connectionId, kind, ...ref }) => connections.tableDetails(connectionId, ref, kind),
     'meta.ddl': ({ connectionId, kind, ...ref }) => connections.ddl(connectionId, ref, kind),
+    'meta.diagram': ({ connectionId, ...scope }) => connections.schemaDiagram(connectionId, scope),
     'meta.saveRoutine': async ({ connectionId, kind, definition, ...ref }) => {
       await connections.saveRoutine(connectionId, ref, kind, definition);
       return null;

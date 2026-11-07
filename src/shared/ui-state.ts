@@ -17,6 +17,16 @@ export type SideBarView = z.infer<typeof SideBarViewSchema>;
 export const PanelLayoutSchema = z.record(z.string().max(50), z.number().min(0).max(100));
 export type PanelLayout = z.infer<typeof PanelLayoutSchema>;
 
+/** Posiciones movidas a mano en el diagrama ER: clave de esquema → tabla → [x, y] (specs/13 §5). */
+export const DiagramPositionsSchema = z.record(
+  z.string().max(1200),
+  z.record(z.string().max(300), z.tuple([z.number().finite(), z.number().finite()])),
+);
+export type DiagramPositions = z.infer<typeof DiagramPositionsSchema>;
+
+/** Cuántos diagramas con posiciones guardadas se recuerdan (los más antiguos se descartan). */
+export const MAX_DIAGRAMS_REMEMBERED = 50;
+
 export const UiStateSchema = z.object({
   version: z.literal(1).catch(1),
   theme: ThemePreferenceSchema.catch('system'),
@@ -42,6 +52,7 @@ export const UiStateSchema = z.object({
     .catch({ main: null, editor: null }),
   /** Anchos (px) de las columnas de la pestaña Plan, por columna: se recuerdan entre planes y al reiniciar. */
   planColumns: z.record(z.string().max(30), z.number().min(20).max(2000)).catch({}),
+  diagramPositions: DiagramPositionsSchema.catch({}),
 });
 
 export type UiState = z.infer<typeof UiStateSchema>;
@@ -53,6 +64,7 @@ export const DEFAULT_UI_STATE: UiState = {
   panel: { visible: true, maximized: false },
   layout: { main: null, editor: null },
   planColumns: {},
+  diagramPositions: {},
 };
 
 /** Interpreta datos arbitrarios como estado de UI, recuperando lo que se pueda. */

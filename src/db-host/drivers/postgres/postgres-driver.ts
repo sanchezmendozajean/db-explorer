@@ -9,12 +9,19 @@ import type {
   DriverCapabilities,
   IndexInfo,
   ObjectKind,
+  SchemaDiagram,
 } from '@shared/metadata';
 import type { LogicalType, ResultColumn } from '@shared/query';
 import { qualifiedName, quoteIdent } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
-import { checkedDatabaseName, formatRowEstimate, unsupportedOperation, withTimeout } from '../common';
+import {
+  checkedDatabaseName,
+  formatRowEstimate,
+  unsupportedOperation,
+  withTimeout,
+  diagramNotAvailable,
+} from '../common';
 import { toDriverError } from './errors';
 import { destroyClient, PostgresSession } from './postgres-session';
 
@@ -306,6 +313,11 @@ export class PostgresDriver implements DbDriver {
       c: 'check',
     };
     return rows.map((r) => ({ name: r.name, type: TYPES[r.type]!, columns: r.columns, definition: r.def }));
+  }
+
+  /** Pendiente (M10): el diagrama ER se construye motor por motor, empezando por SQLite. */
+  getSchemaDiagram(): Promise<SchemaDiagram> {
+    return diagramNotAvailable('PostgreSQL');
   }
 
   async getDDL(ref: ObjectRef, kind: ObjectKind): Promise<string> {

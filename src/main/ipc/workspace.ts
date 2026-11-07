@@ -164,6 +164,10 @@ export function registerWorkspaceHandlers({ settings, workspace, keybindings, us
     return {};
   });
 
+  handle('fs:save-export', async ({ name, extension, content }) => ({
+    path: await workspace.saveExport(name, extension, content),
+  }));
+
   handle('fs:reveal', async ({ path }) => {
     shell.showItemInFolder(await workspace.inside(path));
     return {};

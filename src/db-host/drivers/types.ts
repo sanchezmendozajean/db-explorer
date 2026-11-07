@@ -6,6 +6,7 @@ import type {
   DriverCapabilities,
   IndexInfo,
   ObjectKind,
+  SchemaDiagram,
 } from '@shared/metadata';
 import type { ExecutionPlan } from '@shared/plan';
 import type { CellValue, LogicalType, MessageSeverity, ResultColumn } from '@shared/query';
@@ -113,6 +114,11 @@ export interface DbDriver {
   getIndexes(ref: ObjectRef): Promise<IndexInfo[]>;
   /** Clave primaria, claves foráneas, únicas y CHECK. */
   getConstraints(ref: ObjectRef): Promise<ConstraintInfo[]>;
+  /**
+   * Tablas de un esquema con sus columnas y todas sus claves foráneas, en pocas consultas
+   * (diagrama ER, specs/13). Las relaciones pueden apuntar a tablas de otro esquema.
+   */
+  getSchemaDiagram(scope: Scope): Promise<SchemaDiagram>;
   /** Sentencia de creación del objeto. */
   getDDL(ref: ObjectRef, kind: ObjectKind): Promise<string>;
   /**

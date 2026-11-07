@@ -44,6 +44,7 @@ export interface DbExplorerApi {
     copy: Invoke<'fs:copy'>;
     trash: Invoke<'fs:trash'>;
     reveal: Invoke<'fs:reveal'>;
+    saveExport: Invoke<'fs:save-export'>;
     openExternal: Invoke<'fs:open-external'>;
     openFileDialog: Invoke<'fs:open-file-dialog'>;
     saveAs: Invoke<'fs:save-as'>;
@@ -62,6 +63,7 @@ export interface DbExplorerApi {
     count: Invoke<'meta:count'>;
     table: Invoke<'meta:table'>;
     ddl: Invoke<'meta:ddl'>;
+    diagram: Invoke<'meta:diagram'>;
     saveRoutine: Invoke<'meta:save-routine'>;
   };
   query: {

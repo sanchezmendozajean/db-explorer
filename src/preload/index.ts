@@ -57,6 +57,7 @@ const api: DbExplorerApi = {
     copy: invoke('fs:copy'),
     trash: invoke('fs:trash'),
     reveal: invoke('fs:reveal'),
+    saveExport: invoke('fs:save-export'),
     openExternal: invoke('fs:open-external'),
     openFileDialog: invoke('fs:open-file-dialog'),
     saveAs: invoke('fs:save-as'),
@@ -75,6 +76,7 @@ const api: DbExplorerApi = {
     count: invoke('meta:count'),
     table: invoke('meta:table'),
     ddl: invoke('meta:ddl'),
+    diagram: invoke('meta:diagram'),
     saveRoutine: invoke('meta:save-routine'),
   },
   query: {

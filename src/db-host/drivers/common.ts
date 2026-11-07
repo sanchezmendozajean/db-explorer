@@ -18,6 +18,11 @@ export function unsupportedOperation(message: string): Promise<never> {
   return Promise.reject(new DriverError(message, 'unsupported'));
 }
 
+/** Diagrama ER aún no disponible en este motor (se construye motor por motor, hito M10). */
+export function diagramNotAvailable(engineName: string): Promise<never> {
+  return unsupportedOperation(`El diagrama ER todavía no está disponible para ${engineName}`);
+}
+
 /**
  * Espera `work` como máximo `ms`. Si el servidor no responde (conexión caída sin aviso, p. ej. tras
  * suspender el equipo) rechaza con código `timeout` y llama a `onTimeout`; `work` queda a su suerte.

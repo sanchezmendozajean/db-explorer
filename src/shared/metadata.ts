@@ -59,6 +59,36 @@ export interface ConstraintInfo {
   columns: string[];
   /** Definición legible: `FOREIGN KEY (…) REFERENCES …` o la expresión del CHECK. */
   definition?: string;
+  /** Solo claves foráneas: la tabla y las columnas a las que apunta (specs/13 §2.1). */
+  references?: ForeignKeyTarget;
+}
+
+/** Destino de una clave foránea. En SQLite y MariaDB/MySQL `schema` es la base (o vacío). */
+export interface ForeignKeyTarget {
+  schema: string;
+  table: string;
+  columns: string[];
+}
+
+/** Tabla del diagrama ER (specs/13 §2.1): solo lo que se dibuja. */
+export interface DiagramTable {
+  name: string;
+  columns: { name: string; nativeType: string; nullable: boolean; primaryKey: boolean }[];
+}
+
+/** Clave foránea del diagrama ER. */
+export interface DiagramRelation {
+  /** Nombre de la restricción (puede estar vacío: SQLite no nombra las claves foráneas). */
+  name: string;
+  /** Tabla que contiene la clave foránea. */
+  from: { schema: string; table: string; columns: string[] };
+  /** Tabla referenciada; puede estar en otro esquema o base. */
+  to: ForeignKeyTarget;
+}
+
+export interface SchemaDiagram {
+  tables: DiagramTable[];
+  relations: DiagramRelation[];
 }
 
 /** Columnas, índices y restricciones de una tabla o vista (pestaña de objeto y edición en grilla). */

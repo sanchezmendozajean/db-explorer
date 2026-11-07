@@ -1,5 +1,5 @@
 import type { ConnectionConfig, Engine, ServerInfo } from '@shared/connection';
-import type { ObjectKind, TableDetails, TreeNodeData, TreeNodeRef } from '@shared/metadata';
+import type { ObjectKind, SchemaDiagram, TableDetails, TreeNodeData, TreeNodeRef } from '@shared/metadata';
 import type {
   ApplyChangesRequest,
   ApplyChangesResult,
@@ -111,6 +111,11 @@ export class ConnectionManager {
     if (kind !== 'table') return { columns, indexes: [], constraints: [] };
     const [indexes, constraints] = [await driver.getIndexes(ref), await driver.getConstraints(ref)];
     return { columns, indexes, constraints };
+  }
+
+  /** Tablas y claves foráneas de un esquema para el diagrama ER (specs/13). */
+  schemaDiagram(id: string, scope: { database: string; schema: string }): Promise<SchemaDiagram> {
+    return this.get(id).driver.getSchemaDiagram(scope);
   }
 
   ddl(id: string, ref: ObjectRef, kind: ObjectKind): Promise<string> {

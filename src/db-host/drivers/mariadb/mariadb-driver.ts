@@ -9,11 +9,18 @@ import type {
   DriverCapabilities,
   IndexInfo,
   ObjectKind,
+  SchemaDiagram,
 } from '@shared/metadata';
 import { qualifiedName, quoteIdent } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
-import { checkedDatabaseName, formatRowEstimate, unsupportedOperation, withTimeout } from '../common';
+import {
+  checkedDatabaseName,
+  formatRowEstimate,
+  unsupportedOperation,
+  withTimeout,
+  diagramNotAvailable,
+} from '../common';
 import { toMariaDbError } from './errors';
 import { MariaDbSession } from './mariadb-session';
 
@@ -266,6 +273,11 @@ export class MariaDbDriver implements DbDriver {
       else if (clauses.has(c.name)) definition = `CHECK (${clauses.get(c.name)})`;
       return { ...c, definition };
     });
+  }
+
+  /** Pendiente (M10): el diagrama ER se construye motor por motor, empezando por SQLite. */
+  getSchemaDiagram(): Promise<SchemaDiagram> {
+    return diagramNotAvailable('MariaDB/MySQL');
   }
 
   async getDDL(ref: ObjectRef, kind: ObjectKind): Promise<string> {

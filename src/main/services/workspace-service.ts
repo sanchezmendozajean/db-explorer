@@ -45,6 +45,14 @@ export class FileAccessError extends Error {
 }
 
 /** Clave estable de una ruta (Windows no distingue mayúsculas). */
+/** Nombre de archivo apto para Windows: sin caracteres reservados ni de control, sin punto o espacio final. */
+export function safeBaseName(name: string): string {
+  const cleaned = Array.from(name, (ch) => (ch.charCodeAt(0) < 32 || '<>:"/\\|?*'.includes(ch) ? '_' : ch))
+    .join('')
+    .replace(/[. ]+$/, '');
+  return cleaned || 'Exportación';
+}
+
 function normalize(path: string): string {
   const abs = resolve(path);
   return process.platform === 'win32' ? abs.toLowerCase() : abs;
@@ -333,6 +341,24 @@ export class WorkspaceService {
       }
     }
     throw new Error('No se pudo crear un nombre de script libre');
+  }
+
+  /**
+   * Guarda un archivo generado por la aplicación (p. ej. el SVG de un diagrama) en la raíz del espacio:
+   * `<nombre>.<ext>`, o `<nombre>-N.<ext>` con el menor N ≥ 2 libre. Nunca sobrescribe (specs/13 §5).
+   */
+  async saveExport(name: string, extension: string, content: string): Promise<string> {
+    const base = this.validName(safeBaseName(name));
+    for (let n = 1; n < 100_000; n++) {
+      const path = join(this.rootPath, n === 1 ? `${base}.${extension}` : `${base}-${n}.${extension}`);
+      try {
+        await writeFile(path, content, { flag: 'wx', encoding: 'utf8' });
+        return path;
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+      }
+    }
+    throw new Error('No se pudo encontrar un nombre de archivo libre');
   }
 
   async readScript(path: string): Promise<ScriptFile> {

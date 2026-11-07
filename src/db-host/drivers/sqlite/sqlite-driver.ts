@@ -5,9 +5,12 @@ import type {
   ColumnInfo,
   ConstraintInfo,
   DbObject,
+  DiagramRelation,
+  DiagramTable,
   DriverCapabilities,
   IndexInfo,
   ObjectKind,
+  SchemaDiagram,
 } from '@shared/metadata';
 import { quoteIdent } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
@@ -214,6 +217,11 @@ export class SqliteDriver implements DbDriver {
         type: 'foreignKey',
         columns: fk.from,
         definition: `FOREIGN KEY (${q(fk.from)}) REFERENCES ${quoteIdent('sqlite', fk.table)}${target}`,
+        references: {
+          schema: ref.schema,
+          table: fk.table,
+          columns: fk.to.length > 0 ? fk.to : this.primaryKeyOf(fk.table),
+        },
       });
     }
     // SQLite no expone los CHECK en un PRAGMA: se leen del CREATE TABLE guardado.
@@ -230,6 +238,80 @@ export class SqliteDriver implements DbDriver {
       });
     }
     return result;
+  }
+
+  /**
+   * Todas las tablas con sus columnas y claves foráneas en dos consultas (specs/13). Una clave foránea sin
+   * columnas destino (`REFERENCES t`) apunta a la clave primaria de `t`.
+   */
+  async getSchemaDiagram(scope: Scope): Promise<SchemaDiagram> {
+    const onlyTables = `m.type = 'table' AND (? OR m.name NOT LIKE 'sqlite\\_%' ESCAPE '\\')`;
+    const columnRows = this.all<{
+      tbl: string;
+      name: string;
+      type: string;
+      notnull: number;
+      pk: number;
+    }>(
+      `SELECT m.name AS tbl, p.name, p.type, p."notnull", p.pk
+         FROM sqlite_schema m JOIN pragma_table_info(m.name) p
+        WHERE ${onlyTables}
+        ORDER BY m.name COLLATE NOCASE, p.cid`,
+      this.showSystem(),
+    );
+    const tables = new Map<string, { table: DiagramTable; pk: { name: string; pos: number }[] }>();
+    for (const r of columnRows) {
+      let entry = tables.get(r.tbl);
+      if (!entry) {
+        entry = { table: { name: r.tbl, columns: [] }, pk: [] };
+        tables.set(r.tbl, entry);
+      }
+      const pos = Number(r.pk);
+      entry.table.columns.push({
+        name: r.name,
+        nativeType: r.type || '',
+        nullable: Number(r.notnull) === 0 && pos === 0,
+        primaryKey: pos > 0,
+      });
+      if (pos > 0) entry.pk.push({ name: r.name, pos });
+    }
+    // Tablas sin columnas (no ocurre en SQLite, pero una tabla virtual dañada podría) igual se listan.
+    const fkRows = this.all<{
+      tbl: string;
+      id: number;
+      seq: number;
+      target: string;
+      from: string;
+      to: string | null;
+    }>(
+      `SELECT m.name AS tbl, f.id, f.seq, f."table" AS target, f."from", f."to"
+         FROM sqlite_schema m JOIN pragma_foreign_key_list(m.name) f
+        WHERE ${onlyTables}
+        ORDER BY m.name COLLATE NOCASE, f.id, f.seq`,
+      this.showSystem(),
+    );
+    const byKey = new Map<string, DiagramRelation>();
+    for (const f of fkRows) {
+      const key = `${f.tbl}\u0000${f.id}`;
+      let relation = byKey.get(key);
+      if (!relation) {
+        relation = {
+          name: '',
+          from: { schema: scope.schema, table: f.tbl, columns: [] },
+          to: { schema: scope.schema, table: f.target, columns: [] },
+        };
+        byKey.set(key, relation);
+      }
+      relation.from.columns.push(f.from);
+      if (f.to) relation.to.columns.push(f.to);
+    }
+    const relations = [...byKey.values()];
+    for (const relation of relations) {
+      if (relation.to.columns.length > 0) continue;
+      const pk = tables.get(relation.to.table)?.pk ?? [];
+      relation.to.columns = pk.sort((a, b) => a.pos - b.pos).map((c) => c.name);
+    }
+    return { tables: [...tables.values()].map((t) => t.table), relations };
   }
 
   /** El DDL original guardado en `sqlite_schema` (de la tabla, más sus índices y triggers). */
@@ -290,6 +372,14 @@ export class SqliteDriver implements DbDriver {
     );
     await session.start();
     return session;
+  }
+
+  /** Columnas de la clave primaria de una tabla, en orden (destino de `REFERENCES t` sin columnas). */
+  private primaryKeyOf(table: string): string[] {
+    return this.all<{ name: string }>(
+      'SELECT name FROM pragma_table_info(?) WHERE pk > 0 ORDER BY pk',
+      table,
+    ).map((r) => r.name);
   }
 
   private showSystem(): number {

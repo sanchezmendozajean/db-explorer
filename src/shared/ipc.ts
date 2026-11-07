@@ -8,7 +8,7 @@ import type { ServerInfo } from './connection';
 import type { ToolFamilyStatus, ToolImportResult } from './db-admin';
 import { TOOL_FAMILIES } from './db-admin';
 import { ConnectionConfigSchema } from './connection';
-import type { TableDetails, TreeNodeData } from './metadata';
+import type { SchemaDiagram, TableDetails, TreeNodeData } from './metadata';
 import { ObjectKindSchema, TreeNodeRefSchema } from './metadata';
 import type { ApplyChangesResult, ExecuteSummary, ExportSummary, FetchMoreResult, QueryEvent } from './query';
 import type { Settings } from './settings';
@@ -110,6 +110,18 @@ export const ChildrenSchema = z.object({ connectionId: Id, ref: TreeNodeRefSchem
 
 const Name = z.string().max(1000);
 export const CountRowsSchema = z.object({ connectionId: Id, database: Name, schema: Name, name: Name });
+
+/** Esquema de una conexión (diagrama ER). */
+export const SchemaTargetSchema = z.object({ connectionId: Id, database: Name, schema: Name });
+
+/** Archivo generado por la aplicación (diagrama SVG) que se guarda en la raíz del espacio de trabajo. */
+export const MAX_EXPORT_LENGTH = 32 * 1024 * 1024;
+export const SaveExportSchema = z.object({
+  /** Nombre base sin extensión; el servicio agrega el sufijo numérico si ya existe. */
+  name: z.string().min(1).max(200),
+  extension: z.enum(['svg', 'dbxdiagram']),
+  content: z.string().max(MAX_EXPORT_LENGTH),
+});
 
 const QueryId = z.string().min(1).max(100);
 
@@ -341,6 +353,7 @@ export const ipcInvokeContract = {
   },
   'fs:trash': { request: z.object({ paths: FilePaths }), response: Empty },
   'fs:reveal': { request: z.object({ path: FilePath }), response: Empty },
+  'fs:save-export': { request: SaveExportSchema, response: z.object({ path: z.string() }) },
   'fs:open-external': { request: z.object({ path: FilePath }), response: Empty },
   'fs:pick-folder': {
     request: z.object({ title: z.string().max(200) }),
@@ -379,6 +392,7 @@ export const ipcInvokeContract = {
   },
   'meta:table': { request: ObjectTargetSchema, response: z.custom<TableDetails>() },
   'meta:ddl': { request: ObjectTargetSchema, response: z.object({ ddl: z.string() }) },
+  'meta:diagram': { request: SchemaTargetSchema, response: z.custom<SchemaDiagram>() },
   'meta:save-routine': {
     request: ObjectTargetSchema.extend({ definition: z.string().min(1).max(MAX_ROUTINE_LENGTH) }),
     response: Empty,

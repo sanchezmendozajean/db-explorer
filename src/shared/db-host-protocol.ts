@@ -1,5 +1,5 @@
 import type { ConnectionConfig, ServerInfo } from './connection';
-import type { ObjectKind, TableDetails, TreeNodeData, TreeNodeRef } from './metadata';
+import type { ObjectKind, SchemaDiagram, TableDetails, TreeNodeData, TreeNodeRef } from './metadata';
 import type {
   ApplyChangesRequest,
   ApplyChangesResult,
@@ -51,6 +51,10 @@ export interface DbHostMethods {
   'session.end-transaction': { params: { sessionId: string; commit: boolean }; result: null };
   'meta.table': { params: ObjectTarget; result: TableDetails };
   'meta.ddl': { params: ObjectTarget; result: string };
+  'meta.diagram': {
+    params: { connectionId: string; database: string; schema: string };
+    result: SchemaDiagram;
+  };
   'meta.saveRoutine': { params: ObjectTarget & { definition: string }; result: null };
   'admin.create': { params: { connectionId: string; name: string }; result: null };
   'admin.drop': { params: { connectionId: string; database: string }; result: null };

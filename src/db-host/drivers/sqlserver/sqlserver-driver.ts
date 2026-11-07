@@ -8,11 +8,12 @@ import type {
   DriverCapabilities,
   IndexInfo,
   ObjectKind,
+  SchemaDiagram,
 } from '@shared/metadata';
 import { qualifiedName } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
-import { checkedDatabaseName, formatRowEstimate } from '../common';
+import { checkedDatabaseName, formatRowEstimate, diagramNotAvailable } from '../common';
 import { toSqlServerError } from './errors';
 import { installExactValues } from './exact-values';
 import { checkedServerPath, nstr, planFileMoves } from './database-sql';
@@ -325,6 +326,11 @@ export class SqlServerDriver implements DbDriver {
       });
     }
     return result;
+  }
+
+  /** Pendiente (M10): el diagrama ER se construye motor por motor, empezando por SQLite. */
+  getSchemaDiagram(): Promise<SchemaDiagram> {
+    return diagramNotAvailable('SQL Server');
   }
 
   async getDDL(ref: ObjectRef, kind: ObjectKind): Promise<string> {

@@ -144,6 +144,7 @@ export function registerConnectionHandlers({
 
   handle('meta:table', (req) => dbHost.request('meta.table', req));
   handle('meta:ddl', async (req) => ({ ddl: await dbHost.request('meta.ddl', req) }));
+  handle('meta:diagram', (req) => dbHost.request('meta.diagram', req));
   handle('meta:save-routine', async (req) => {
     await dbHost.request('meta.saveRoutine', req, { timeoutMs: null });
     return {};
