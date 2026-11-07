@@ -14,3 +14,4 @@ test/integration/.env
 site/docs/
 site-docs/.vitepress/cache/
 site-docs/node_modules/
+logs
