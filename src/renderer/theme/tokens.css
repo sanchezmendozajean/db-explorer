@@ -42,6 +42,7 @@
   --accent-fg: #ffffff;
   --accent-hover: #026ec1;
   --link: #3794ff; /* (maqueta) */
+  --diagram-highlight: #3b9cff; /* celeste de la caja activa del diagrama ER */
   --error: #f96b64;
   --warning: #cca700;
   --success: #2ea043;
@@ -104,6 +105,7 @@
   --accent-fg: #ffffff;
   --accent-hover: #0258a8;
   --link: #005fb8;
+  --diagram-highlight: #3b9cff; /* celeste de la caja activa del diagrama ER */
   --error: #dc1300;
   --warning: #916702;
   --success: #388a34;

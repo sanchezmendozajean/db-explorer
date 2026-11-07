@@ -54,6 +54,9 @@ import { getActiveGrid } from '../features/results/grid-edit';
 import { pendingCount } from '../features/results/edit-state';
 import { tabResults } from '../features/results/results-store';
 import { openCatalogObject } from '../features/objects/object-tabs';
+import { activeDiagram } from '../features/diagram/diagram-actions';
+import { saveDiagram } from '../features/diagram/diagram-file';
+import { openDiagramTab, supportsDiagram } from '../features/diagram/diagram-tabs';
 import { saveRoutine } from '../features/objects/routine-tabs';
 
 /** Cambios pendientes de la grilla con foco. */
@@ -133,6 +136,10 @@ export function registerAppCommands(): () => void {
     return tab?.kind === 'script' ? tab.id : undefined;
   };
   const hasScript = (): boolean => activeScript() !== undefined;
+  const activeDiagramTab = (): string | undefined => {
+    const tab = wb().tabs.find((t) => t.id === wb().activeId);
+    return tab?.kind === 'diagram' ? tab.id : undefined;
+  };
   const activeRoutine = (): string | undefined => {
     const tab = wb().tabs.find((t) => t.id === wb().activeId);
     return tab?.kind === 'routine' ? tab.id : undefined;
@@ -229,8 +236,13 @@ export function registerAppCommands(): () => void {
     {
       id: 'db.save',
       category: cat.file,
-      enabled: () => hasScript() || activeRoutine() !== undefined,
+      enabled: () => hasScript() || activeRoutine() !== undefined || activeDiagramTab() !== undefined,
       run: async () => {
+        const diagram = activeDiagramTab();
+        if (diagram) {
+          await saveDiagram(diagram);
+          return;
+        }
         const routine = activeRoutine();
         if (routine) {
           await saveRoutine(routine);
@@ -528,6 +540,39 @@ export function registerAppCommands(): () => void {
           dirty: false,
           preview: false,
         }),
+    },
+    {
+      id: 'db.openDiagram',
+      category: cat.view,
+      enabled: () => !!connectionById(wb().tabs.find((t) => t.id === wb().activeId)?.connectionId),
+      run: () => {
+        const tab = wb().tabs.find((t) => t.id === wb().activeId);
+        const conn = connectionById(tab?.connectionId);
+        // SQLite no tiene bases ni esquemas: el diagrama es el de `main`. Los demás motores lo abren desde el árbol.
+        if (conn && supportsDiagram(conn.engine) && conn.engine === 'sqlite') {
+          openDiagramTab(conn.id, { database: 'main', schema: 'main' });
+        } else {
+          showToast('info', es.diagram.noTarget);
+        }
+      },
+    },
+    {
+      id: 'db.diagram.zoomIn',
+      category: cat.view,
+      enabled: () => !!activeDiagram(),
+      run: () => activeDiagram()?.zoomIn(),
+    },
+    {
+      id: 'db.diagram.zoomOut',
+      category: cat.view,
+      enabled: () => !!activeDiagram(),
+      run: () => activeDiagram()?.zoomOut(),
+    },
+    {
+      id: 'db.diagram.fit',
+      category: cat.view,
+      enabled: () => !!activeDiagram(),
+      run: () => activeDiagram()?.fit(),
     },
     { id: 'db.help.keybindings', category: cat.help, run: () => overlay().openDialog({ id: 'keybindings' }) },
     { id: 'db.help.about', category: cat.help, run: () => overlay().openDialog({ id: 'about' }) },

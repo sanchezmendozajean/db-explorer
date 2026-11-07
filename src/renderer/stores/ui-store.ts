@@ -1,6 +1,7 @@
 import { create } from 'zustand';
+import { withoutKey } from '@shared/records';
 import type { PanelLayout, SideBarView, ThemePreference, UiState } from '@shared/ui-state';
-import { DEFAULT_UI_STATE } from '@shared/ui-state';
+import { DEFAULT_UI_STATE, MAX_DIAGRAMS_REMEMBERED } from '@shared/ui-state';
 
 interface UiStore extends UiState {
   /** Tema efectivo (resuelve "system" con la preferencia del sistema operativo). */
@@ -16,6 +17,8 @@ interface UiStore extends UiState {
   setEditorLayout: (layout: PanelLayout) => void;
   /** Ancho de una columna de la pestaña Plan (se recuerda entre planes). */
   setPlanColumn: (column: string, width: number) => void;
+  /** Guarda (`null`: borra) las posiciones movidas a mano de un diagrama ER. */
+  setDiagramPositions: (key: string, positions: Record<string, [number, number]> | null) => void;
 }
 
 let systemDark = true;
@@ -58,6 +61,15 @@ export const useUiStore = create<UiStore>((set, get) => ({
 
   setPlanColumn: (column, width) =>
     set((s) => ({ planColumns: { ...s.planColumns, [column]: Math.round(width) } })),
+
+  setDiagramPositions: (key, positions) =>
+    set((s) => {
+      const rest = withoutKey(s.diagramPositions, key);
+      if (!positions || Object.keys(positions).length === 0) return { diagramPositions: rest };
+      // Se reinserta al final: los más antiguos son los primeros en descartarse.
+      const entries = Object.entries({ ...rest, [key]: positions });
+      return { diagramPositions: Object.fromEntries(entries.slice(-MAX_DIAGRAMS_REMEMBERED)) };
+    }),
 }));
 
 /** Extrae la parte persistible del store. */
@@ -69,6 +81,7 @@ export function selectPersistedUiState(s: UiStore): UiState {
     panel: s.panel,
     layout: s.layout,
     planColumns: s.planColumns,
+    diagramPositions: s.diagramPositions,
   };
 }
 

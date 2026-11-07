@@ -20,6 +20,7 @@ import { Highlight, SideBarHeader } from '../side-bar/SideBarHeader';
 import * as actions from './actions';
 import { newScript } from '../editor/scripts';
 import { countRows, newDdlScript, newTableScript, objectRef, targetOfRef } from './table-scripts';
+import { openDiagramTab, supportsDiagram } from '../diagram/diagram-tabs';
 import { openObjectTab } from '../objects/object-tabs';
 import { openRoutineTab } from '../objects/routine-tabs';
 import { invalidateDetails } from '../objects/object-details';
@@ -347,6 +348,17 @@ export function ConnectionsView(): React.JSX.Element {
               } satisfies MenuEntry,
             ]
           : []),
+        // SQLite: la conexión es el archivo y su único esquema es `main`.
+        ...(supportsDiagram(cfg.engine) && cfg.engine === 'sqlite'
+          ? [
+              {
+                type: 'item',
+                id: 'diagram',
+                label: t.viewDiagram,
+                run: () => openDiagramTab(cfg.id, { database: 'main', schema: 'main' }),
+              } satisfies MenuEntry,
+            ]
+          : []),
         SEPARATOR,
         {
           type: 'item',
@@ -501,6 +513,17 @@ export function ConnectionsView(): React.JSX.Element {
           label: t.viewStructure,
           run: () => openObjectTab(node.connectionId, objectRef(ref), 'structure'),
         },
+        ...(isTable && supportsDiagram(engine)
+          ? [
+              {
+                type: 'item',
+                id: 'diagram',
+                label: t.viewDiagram,
+                run: () =>
+                  openDiagramTab(node.connectionId, { database: ref.database, schema: ref.schema }, ref.name),
+              } satisfies MenuEntry,
+            ]
+          : []),
         {
           type: 'submenu',
           id: 'script',

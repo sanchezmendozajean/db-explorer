@@ -1980,3 +1980,147 @@ button.plan-warnings:hover {
   border: 1.5px solid var(--bg-activity-bar);
   pointer-events: none;
 }
+
+/* Diagrama ER (specs/13) */
+.diagram-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  background: var(--bg-editor);
+  outline: none;
+}
+
+.diagram-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--height-toolbar);
+  flex: none;
+  padding: 0 8px;
+  background: var(--bg-editor);
+  border-bottom: 1px solid var(--border);
+}
+
+.diagram-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.diagram-zoom {
+  min-width: 44px;
+  text-align: center;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.diagram-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.diagram-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.diagram-svg:active {
+  cursor: grabbing;
+}
+
+.diagram-svg .er-box {
+  cursor: move;
+}
+
+.diagram-message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--fg-muted);
+  pointer-events: none;
+}
+
+.diagram-message button {
+  pointer-events: auto;
+}
+
+.diagram-error {
+  color: var(--error);
+}
+
+.diagram-notice {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  color: var(--fg-muted);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  pointer-events: none;
+}
+
+.diagram-picker {
+  position: absolute;
+  inset: 24px;
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 6px;
+  background: var(--bg-menu);
+  border: 1px solid var(--border-menu);
+  box-shadow: var(--shadow-dialog);
+  z-index: 2;
+}
+
+.diagram-picker p {
+  margin: 0;
+}
+
+.diagram-picker-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.diagram-picker-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+}
+
+.diagram-picker-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--fg-muted);
+}
+
+.diagram-offline {
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--fg-muted);
+  background: var(--bg-input);
+  white-space: nowrap;
+}

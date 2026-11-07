@@ -1,5 +1,7 @@
 import type { ScriptTabState, WorkspaceState } from '@shared/workspace';
+import { isDiagramFileName } from '@shared/diagram-file';
 import { isTextFile, parseConnectionHeader } from '@shared/workspace';
+import { openDiagramFile } from '../diagram/diagram-file';
 import { es } from '../../i18n/es';
 import { currentContext } from '../../commands/service';
 import { connectionById, useConnectionsStore } from '../../stores/connections-store';
@@ -114,6 +116,8 @@ export async function openScript(
   path: string,
   options: { preview?: boolean; focus?: boolean } = {},
 ): Promise<void> {
+  // Los diagramas guardados (.dbxdiagram) tienen su propia vista.
+  if (isDiagramFileName(fileName(path))) return openDiagramFile(path);
   if (!isTextFile(fileName(path))) {
     const r = await window.api.fs.openExternal({ path });
     if (!r.ok) showToast('error', es.files.openFailed(fileName(path), r.error.message));

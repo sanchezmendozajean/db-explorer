@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import type { Layout } from 'react-resizable-panels';
 import { useUiStore } from '../../stores/ui-store';
@@ -12,6 +13,9 @@ import { ObjectView } from '../objects/ObjectView';
 import { RoutineView } from '../objects/RoutineView';
 import { SqlEditor } from './SqlEditor';
 import { Watermark } from './Watermark';
+
+// El diagrama ER se carga al abrirlo la primera vez: no pesa en el arranque (specs/13 §8).
+const DiagramView = lazy(() => import('../diagram/DiagramView').then((m) => ({ default: m.DiagramView })));
 
 const EDITOR_IDS = ['editor', 'results'];
 
@@ -38,6 +42,10 @@ function EditorGroup({ group }: { group: EditorGroupIndex }): React.JSX.Element 
           <Watermark />
         ) : tab.kind === 'object' ? (
           <ObjectView key={tab.id} tab={tab} />
+        ) : tab.kind === 'diagram' ? (
+          <Suspense fallback={null}>
+            <DiagramView key={tab.id} tab={tab} />
+          </Suspense>
         ) : tab.kind === 'routine' ? (
           <RoutineView key={tab.id} tab={tab} />
         ) : tab.kind === 'preferences' ? (

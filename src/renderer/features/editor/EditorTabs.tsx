@@ -24,6 +24,7 @@ const TAB_ICON: Record<EditorTab['kind'], { icon: string; color: string }> = {
   object: { icon: 'table', color: 'var(--icon-table)' },
   routine: { icon: 'symbol-method', color: 'var(--fg-muted)' },
   preferences: { icon: 'settings-gear', color: 'var(--fg-muted)' },
+  diagram: { icon: 'symbol-structure', color: 'var(--icon-table)' },
 };
 
 function tabMenu(tab: EditorTab): MenuEntry[] {

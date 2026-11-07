@@ -87,6 +87,16 @@ export const DEFAULT_KEYBINDINGS: readonly KeybindingRule[] = [
   { key: 'ctrl+numpad_subtract', command: 'db.zoomOut' },
   { key: 'ctrl+numpad0', command: 'db.zoomReset' },
 
+  // Diagrama ER enfocado: sustituyen al zoom de la ventana (las reglas posteriores ganan).
+  { key: 'ctrl+=', command: 'db.diagram.zoomIn', when: 'diagramFocus' },
+  { key: 'ctrl+shift+=', command: 'db.diagram.zoomIn', when: 'diagramFocus' },
+  { key: 'ctrl++', command: 'db.diagram.zoomIn', when: 'diagramFocus' },
+  { key: 'ctrl+numpad_add', command: 'db.diagram.zoomIn', when: 'diagramFocus' },
+  { key: 'ctrl+-', command: 'db.diagram.zoomOut', when: 'diagramFocus' },
+  { key: 'ctrl+numpad_subtract', command: 'db.diagram.zoomOut', when: 'diagramFocus' },
+  { key: 'ctrl+0', command: 'db.diagram.fit', when: 'diagramFocus' },
+  { key: 'ctrl+numpad0', command: 'db.diagram.fit', when: 'diagramFocus' },
+
   // Editor (Monaco los resuelve por sí mismo; aquí solo se muestran en menús)
   { key: 'ctrl+f', command: 'editor.action.find', when: 'editorTextFocus' },
   { key: 'ctrl+h', command: 'editor.action.replace', when: 'editorTextFocus' },

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { ObjectKind } from '@shared/metadata';
 
-export type EditorTabKind = 'script' | 'object' | 'routine' | 'preferences';
+export type EditorTabKind = 'script' | 'object' | 'routine' | 'preferences' | 'diagram';
 
 /** Grupo del editor: 0 = principal (izquierdo), 1 = dividido (derecho). */
 export type EditorGroupIndex = 0 | 1;
@@ -23,6 +23,8 @@ export interface EditorTab {
   /** Pestaña de objeto (specs/04 §9): tabla o vista y subpestaña elegida; en `routine`, la rutina editada. */
   object?: { database: string; schema: string; name: string; kind: ObjectKind };
   objectView?: 'data' | 'structure' | 'ddl';
+  /** Pestaña de diagrama ER (specs/13): tabla que se selecciona y centra al abrirla. */
+  diagramFocus?: string;
   /** Grupo donde está la pestaña: sin valor, el principal; `1`, el dividido. */
   group?: EditorGroupIndex;
 }
