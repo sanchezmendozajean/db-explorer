@@ -35,6 +35,10 @@ export class HistoryService {
   ) {
     mkdirSync(dirname(file), { recursive: true });
     this.db = new DatabaseSync(file);
+    // Cada sentencia ejecutada es una inserción: con el diario por defecto cada una espera un `fsync` del
+    // disco (decenas de ms en un disco lento o con antivirus). El historial puede perder, como mucho, las
+    // últimas entradas ante un corte de energía, a cambio de no frenar la escritura.
+    this.db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS history (
         id INTEGER PRIMARY KEY,
