@@ -11,6 +11,7 @@
 
 ### Cambios
 - La pestaña Estructura recibe el destino estructurado de las claves foráneas (tabla y columnas referenciadas).
+- El historial de consultas escribe más rápido (modo WAL): ya no espera un `fsync` del disco por cada sentencia.
 
 ### Avisos
 - Las consultas del diagrama para SQL Server y MariaDB/MySQL no se probaron contra un servidor real antes de publicar.
