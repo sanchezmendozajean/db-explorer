@@ -68,3 +68,7 @@ Arquitectura en `specs/02` y `specs/03`; decisiones por hito en `specs/NOTAS.md`
 - La cancelación nativa de PostgreSQL y MariaDB usa la conexión de metadatos: envolverla siempre en `withTimeout` (`drivers/common.ts`) y descartar esa conexión si vence.
 - `pg`: `keepAlive: true` + `keepAliveInitialDelayMillis`; `mysql2`: `enableKeepAlive` + `keepAliveInitialDelay`; `tedious` ya trae keepalive de 30 s y no es configurable. `pg` no tiene `destroy`: se cierra `client.connection.stream`.
 - `ping()` de PostgreSQL acepta errores del servidor (los `DatabaseError` tienen `severity`; p. ej. transacción abortada): solo los de socket cuentan como conexión caída. Con un cursor de `pg-cursor` abierto las demás consultas del cliente quedan en cola: cerrar el cursor antes del ping.
+
+## Diagrama ER (specs/13)
+- SQLite: `sqlite_schema m JOIN pragma_table_info(m.name)` y `JOIN pragma_foreign_key_list(m.name)` traen todas las tablas en dos consultas (las funciones de tabla aceptan columnas del `JOIN`). En `pragma_foreign_key_list`, `to` es `NULL` cuando la FK es `REFERENCES t` sin columnas: apunta a la PK de `t` (`pragma_table_info.pk` da el orden). SQLite permite FK hacia tablas inexistentes.
+- `ConstraintInfo.references` es el destino estructurado de una FK; `definition` queda solo para mostrar. PostgreSQL aún no lo llena (usa `pg_get_constraintdef`): para M10 hay que leer `pg_constraint` (`conkey`/`confkey`, con `attname::text` por el arreglo `name[]`).

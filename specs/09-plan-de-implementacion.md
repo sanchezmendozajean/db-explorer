@@ -91,6 +91,13 @@ Va después de M7 porque necesita los cuatro motores (M4) y el modo de transacci
 
 **Aceptación**: instalador funciona en un Windows limpio sin Node instalado; arranque < 2 s; checklist e2e (Playwright) de flujo completo pasa sobre el build empaquetado.
 
+## M10 — Diagrama ER
+Va después de M9: es una funcionalidad añadida tras la primera versión empaquetada (D18).
+- Todo `13`: `getSchemaDiagram` en los cuatro drivers y `references` en `ConstraintInfo`, pestaña `diagram`, dibujo SVG, disposición automática, mover cajas, zoom, posiciones recordadas y exportación a SVG en el espacio de trabajo.
+- Comando *Ver diagrama* en el menú contextual del esquema y de la tabla, y en la paleta.
+
+**Aceptación**: en los cuatro motores, *Ver diagrama* de un esquema con claves foráneas (una compuesta) muestra todas las tablas y relaciones; arrastrar una caja mueve sus líneas, y la posición se conserva tras reiniciar; Ajustar muestra todo; Exportar SVG crea `Diagrama-<esquema>.svg` en la raíz del espacio de trabajo, visible en la vista Archivos y con todas las tablas; un esquema de más de 150 tablas pide elegir cuáles incluir y no congela la interfaz; el arranque sigue por debajo de 2 s (el componente se carga de forma perezosa).
+
 ---
 
 ## Convenciones

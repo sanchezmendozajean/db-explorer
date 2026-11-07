@@ -619,3 +619,57 @@ Tras suspender el equipo, el socket de la sesión queda "a medias": el servidor 
 - Pendiente: las conexiones de **metadatos** (árbol) no se verifican al reanudar; se recuperan por keepalive/errores de socket (la siguiente consulta reconecta).
 - El texto `execution.transactionLost` ya no menciona solo a SQLite.
 - Pruebas: `test/unit/query-runner-dead-connection.test.ts` (sesión simulada con conexión muerta).
+
+
+## Diagrama ER: especificación (2026-11-06)
+Se aprueba añadir un diagrama ER de solo lectura, que antes estaba fuera de alcance. Solo se escribieron las specs; **no hay código todavía**.
+- Decisión **D18** (`00`): SVG propio, sin dependencias nuevas.
+- `01` lo mueve a "Dentro del alcance"; siguen fuera la edición desde el diagrama y los diagramas de varios esquemas.
+- Nueva `13-diagrama-er.md` y hito **M10** en `09`.
+- Las cajas se mueven arrastrando su cabecera y las posiciones se guardan por conexión + base + esquema en `ui-state.json`.
+- **A pedido del usuario**, el SVG exportado se guarda en la raíz del espacio de trabajo (sin diálogo), como `Diagrama-<esquema>.svg`, sin sobrescribir.
+- Hallazgo: PostgreSQL no entrega las claves foráneas estructuradas (el driver usa `pg_get_constraintdef`); M10 debe consultar `pg_constraint`. Los otros tres motores ya traen tabla y columnas referenciadas.
+- Definiciones tomadas por ser las más simples: tope de 150 tablas con selector, tablas de otros esquemas como cajas externas atenuadas sin columnas, y solo tablas (sin vistas).
+
+
+## M10 — Diagrama ER: SQLite primero (2026-11-06)
+Se construyó todo lo que no depende del motor (contrato, IPC, pestaña, dibujo, disposición, interacción, posiciones, exportación) y el driver de **SQLite**. PostgreSQL, MariaDB/MySQL y SQL Server **siguen pendientes** y hoy responden `unsupported` ("El diagrama ER todavía no está disponible para …"). El menú *Ver diagrama* solo aparece en SQLite (`DIAGRAM_ENGINES` en `diagram-tabs.ts`): al terminar cada motor se agrega ahí.
+
+| Criterio de `13` | Estado |
+|---|---|
+| Ver diagrama muestra todas las tablas y relaciones (una compuesta) | ✅ SQLite (integración `sqlite-diagram.test.ts`: compuesta, `REFERENCES t` sin columnas, autorreferencia, destino inexistente; e2e) |
+| Arrastrar una caja mueve sus líneas y la posición se conserva tras reiniciar | ✅ e2e SQLite (el `translate` de la caja es idéntico tras reiniciar) |
+| Ajustar muestra todo; zoom | ✅ e2e (botones y Ctrl+- con el diagrama enfocado) |
+| Exportar SVG en la raíz del espacio, visible en Archivos, con todas las tablas, sin sobrescribir | ✅ e2e (`Diagrama-<nombre>.svg`, `-2`; sin `var(--` ni dependencias del tema) |
+| Esquema de más de 150 tablas pide elegir cuáles incluir | ✅ lógica (`initialSelection`, pruebas unitarias) y selector; **sin prueba e2e** (SQLite de 150+ tablas no se probó en la interfaz) |
+| Arranque < 2 s | ✅ por construcción: `DiagramView` se carga con `lazy` y `react-dom/server` solo al exportar; **no se volvió a medir** (`npm run measure`) |
+| Los cuatro motores | ⏳ solo SQLite |
+
+**Construido**
+- `shared/metadata.ts`: `SchemaDiagram`, `DiagramTable`, `DiagramRelation`, `ForeignKeyTarget`; `ConstraintInfo.references` (la pestaña Estructura y el diagrama comparten el dato). `DbDriver.getSchemaDiagram(scope)`; IPC `meta:diagram` (main ↔ db-host).
+- SQLite: dos consultas por esquema (`sqlite_schema` unido con `pragma_table_info` y `pragma_foreign_key_list`). Una FK sin columnas destino apunta a la PK de la tabla destino.
+- `renderer/features/diagram/`: `diagram-layout.ts` (modelo, disposición por capas, enrutado; puro y probado), `DiagramContent.tsx` (dibujo SVG compartido por pantalla y exportación), `DiagramView.tsx`, `diagram-store.ts` (estado por pestaña en zustand), `diagram-tabs.ts`, `diagram-actions.ts`, `diagram-export.ts`.
+- Exportación: `fs:save-export` → `WorkspaceService.saveExport` crea el archivo en la raíz con `wx` (nunca sobrescribe) y nombres seguros para Windows (`safeBaseName`). El SVG sale de `renderToStaticMarkup` del mismo componente, con las variables CSS del tema resueltas.
+- Posiciones movidas a mano en `ui-state.json` (`diagramPositions`, máx. 50 diagramas, las más antiguas se descartan). Clave: `conexión␀base␀esquema`.
+- Comando *Ver diagrama* (`db.openDiagram`) en la paleta (SQLite) y atajos `db.diagram.zoomIn/zoomOut/fit` con contexto `diagramFocus`, que ganan a Ctrl+= / Ctrl+- / Ctrl+0 globales por ir al final de los atajos.
+
+**Decisiones** (opción más simple)
+- Etiquetas de columna `PK` / `FK` en texto (no iconos): salen igual en el SVG exportado sin depender de la fuente de iconos.
+- Anchura fija de caja (230 px) con texto recortado con puntos suspensivos.
+- La pestaña de diagrama no se restaura al reiniciar (como las de objeto); lo que se recuerda son las posiciones.
+- En SQLite el diagrama es el de `main` y se abre desde el menú de la conexión o de una tabla; no hay nodo de esquema.
+
+**Pendiente de M10**: drivers de PostgreSQL (`pg_constraint`, hoy el driver solo da `pg_get_constraintdef`), MariaDB/MySQL (`KEY_COLUMN_USAGE`) y SQL Server (`sys.foreign_keys`); *Ver diagrama* en los nodos de base y esquema del árbol y en la paleta para esos motores; sumar `getSchemaDiagram` a la suite común de integración y un e2e por motor; medir el arranque.
+
+**Notas de pruebas**: una prueba de `history.test.ts` ("borra entradas y recorta a maxEntries") falló una vez en la corrida completa y pasó 4 veces seguidas sola y con la rama limpia: intermitente, ajena a este cambio. Tres archivos con avisos de Prettier (`ObjectView.tsx`, `preferences.spec.ts`, `data-edit.test.ts`) ya los tenían antes y no se tocaron.
+
+- **A pedido del usuario**, al pasar el cursor o seleccionar una caja las demás **no se atenúan**: la activa lleva borde y cabecera celestes (`--diagram-highlight`) con el título en blanco. Las líneas de sus relaciones se resaltan en el color de acento.
+
+## M10 — Archivo de diagrama `.dbxdiagram` (2026-11-06)
+A pedido del usuario, el diagrama se guarda en el espacio de trabajo en un JSON propio que DB Explorer sabe dibujar (ver `13` §9). Un diagrama sin archivo sigue recordando sus posiciones en `ui-state.json`.
+- **Decisiones** (opción más simple): guardado manual la primera vez (botón o Ctrl+S) y automático después; el archivo guarda la **copia completa** de tablas y relaciones, no solo las posiciones, para dibujarlo sin conexión; se reescribe con `fs:write-script` (`force`, sin BOM); una pestaña recién guardada y la abierta desde el archivo se reconocen como la misma por su ruta.
+- **Pruebas**: `test/unit/diagram-file.test.ts` (formato: ida y vuelta, BOM, archivos rotos, ajenos o de versión futura) y 5 e2e nuevos en `test/e2e/diagram.spec.ts` (guardar, autoguardado al mover, cerrar y reabrir desde Archivos, conexión inexistente, archivo dañado).
+- **Pendiente**: si hay un archivo de diagrama de ese esquema, *Ver diagrama* desde el árbol no lo busca (abre uno nuevo desde la base); se podría ofrecer abrir el guardado.
+
+- **Cambio a pedido del usuario**: el diagrama se guarda **al abrirlo** (como un `Script-N.sql` nuevo), sin botón de guardar; *Ver diagrama* reabre el archivo existente del esquema en vez de crear otro y lo actualiza desde la base si la conexión ya está abierta. Esto resuelve el pendiente anterior. Autoguardado y Ctrl+S como antes.
+- **Intermitencia vista**: en dos corridas completas del e2e `diagram.spec.ts` fallaron una vez el primer test (el diagrama tardó más de 5 s en aparecer) y otra vez el arrastre de la caja (la caja se movió 334 px de más); no se pudo reproducir en las 8 corridas siguientes (todas en verde). Sin causa conocida: si reaparece, sospechar de la carga inicial (`fit` con el tamaño del lienzo aún no estable).

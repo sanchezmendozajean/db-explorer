@@ -54,3 +54,10 @@ description: Lecciones del renderer de DB Explorer (React 19, zustand, Monaco 0.
 - Un editor Monaco por grupo: `activeEditor()` devuelve el del grupo enfocado (el de la pestaña activa); para hallar el que muestra un documento usar `editorShowing(model)`. No guardar una referencia "actual" global.
 - `useWorkbenchStore.activeId` es la pestaña enfocada; la visible de cada grupo es `groupActive[g]`. Toda escritura pasa por `normalize` en el store: no tocar `groupActive` a mano. Las operaciones por posición (Ctrl+Tab, Alt+N) deben limitarse al grupo enfocado.
 - Hay dos `.editor-group` a la vez: los selectores de foco y las pruebas e2e deben acotar por grupo (`.editor-group[data-group="1"]` o `.nth()`). El panel de resultados es uno solo (`data-testid="results"`), fuera de los grupos, y sigue a la pestaña enfocada (`EditorArea`).
+
+## Diagrama ER y reglas de lint de React
+- `eslint-plugin-react-hooks` v7 prohíbe `setState` síncrono dentro de un efecto y escribir `ref.current` durante el dibujo. Lo que cambia por gestos de ratón o por un efecto va en un store de zustand por pestaña (`diagram-store.ts`, como `object-tabs.ts`); los manejadores de eventos sí pueden leer refs y `getState()`.
+- Un efecto sin lista de dependencias que solo llama a funciones de un store está permitido: así los atajos (`diagram-actions.ts`) ven siempre el modelo vigente.
+- Atajos con contexto: `keybindings.resolve` recorre las reglas **de la última a la primera**, así que una regla con `when` añadida al final de `default-keybindings.ts` gana a una global igual (Ctrl+= / Ctrl+- / Ctrl+0 con `diagramFocus`). El contexto sale de `data-focus-context` del elemento enfocado y sus ancestros.
+- El SVG exportado reutiliza el componente de pantalla con `renderToStaticMarkup` (import dinámico de `react-dom/server`) y resuelve `var(--token)` con `getComputedStyle`; los iconos de fuente (codicons) no sirven dentro de un SVG exportado: usar texto o trazos.
+- Vista lateral y reinicio: la última vista de la barra lateral se recuerda en `ui-state.json`; un e2e que cambie a Archivos y reinicie la app debe volver a pulsar Ctrl+Shift+D antes de buscar el árbol de conexiones.

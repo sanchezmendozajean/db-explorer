@@ -63,3 +63,8 @@ Credenciales solo en `test/integration/.env` (ignorado; plantilla en `.env.examp
 - Respaldo/restauración de MariaDB y MySQL sí se puede verificar sobre `dbx_test` (respaldo = lectura; restaurar su propio volcado la deja igual). Se hizo con una prueba temporal que no se commitea; las rutas de los binarios son de este equipo (`C:\Program Files\MariaDB 13.0\bin`, `…\MySQL\MySQL Server 26.7\bin`).
 - `test/integration/db-admin.test.ts` y `test/e2e/db-admin.spec.ts` usan el `pg_dump`/`pg_restore` de `findPgBin()` (se saltan si no están). En e2e el diálogo de archivos se reemplaza con `app.evaluate` (`showOpenDialog`/`showSaveDialog`); el mismo `showOpenDialog` sirve a las herramientas y al archivo de restauración, así que hay que volver a fijarlo entre pasos.
 - Al borrar una carpeta con un `.exe` recién ejecutado en Windows, `rm` puede dar `EPERM` unos instantes: usar `maxRetries`.
+
+## e2e con SQLite y el diagrama ER
+- Para preparar datos sin servidor: crear el archivo con `DatabaseSync` de `node:sqlite` en el propio spec y escribir `connections.json` en `userData` antes de lanzar la app (ver `test/e2e/diagram.spec.ts`). El espacio de trabajo de los e2e es `userData/Documents/DB Explorer`.
+- La primera prueba tras `electron-vite build` puede pasar los 5 s de `expect` (arranque en frío del binario nuevo); repetir antes de buscar un fallo de la aplicación.
+- Arrastres con `page.mouse` sobre SVG funcionan con `steps` > 1 (el puntero se captura en el `<g>` de la caja). Comparar posiciones por el atributo `transform` de la caja, no por píxeles, al verificar que se recuerdan tras reiniciar.
