@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.2.0
+
+### Novedades
+- **Diagrama ER** de solo lectura de un esquema, en los cuatro motores: clic derecho en una conexión SQLite, un esquema (PostgreSQL, SQL Server), una base (MariaDB/MySQL) o una tabla → **Ver diagrama**. Muestra las tablas con sus columnas y las claves foráneas (también las compuestas) con notación de pata de gallo.
+- Las cajas se **mueven arrastrando** su cabecera y las líneas las siguen; zoom con botones, Ctrl+rueda o Ctrl+`+`/`-`/0; **Ajustar** y **Reorganizar**. La caja bajo el cursor o seleccionada se resalta en celeste.
+- El diagrama se **guarda solo en el espacio de trabajo** como `Diagrama-<conexión>.dbxdiagram` (un JSON propio de DB Explorer) en cuanto se abre, igual que un script nuevo. Al volver a abrir el diagrama de un esquema se reutiliza ese archivo y se actualiza desde la base. Se puede abrir desde la vista Archivos, incluso sin conexión (muestra la copia guardada).
+- **Exportar a SVG** guarda el diagrama completo en el espacio de trabajo (`Diagrama-<conexión>.svg`, sin sobrescribir).
+- Esquemas de más de 150 tablas: se elige cuáles dibujar.
+
+### Cambios
+- La pestaña Estructura recibe el destino estructurado de las claves foráneas (tabla y columnas referenciadas).
+
+### Avisos
+- Las consultas del diagrama para SQL Server y MariaDB/MySQL no se probaron contra un servidor real antes de publicar.
+
 ## v0.1.6
 
 ### Correcciones
