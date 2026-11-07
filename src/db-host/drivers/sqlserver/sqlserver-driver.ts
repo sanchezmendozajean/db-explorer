@@ -9,11 +9,13 @@ import type {
   IndexInfo,
   ObjectKind,
   SchemaDiagram,
+  DiagramRelation,
+  DiagramTable,
 } from '@shared/metadata';
 import { qualifiedName } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
-import { checkedDatabaseName, formatRowEstimate, diagramNotAvailable } from '../common';
+import { checkedDatabaseName, formatRowEstimate } from '../common';
 import { toSqlServerError } from './errors';
 import { installExactValues } from './exact-values';
 import { checkedServerPath, nstr, planFileMoves } from './database-sql';
@@ -58,6 +60,15 @@ type Param = string | number;
  * (con cola: `tedious` atiende una petición a la vez) usando nombres de tres
  * partes (`[base].sys.tables`); ejecución en sesiones dedicadas por pestaña.
  */
+/** Tipo de columna legible (`varchar(50)`, `decimal(12,2)`…); espera los alias `c` (columns) y `t` (types). */
+const COLUMN_TYPE_SQL = `CASE
+    WHEN t.name IN ('nvarchar', 'nchar') THEN t.name + '(' + IIF(c.max_length = -1, 'max', CAST(c.max_length / 2 AS varchar(10))) + ')'
+    WHEN t.name IN ('varchar', 'char', 'varbinary', 'binary') THEN t.name + '(' + IIF(c.max_length = -1, 'max', CAST(c.max_length AS varchar(10))) + ')'
+    WHEN t.name IN ('decimal', 'numeric') THEN t.name + '(' + CAST(c.precision AS varchar(3)) + ',' + CAST(c.scale AS varchar(3)) + ')'
+    WHEN t.name IN ('datetime2', 'time', 'datetimeoffset') THEN t.name + '(' + CAST(c.scale AS varchar(3)) + ')'
+    ELSE t.name
+  END`;
+
 export class SqlServerDriver implements DbDriver {
   readonly engine = 'sqlserver' as const;
   readonly capabilities: DriverCapabilities = {
@@ -190,13 +201,7 @@ export class SqlServerDriver implements DbDriver {
     const db = bracket(ref.database);
     const rows = await this.query(
       `SELECT c.name,
-              CASE
-                WHEN t.name IN ('nvarchar', 'nchar') THEN t.name + '(' + IIF(c.max_length = -1, 'max', CAST(c.max_length / 2 AS varchar(10))) + ')'
-                WHEN t.name IN ('varchar', 'char', 'varbinary', 'binary') THEN t.name + '(' + IIF(c.max_length = -1, 'max', CAST(c.max_length AS varchar(10))) + ')'
-                WHEN t.name IN ('decimal', 'numeric') THEN t.name + '(' + CAST(c.precision AS varchar(3)) + ',' + CAST(c.scale AS varchar(3)) + ')'
-                WHEN t.name IN ('datetime2', 'time', 'datetimeoffset') THEN t.name + '(' + CAST(c.scale AS varchar(3)) + ')'
-                ELSE t.name
-              END AS type,
+              ${COLUMN_TYPE_SQL} AS type,
               c.is_nullable AS nullable,
               dc.definition AS def,
               CAST(IIF(EXISTS (
@@ -268,6 +273,7 @@ export class SqlServerDriver implements DbDriver {
       ref.database,
       `SELECT fk.name, pc.name AS col, rc.name AS ref_col,
               QUOTENAME(OBJECT_SCHEMA_NAME(fk.referenced_object_id)) + '.' + QUOTENAME(OBJECT_NAME(fk.referenced_object_id)) AS ref_table,
+              OBJECT_SCHEMA_NAME(fk.referenced_object_id) AS ref_schema, OBJECT_NAME(fk.referenced_object_id) AS ref_name,
               fk.delete_referential_action_desc AS on_delete, fk.update_referential_action_desc AS on_update
          FROM sys.foreign_keys fk
          JOIN sys.foreign_key_columns fkc ON fkc.constraint_object_id = fk.object_id
@@ -315,7 +321,17 @@ export class SqlServerDriver implements DbDriver {
         const value = String(first[action]);
         if (value !== 'NO_ACTION') definition += ` ${label} ${value.replace(/_/g, ' ')}`;
       }
-      result.push({ name, type: 'foreignKey', columns: cols, definition });
+      result.push({
+        name,
+        type: 'foreignKey',
+        columns: cols,
+        definition,
+        references: {
+          schema: String(first['ref_schema']),
+          table: String(first['ref_name']),
+          columns: rows.map((r) => String(r['ref_col'])),
+        },
+      });
     }
     for (const r of checks) {
       result.push({
@@ -328,9 +344,72 @@ export class SqlServerDriver implements DbDriver {
     return result;
   }
 
-  /** Pendiente (M10): el diagrama ER se construye motor por motor, empezando por SQLite. */
-  getSchemaDiagram(): Promise<SchemaDiagram> {
-    return diagramNotAvailable('SQL Server');
+  /**
+   * Tablas de usuario del esquema con sus columnas y todas sus claves foráneas, en dos consultas (specs/13).
+   * Las claves foráneas de SQL Server no cruzan bases, pero sí esquemas.
+   */
+  async getSchemaDiagram(scope: Scope): Promise<SchemaDiagram> {
+    const db = bracket(scope.database);
+    const columns = await this.query(
+      `SELECT o.name AS tbl, c.name, ${COLUMN_TYPE_SQL} AS type, c.is_nullable AS nullable,
+              CAST(IIF(EXISTS (
+                SELECT 1 FROM ${db}.sys.index_columns ic
+                  JOIN ${db}.sys.indexes i ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+                 WHERE i.is_primary_key = 1 AND ic.object_id = c.object_id AND ic.column_id = c.column_id
+              ), 1, 0) AS bit) AS pk
+         FROM ${db}.sys.columns c
+         JOIN ${db}.sys.objects o ON o.object_id = c.object_id AND o.type = 'U' AND o.is_ms_shipped = 0
+         JOIN ${db}.sys.schemas s ON s.schema_id = o.schema_id
+         JOIN ${db}.sys.types t ON t.user_type_id = c.user_type_id
+        WHERE s.name = @schema
+        ORDER BY o.name, c.column_id`,
+      { schema: scope.schema },
+    );
+    const tables = new Map<string, DiagramTable>();
+    for (const r of columns) {
+      const name = String(r['tbl']);
+      let table = tables.get(name);
+      if (!table) {
+        table = { name, columns: [] };
+        tables.set(name, table);
+      }
+      table.columns.push({
+        name: String(r['name']),
+        nativeType: String(r['type']),
+        nullable: !!r['nullable'],
+        primaryKey: !!r['pk'],
+      });
+    }
+    const fks = await this.query(
+      `SELECT fk.name, po.name AS from_table, pc.name AS col, rs.name AS ref_schema, ro.name AS ref_table, rc.name AS ref_col
+         FROM ${db}.sys.foreign_keys fk
+         JOIN ${db}.sys.objects po ON po.object_id = fk.parent_object_id
+         JOIN ${db}.sys.schemas ps ON ps.schema_id = po.schema_id
+         JOIN ${db}.sys.foreign_key_columns fkc ON fkc.constraint_object_id = fk.object_id
+         JOIN ${db}.sys.columns pc ON pc.object_id = fkc.parent_object_id AND pc.column_id = fkc.parent_column_id
+         JOIN ${db}.sys.objects ro ON ro.object_id = fkc.referenced_object_id
+         JOIN ${db}.sys.schemas rs ON rs.schema_id = ro.schema_id
+         JOIN ${db}.sys.columns rc ON rc.object_id = fkc.referenced_object_id AND rc.column_id = fkc.referenced_column_id
+        WHERE ps.name = @schema
+        ORDER BY po.name, fk.name, fkc.constraint_column_id`,
+      { schema: scope.schema },
+    );
+    const relations = new Map<string, DiagramRelation>();
+    for (const r of fks) {
+      const key = `${String(r['from_table'])}\u0000${String(r['name'])}`;
+      let relation = relations.get(key);
+      if (!relation) {
+        relation = {
+          name: String(r['name']),
+          from: { schema: scope.schema, table: String(r['from_table']), columns: [] },
+          to: { schema: String(r['ref_schema']), table: String(r['ref_table']), columns: [] },
+        };
+        relations.set(key, relation);
+      }
+      relation.from.columns.push(String(r['col']));
+      relation.to.columns.push(String(r['ref_col']));
+    }
+    return { tables: [...tables.values()], relations: [...relations.values()] };
   }
 
   async getDDL(ref: ObjectRef, kind: ObjectKind): Promise<string> {

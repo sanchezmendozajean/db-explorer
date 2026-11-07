@@ -6,6 +6,7 @@ import type {
   ColumnInfo,
   ConstraintInfo,
   DbObject,
+  DiagramTable,
   DriverCapabilities,
   IndexInfo,
   ObjectKind,
@@ -15,13 +16,7 @@ import type { LogicalType, ResultColumn } from '@shared/query';
 import { qualifiedName, quoteIdent } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
-import {
-  checkedDatabaseName,
-  formatRowEstimate,
-  unsupportedOperation,
-  withTimeout,
-  diagramNotAvailable,
-} from '../common';
+import { checkedDatabaseName, formatRowEstimate, unsupportedOperation, withTimeout } from '../common';
 import { toDriverError } from './errors';
 import { destroyClient, PostgresSession } from './postgres-session';
 
@@ -292,16 +287,30 @@ export class PostgresDriver implements DbDriver {
   }
 
   async getConstraints(ref: ObjectRef): Promise<ConstraintInfo[]> {
-    const { rows } = await this.query<{ name: string; type: string; columns: string[]; def: string }>(
+    const { rows } = await this.query<{
+      name: string;
+      type: string;
+      columns: string[];
+      def: string;
+      ref_schema: string | null;
+      ref_table: string | null;
+      ref_columns: string[];
+    }>(
       ref.database,
       `SELECT con.conname AS name, con.contype AS type,
               ARRAY(SELECT a.attname::text FROM unnest(con.conkey) WITH ORDINALITY AS k(n, i)
                       JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = k.n
                      ORDER BY k.i) AS columns,
-              pg_get_constraintdef(con.oid, true) AS def
+              pg_get_constraintdef(con.oid, true) AS def,
+              rn.nspname::text AS ref_schema, rt.relname::text AS ref_table,
+              ARRAY(SELECT a.attname::text FROM unnest(con.confkey) WITH ORDINALITY AS k(n, i)
+                      JOIN pg_attribute a ON a.attrelid = con.confrelid AND a.attnum = k.n
+                     ORDER BY k.i) AS ref_columns
          FROM pg_constraint con
          JOIN pg_class t ON t.oid = con.conrelid
          JOIN pg_namespace n ON n.oid = t.relnamespace
+         LEFT JOIN pg_class rt ON rt.oid = con.confrelid
+         LEFT JOIN pg_namespace rn ON rn.oid = rt.relnamespace
         WHERE n.nspname = $1 AND t.relname = $2 AND con.contype IN ('p', 'f', 'u', 'c')
         ORDER BY strpos('pufc', con.contype::text), con.conname`,
       [ref.schema, ref.name],
@@ -312,12 +321,85 @@ export class PostgresDriver implements DbDriver {
       u: 'unique',
       c: 'check',
     };
-    return rows.map((r) => ({ name: r.name, type: TYPES[r.type]!, columns: r.columns, definition: r.def }));
+    return rows.map((r) => ({
+      name: r.name,
+      type: TYPES[r.type]!,
+      columns: r.columns,
+      definition: r.def,
+      ...(r.type === 'f' && r.ref_table
+        ? { references: { schema: r.ref_schema ?? ref.schema, table: r.ref_table, columns: r.ref_columns } }
+        : {}),
+    }));
   }
 
-  /** Pendiente (M10): el diagrama ER se construye motor por motor, empezando por SQLite. */
-  getSchemaDiagram(): Promise<SchemaDiagram> {
-    return diagramNotAvailable('PostgreSQL');
+  /**
+   * Tablas (incluidas las particionadas, sin sus particiones) con sus columnas y todas las claves foráneas
+   * del esquema, en dos consultas (specs/13). Las claves se leen de `pg_constraint`, no de su texto.
+   */
+  async getSchemaDiagram(scope: Scope): Promise<SchemaDiagram> {
+    const columns = await this.query<{
+      tbl: string;
+      name: string;
+      type: string;
+      nullable: boolean;
+      pk: boolean;
+    }>(
+      scope.database,
+      `SELECT c.relname::text AS tbl, a.attname::text AS name,
+              format_type(a.atttypid, a.atttypmod) AS type,
+              NOT a.attnotnull AS nullable,
+              COALESCE(a.attnum = ANY(i.indkey), false) AS pk
+         FROM pg_class c
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+         LEFT JOIN pg_index i ON i.indrelid = c.oid AND i.indisprimary
+        WHERE n.nspname = $1 AND c.relkind IN ('r', 'p') AND NOT c.relispartition
+        ORDER BY c.relname, a.attnum`,
+      [scope.schema],
+    );
+    const tables = new Map<string, DiagramTable>();
+    for (const r of columns.rows) {
+      let table = tables.get(r.tbl);
+      if (!table) {
+        table = { name: r.tbl, columns: [] };
+        tables.set(r.tbl, table);
+      }
+      table.columns.push({ name: r.name, nativeType: r.type, nullable: r.nullable, primaryKey: r.pk });
+    }
+    const fks = await this.query<{
+      name: string;
+      from_table: string;
+      from_columns: string[];
+      to_schema: string;
+      to_table: string;
+      to_columns: string[];
+    }>(
+      scope.database,
+      `SELECT con.conname::text AS name, t.relname::text AS from_table,
+              ARRAY(SELECT a.attname::text FROM unnest(con.conkey) WITH ORDINALITY AS k(n, i)
+                      JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = k.n
+                     ORDER BY k.i) AS from_columns,
+              rn.nspname::text AS to_schema, rt.relname::text AS to_table,
+              ARRAY(SELECT a.attname::text FROM unnest(con.confkey) WITH ORDINALITY AS k(n, i)
+                      JOIN pg_attribute a ON a.attrelid = con.confrelid AND a.attnum = k.n
+                     ORDER BY k.i) AS to_columns
+         FROM pg_constraint con
+         JOIN pg_class t ON t.oid = con.conrelid
+         JOIN pg_namespace n ON n.oid = t.relnamespace
+         JOIN pg_class rt ON rt.oid = con.confrelid
+         JOIN pg_namespace rn ON rn.oid = rt.relnamespace
+        WHERE con.contype = 'f' AND n.nspname = $1 AND t.relkind IN ('r', 'p') AND NOT t.relispartition
+        ORDER BY t.relname, con.conname`,
+      [scope.schema],
+    );
+    return {
+      tables: [...tables.values()],
+      relations: fks.rows.map((r) => ({
+        name: r.name,
+        from: { schema: scope.schema, table: r.from_table, columns: r.from_columns },
+        to: { schema: r.to_schema, table: r.to_table, columns: r.to_columns },
+      })),
+    };
   }
 
   async getDDL(ref: ObjectRef, kind: ObjectKind): Promise<string> {

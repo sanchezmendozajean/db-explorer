@@ -254,6 +254,55 @@ describe.each(cases)('$label', (c: EngineCase) => {
       await exec([`DROP TABLE ${p}restr_hijo`, `DROP TABLE ${p}restr_padre`], null);
     });
 
+    it.runIf(c.writable)(
+      'devuelve el diagrama ER: tablas, columnas y claves foráneas (compuesta)',
+      async () => {
+        const p = c.plan.prefix;
+        await exec(
+          [
+            `DROP TABLE IF EXISTS ${p}er_hijo`,
+            `DROP TABLE IF EXISTS ${p}er_padre`,
+            `CREATE TABLE ${p}er_padre (a int NOT NULL, b int NOT NULL, PRIMARY KEY (a, b))`,
+            `CREATE TABLE ${p}er_hijo (id int NOT NULL PRIMARY KEY, a int, b int, otro int NOT NULL,
+             CONSTRAINT fk_er_padre FOREIGN KEY (a, b) REFERENCES ${p}er_padre (a, b))`,
+          ],
+          null,
+        );
+        try {
+          const diagram = await manager.schemaDiagram(id, { database: table.database, schema: table.schema });
+          const byName = new Map(diagram.tables.map((t) => [t.name.toLowerCase(), t]));
+          expect([...byName.keys()]).toEqual(expect.arrayContaining(['er_padre', 'er_hijo']));
+          const hijo = byName.get('er_hijo')!;
+          expect(hijo.columns.map((col) => [col.name.toLowerCase(), col.primaryKey, col.nullable])).toEqual([
+            ['id', true, false],
+            ['a', false, true],
+            ['b', false, true],
+            ['otro', false, false],
+          ]);
+          expect(byName.get('er_padre')!.columns.map((col) => col.primaryKey)).toEqual([true, true]);
+          const fk = diagram.relations.filter((r) => r.from.table.toLowerCase() === 'er_hijo');
+          expect(fk).toHaveLength(1);
+          // SQLite no nombra las claves foráneas.
+          if (c.engine !== 'sqlite') expect(fk[0]!.name.toLowerCase()).toBe('fk_er_padre');
+          expect(fk[0]!.from.columns.map((x) => x.toLowerCase())).toEqual(['a', 'b']);
+          expect(fk[0]!.to.table.toLowerCase()).toBe('er_padre');
+          expect(fk[0]!.to.columns.map((x) => x.toLowerCase())).toEqual(['a', 'b']);
+          expect(fk[0]!.to.schema).toBe(fk[0]!.from.schema);
+          // El destino estructurado también llega por getConstraints (pestaña Estructura).
+          const details = await manager.tableDetails(
+            id,
+            { database: table.database, schema: table.schema, name: 'er_hijo' },
+            'table',
+          );
+          const constraint = details.constraints.find((k) => k.type === 'foreignKey');
+          expect(constraint?.references?.table.toLowerCase()).toBe('er_padre');
+          expect(constraint?.references?.columns.map((x) => x.toLowerCase())).toEqual(['a', 'b']);
+        } finally {
+          await exec([`DROP TABLE ${p}er_hijo`, `DROP TABLE ${p}er_padre`], null);
+        }
+      },
+    );
+
     /** Filas de `clientes` vistas desde otra sesión (lo confirmado). */
     async function committedIds(): Promise<number[]> {
       const queryId = `${id}-${n++}`;

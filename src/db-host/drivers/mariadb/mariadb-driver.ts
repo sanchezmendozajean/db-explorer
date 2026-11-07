@@ -10,17 +10,13 @@ import type {
   IndexInfo,
   ObjectKind,
   SchemaDiagram,
+  DiagramRelation,
+  DiagramTable,
 } from '@shared/metadata';
 import { qualifiedName, quoteIdent } from '@shared/sql-quote';
 import type { DbDriver, DbSession, ObjectRef, Scope } from '../types';
 import { DriverError } from '../types';
-import {
-  checkedDatabaseName,
-  formatRowEstimate,
-  unsupportedOperation,
-  withTimeout,
-  diagramNotAvailable,
-} from '../common';
+import { checkedDatabaseName, formatRowEstimate, unsupportedOperation, withTimeout } from '../common';
 import { toMariaDbError } from './errors';
 import { MariaDbSession } from './mariadb-session';
 
@@ -234,7 +230,10 @@ export class MariaDbDriver implements DbDriver {
       'FOREIGN KEY': 'foreignKey',
       CHECK: 'check',
     };
-    const byName = new Map<string, ConstraintInfo & { refCols: string[]; refTable?: string }>();
+    const byName = new Map<
+      string,
+      ConstraintInfo & { refCols: string[]; refTable?: string; refSchema?: string; refName?: string }
+    >();
     for (const r of rows) {
       const type = TYPES[String(r['type'])];
       if (!type) continue;
@@ -244,6 +243,8 @@ export class MariaDbDriver implements DbDriver {
       if (!c) {
         c = { name, type, columns: [], refCols: [] };
         if (r['ref_table']) {
+          c.refSchema = String(r['ref_schema']);
+          c.refName = String(r['ref_table']);
           c.refTable = qualifiedName('mariadb', {
             schema: String(r['ref_schema']),
             name: String(r['ref_table']),
@@ -264,20 +265,76 @@ export class MariaDbDriver implements DbDriver {
     ).catch(() => [] as Row[]);
     const clauses = new Map(checks.map((r) => [String(r['name']), String(r['clause'])]));
     const q = (cols: string[]): string => cols.map((col) => quoteIdent('mariadb', col)).join(', ');
-    return [...byName.values()].map(({ refCols, refTable, ...c }) => {
+    return [...byName.values()].map(({ refCols, refTable, refSchema, refName, ...c }) => {
       let definition: string | undefined;
       if (c.type === 'primaryKey') definition = `PRIMARY KEY (${q(c.columns)})`;
       else if (c.type === 'unique') definition = `UNIQUE (${q(c.columns)})`;
       else if (c.type === 'foreignKey')
         definition = `FOREIGN KEY (${q(c.columns)}) REFERENCES ${refTable ?? '?'} (${q(refCols)})`;
       else if (clauses.has(c.name)) definition = `CHECK (${clauses.get(c.name)})`;
-      return { ...c, definition };
+      const references =
+        c.type === 'foreignKey' && refName
+          ? { references: { schema: refSchema ?? ref.database, table: refName, columns: refCols } }
+          : {};
+      return { ...c, definition, ...references };
     });
   }
 
-  /** Pendiente (M10): el diagrama ER se construye motor por motor, empezando por SQLite. */
-  getSchemaDiagram(): Promise<SchemaDiagram> {
-    return diagramNotAvailable('MariaDB/MySQL');
+  /**
+   * Tablas de la base con sus columnas y todas sus claves foráneas, en dos consultas (specs/13). Aquí el
+   * "esquema" es la base: una clave foránea hacia otra base se dibuja como tabla externa.
+   */
+  async getSchemaDiagram(scope: Scope): Promise<SchemaDiagram> {
+    const columns = await this.query(
+      `SELECT c.table_name AS tbl, c.column_name AS name, c.column_type AS type,
+              c.is_nullable AS nullable, c.column_key AS col_key
+         FROM information_schema.columns c
+         JOIN information_schema.tables t
+           ON t.table_schema = c.table_schema AND t.table_name = c.table_name AND t.table_type = 'BASE TABLE'
+        WHERE c.table_schema = ?
+        ORDER BY c.table_name, c.ordinal_position`,
+      [scope.database],
+    );
+    const tables = new Map<string, DiagramTable>();
+    for (const r of columns) {
+      const name = String(r['tbl']);
+      let table = tables.get(name);
+      if (!table) {
+        table = { name, columns: [] };
+        tables.set(name, table);
+      }
+      table.columns.push({
+        name: String(r['name']),
+        nativeType: String(r['type']),
+        nullable: r['nullable'] === 'YES',
+        primaryKey: r['col_key'] === 'PRI',
+      });
+    }
+    const fks = await this.query(
+      `SELECT k.constraint_name AS name, k.table_name AS from_table, k.column_name AS col,
+              k.referenced_table_schema AS ref_schema, k.referenced_table_name AS ref_table,
+              k.referenced_column_name AS ref_col
+         FROM information_schema.key_column_usage k
+        WHERE k.table_schema = ? AND k.referenced_table_name IS NOT NULL
+        ORDER BY k.table_name, k.constraint_name, k.ordinal_position`,
+      [scope.database],
+    );
+    const relations = new Map<string, DiagramRelation>();
+    for (const r of fks) {
+      const key = `${String(r['from_table'])}\u0000${String(r['name'])}`;
+      let relation = relations.get(key);
+      if (!relation) {
+        relation = {
+          name: String(r['name']),
+          from: { schema: scope.schema, table: String(r['from_table']), columns: [] },
+          to: { schema: String(r['ref_schema']), table: String(r['ref_table']), columns: [] },
+        };
+        relations.set(key, relation);
+      }
+      relation.from.columns.push(String(r['col']));
+      relation.to.columns.push(String(r['ref_col']));
+    }
+    return { tables: [...tables.values()], relations: [...relations.values()] };
   }
 
   async getDDL(ref: ObjectRef, kind: ObjectKind): Promise<string> {
