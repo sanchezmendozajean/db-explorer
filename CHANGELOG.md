@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.2.1
+
+### Cambios
+- Nuevo ícono de la aplicación (ventana, barra de tareas, barra de título, instalador y sitios web). La ventana usa el `.ico` para que Windows elija el tamaño adecuado.
+
 ## v0.2.0
 
 ### Novedades

@@ -44,7 +44,6 @@ Los instaladores están en [Releases](https://github.com/sanchezmendozajean/db-e
 | `npm run package:dir`      | Genera solo la carpeta `dist/win-unpacked` (más rápido, para probar).         |
 | `npm run test:packaged`    | Empaqueta y recorre la checklist e2e de flujo completo sobre el `.exe`.       |
 | `npm run measure`          | Mide el arranque y la memoria en reposo del programa empaquetado.             |
-| `npm run icon`             | Regenera `resources/icon.ico` e `icon.png` desde `resources/icon.svg`.        |
 
 ### Pruebas de integración y e2e
 

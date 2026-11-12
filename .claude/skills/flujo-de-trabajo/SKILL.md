@@ -15,7 +15,7 @@ Complementa `CLAUDE.md` (que sigue siendo la fuente de las reglas). Aquí va lo 
 - No agregar funcionalidades fuera de `specs/01` sin preguntar. Arreglar bugs encontrados de paso sí, y anotarlos en NOTAS ("Corregido de paso").
 
 ## Empaquetado
-- `npm run package` genera el instalador NSIS (por usuario) y el portable en `dist/`; `npm run package:dir`, solo `dist/win-unpacked`. Ícono: editar `resources/icon.svg` y correr `npm run icon`.
+- `npm run package` genera el instalador NSIS (por usuario) y el portable en `dist/`; `npm run package:dir`, solo `dist/win-unpacked`. Ícono: los archivos finales (`icon.svg`, `icon.ico`, `icon.png`) se editan a mano en `resources/`, con fuente en `specs/Icono para la app/`; no hay script que los regenere.
 - Las dependencias que necesitan main o el db-host en tiempo de ejecución van en `dependencies`; todo lo del renderer, en `devDependencies` (Vite lo empaqueta y así no entra en `app.asar`).
 - El nombre "DB Explorer" sigue provisional (D1): cambiarlo es tocar `productName`/`appId` en `electron-builder.yml` y los textos de `es.ts`.
 

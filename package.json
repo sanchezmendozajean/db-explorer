@@ -1,7 +1,7 @@
 {
   "name": "db-explorer",
   "productName": "DB Explorer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Cliente de escritorio para explorar y consultar bases de datos PostgreSQL, MariaDB/MySQL, SQLite y SQL Server.",
   "author": {
@@ -30,7 +30,6 @@
     "lint": "eslint . && npm run typecheck",
     "format": "prettier --write .",
     "package": "npm run build && node scripts/electron-builder.mjs --win",
-    "icon": "node scripts/electron-run.mjs scripts/make-icon.mjs",
     "package:linux": "npm run build && node scripts/electron-builder.mjs --linux",
     "package:dir": "npm run build && node scripts/electron-builder.mjs --win --dir",
     "test:packaged": "npm run package:dir && playwright test --config playwright.packaged.config.ts",

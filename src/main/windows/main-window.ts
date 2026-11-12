@@ -2,7 +2,7 @@ import { BrowserWindow, screen } from 'electron';
 import { join } from 'node:path';
 import type { IpcEventChannel } from '@shared/channels';
 import type { IpcEventPayload } from '@shared/ipc';
-import icon from '../../../resources/icon.png?asset';
+import icon from '../../../resources/icon.ico?asset';
 import { devServerUrl, devToolsEnabled, rendererIndexPath } from '../security';
 import type { WindowStateStore } from '../services/window-state-store';
 import type { WindowState } from './window-bounds';
