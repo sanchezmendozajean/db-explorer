@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.3
+
+### Novedades
+- **Edición de estructura de tablas**: la pestaña Estructura es ahora la inicial y permite agregar, renombrar, cambiar y eliminar columnas con vista previa del SQL, en los cuatro motores. También se pueden crear tablas nuevas.
+
+
 ## v0.2.2
 
 ### Correcciones
