@@ -61,3 +61,10 @@ description: Lecciones del renderer de DB Explorer (React 19, zustand, Monaco 0.
 - Atajos con contexto: `keybindings.resolve` recorre las reglas **de la última a la primera**, así que una regla con `when` añadida al final de `default-keybindings.ts` gana a una global igual (Ctrl+= / Ctrl+- / Ctrl+0 con `diagramFocus`). El contexto sale de `data-focus-context` del elemento enfocado y sus ancestros.
 - El SVG exportado reutiliza el componente de pantalla con `renderToStaticMarkup` (import dinámico de `react-dom/server`) y resuelve `var(--token)` con `getComputedStyle`; los iconos de fuente (codicons) no sirven dentro de un SVG exportado: usar texto o trazos.
 - Vista lateral y reinicio: la última vista de la barra lateral se recuerda en `ui-state.json`; un e2e que cambie a Archivos y reinicie la app debe volver a pulsar Ctrl+Shift+D antes de buscar el árbol de conexiones.
+
+## Estructura editable de tablas
+- El borrador de cada pestaña vive en `objects/table-design.ts` (zustand, por pestaña, como `object-tabs.ts`); el SQL lo genera `src/shared/table-design.ts` y se ejecuta con `data.apply` en una sesión temporal. `EditorTab.dirty` se sincroniza con el borrador (`syncDirty`) y el cierre pregunta con `confirmDiscardDesign`; al cerrar una pestaña hay que llamar a `forgetDesign` (si no, al reabrir reaparecen los cambios).
+- Tras guardar, la pantalla muestra un instante el borrador viejo mientras se relee la tabla: los controles se deshabilitan con `saving` para que un clic no actúe sobre la fila equivocada. En e2e, esperar el aviso («Estructura de … actualizada.») antes de seguir.
+- `npx playwright test` **no recompila**: usar `npm run test:e2e` (o `electron-vite build`) tras cambiar el código, o se prueba un build viejo.
+- El texto que resalta `SqlPreview` (Monaco `colorize`) usa espacios no separables: en las pruebas, regex con `s+`.
+- En SQLite otra pestaña con transacción manual abierta bloquea el DDL (`database is locked`): en e2e, crear/modificar tablas antes de las pruebas de modo manual.

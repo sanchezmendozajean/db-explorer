@@ -18,6 +18,7 @@ import { forgetTab, tabResults } from '../results/results-store';
 import { confirmDiscardGridChanges } from '../results/grid-edit';
 import { confirmOpenTransactions, forgetTransaction } from '../execution/transactions';
 import { confirmRoutineChanges, disposeRoutineTab } from '../objects/routine-tabs';
+import { confirmDiscardDesign, forgetDesign } from '../objects/table-design';
 import {
   allDocuments,
   disposeDocument,
@@ -355,6 +356,7 @@ export function discardAllTabs(): void {
     void window.api.query.closeSession({ sessionId: tab.id });
     forgetTab(tab.id);
     disposeRoutineTab(tab.id);
+    forgetDesign(tab.id);
     disposeDocument(tab.id);
   }
   wb().restore([], null);
@@ -419,6 +421,7 @@ export async function closeTabs(ids: readonly string[]): Promise<boolean> {
   if (!(await confirmOpenTransactions(ids))) return false;
   for (const id of ids) if (!(await confirmDiscardGridChanges(id))) return false;
   if (!(await confirmRoutineChanges(ids))) return false;
+  if (!(await confirmDiscardDesign(ids))) return false;
   const tabs = wb().tabs.filter((t) => ids.includes(t.id));
   const closable: string[] = [];
   const autoSave = setting('files.autoSave');
@@ -452,6 +455,7 @@ export async function closeTabs(ids: readonly string[]): Promise<boolean> {
     forgetTab(id);
     forgetTransaction(id);
     disposeRoutineTab(id);
+    forgetDesign(id);
     const doc = getDocument(id);
     const empty = doc ? doc.model.getValue().trim() === '' : true;
     if (tab.path && empty && setting('scripts.deleteEmptyOnClose')) {
@@ -480,6 +484,7 @@ export async function handleBeforeClose(): Promise<void> {
   if (!(await confirmOpenTransactions(ids))) return;
   for (const id of ids) if (!(await confirmDiscardGridChanges(id))) return;
   if (!(await confirmRoutineChanges(ids))) return;
+  if (!(await confirmDiscardDesign(ids))) return;
   if (setting('files.autoSave')) {
     const saved = await Promise.race([
       saveAll()

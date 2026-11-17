@@ -31,6 +31,7 @@ Más un **explorador de archivos** editable para organizar y abrir scripts `.sql
 - Edición de datos en grilla (según D7).
 - Abrir tabla: ver datos (con filtro WHERE y orden) y ver estructura (columnas, índices, claves, DDL).
 - Editar procedimientos y funciones (SQL Server, PostgreSQL, MariaDB/MySQL): doble clic en el árbol abre su definición en un editor; Ctrl+S la guarda en la base tras confirmar.
+- Crear y modificar tablas desde la pestaña **Estructura** (editable en línea; clic derecho en *Tablas* › *Nueva tabla…* para crear): columnas, tipos, nulo, valor por defecto, comentario, clave primaria y autoincremento al crear; agregar, quitar y renombrar columnas; vista previa del SQL antes de aplicar. Sin claves foráneas, índices ni restricciones.
 - Administrar bases de datos (PostgreSQL, MariaDB/MySQL, SQL Server): crear, renombrar, eliminar, respaldar y restaurar desde el árbol. PostgreSQL y MariaDB/MySQL respaldan con herramientas auxiliares que aporta el usuario (ver `08`).
 - Historial de consultas ejecutadas.
 - Diagrama ER de solo lectura de un esquema (tablas, claves foráneas), con cajas movibles, zoom y exportación a SVG en el espacio de trabajo (ver `13`).
@@ -41,7 +42,7 @@ Más un **explorador de archivos** editable para organizar y abrir scripts `.sql
 - Persistencia: pestañas abiertas por espacio de trabajo, tamaños de paneles, tema.
 
 ## Fuera del alcance (v1)
-- Edición desde el diagrama ER (diseñador visual de tablas), diagramas de varios esquemas o bases, diagrama gráfico del plan de ejecución, comparadores de esquema, generadores de datos.
+- Edición desde el diagrama ER (diseñador visual de tablas completo: claves foráneas, índices, restricciones), diagramas de varios esquemas o bases, diagrama gráfico del plan de ejecución, comparadores de esquema, generadores de datos.
 - Administración de servidor (usuarios, roles, sesiones). Los respaldos de bases sí están dentro del alcance (ver arriba).
 - Importación de datos desde archivos (v2).
 - Túnel SSH (v2, ver D8).

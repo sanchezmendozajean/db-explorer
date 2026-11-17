@@ -41,6 +41,8 @@ export interface ColumnInfo {
   defaultValue?: string;
   primaryKey: boolean;
   comment?: string;
+  /** Contador automático (identidad, serial o AUTO_INCREMENT); SQLite no lo informa. */
+  autoIncrement?: boolean;
 }
 
 export interface IndexInfo {

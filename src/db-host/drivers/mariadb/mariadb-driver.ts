@@ -173,7 +173,7 @@ export class MariaDbDriver implements DbDriver {
   async getColumns(ref: ObjectRef): Promise<ColumnInfo[]> {
     const rows = await this.query(
       `SELECT column_name AS name, column_type AS type, is_nullable AS nullable, column_default AS def,
-              column_key AS col_key, column_comment AS comment
+              column_key AS col_key, column_comment AS comment, extra AS extra
          FROM information_schema.columns
         WHERE table_schema = ? AND table_name = ?
         ORDER BY ordinal_position`,
@@ -186,6 +186,7 @@ export class MariaDbDriver implements DbDriver {
       defaultValue: r['def'] === null || r['def'] === undefined ? undefined : String(r['def']),
       primaryKey: r['col_key'] === 'PRI',
       comment: r['comment'] ? String(r['comment']) : undefined,
+      autoIncrement: /auto_increment/i.test(String(r['extra'] ?? '')),
     }));
   }
 

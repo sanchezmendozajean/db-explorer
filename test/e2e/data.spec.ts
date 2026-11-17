@@ -129,6 +129,9 @@ test('doble clic en una tabla abre la pestaña de objeto con sus datos editables
     .click();
   await node(/^clientes/).dblclick();
   await expect(page.getByTestId('object-view')).toBeVisible();
+  // La pestaña de objeto abre en Estructura (specs/04 §9).
+  await expect(page.getByTestId('structure')).toBeVisible();
+  await page.getByRole('tab', { name: 'Datos' }).click();
   await expect(grid()).toHaveAttribute('data-columns', 'id,nombre,importe');
   await expect(page.getByTestId('results-footer')).toContainText('3 filas');
   await expect(grid()).toHaveAttribute('data-editable', 'true');
@@ -200,10 +203,73 @@ test('el visor de valor edita la celda como cambio pendiente', async () => {
 test('la pestaña Estructura y el DDL muestran la tabla', async () => {
   await page.getByRole('tab', { name: 'Estructura' }).click();
   const structure = page.getByTestId('structure');
-  await expect(structure).toContainText('nombre');
+  await expect(structure.getByTestId('column-name').nth(1)).toHaveValue('nombre');
   await expect(structure).toContainText('Clave primaria');
   await page.getByRole('tab', { name: 'DDL' }).click();
   await expect(page.getByTestId('ddl-editor')).toHaveAttribute('data-ddl', /CREATE TABLE clientes/);
+  await page.getByRole('tab', { name: 'Datos' }).click();
+});
+
+test('la estructura se edita: agrega y elimina una columna mostrando el SQL', async () => {
+  await page.getByRole('tab', { name: 'Estructura' }).click();
+  const rows = page.getByTestId('structure-row');
+  await expect(rows).toHaveCount(3);
+  await expect(page.getByTestId('structure-save')).toBeDisabled();
+
+  await page.getByTestId('column-add').click();
+  await rows.last().getByTestId('column-name').fill('telefono');
+  await rows.last().getByTestId('column-type').fill('varchar(20)');
+  await page.getByTestId('structure-save').click();
+  await expect(page.getByTestId('sql-preview')).toContainText(/ADD\s+(COLUMN\s+)?telefono\s+varchar\(20\)/);
+  await page.getByRole('button', { name: 'Aplicar' }).click();
+  // El aviso indica que el guardado terminó y que la estructura se volvió a leer de la base.
+  await expect(page.getByText('Estructura de clientes actualizada.')).toBeVisible();
+  await expect(rows).toHaveCount(4);
+  await expect(page.getByTestId('structure-save')).toBeDisabled();
+  await expect(rows.last().getByTestId('column-name')).toHaveValue('telefono');
+
+  // Se vuelve a dejar la tabla como estaba para las pruebas siguientes.
+  await rows.last().getByTestId('column-remove').click();
+  await page.getByTestId('structure-save').click();
+  await expect(page.getByTestId('sql-preview')).toContainText(/DROP\s+COLUMN\s+telefono/);
+  await page.getByRole('button', { name: 'Aplicar' }).click();
+  await expect(page.getByText('Estructura de clientes actualizada.').last()).toBeVisible();
+  await expect(rows).toHaveCount(3);
+  await page.getByRole('tab', { name: 'Datos' }).click();
+});
+
+test('Nueva tabla… diseña la tabla en Estructura y la crea al guardar', async () => {
+  await node(/^Tablas/).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Nueva tabla…' }).click();
+  const rows = page.getByTestId('structure-row');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first().getByTestId('column-name')).toHaveValue('id');
+
+  // Sin nombre no se puede crear.
+  await page.getByTestId('structure-save').click();
+  await expect(page.getByTestId('structure-issues')).toContainText('Escribe el nombre de la tabla.');
+
+  await page.getByTestId('table-name').fill('productos');
+  await page.getByTestId('column-add').click();
+  await rows.nth(1).getByTestId('column-name').fill('descripcion');
+  await rows.nth(1).getByTestId('column-type').fill('TEXT');
+  await rows.nth(1).getByTestId('column-nullable').uncheck();
+  await page.getByTestId('structure-save').click();
+  const preview = page.getByTestId('sql-preview');
+  await expect(preview).toContainText(/CREATE\s+TABLE\s+productos/);
+  await expect(preview).toContainText(/id\s+INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT/);
+  await page.getByRole('button', { name: 'Aplicar' }).click();
+
+  // La pestaña pasa a ser la de la tabla creada y esta aparece en el árbol.
+  await expect(page.getByTestId('table-name')).toHaveCount(0);
+  await expect(page.getByTestId('structure-row')).toHaveCount(2);
+  await expect(page.getByTestId('structure-row').nth(1).getByTestId('column-name')).toHaveValue(
+    'descripcion',
+  );
+  await expect(node(/^productos/)).toBeVisible();
+
+  // Se vuelve a la pestaña de clientes para las pruebas siguientes.
+  await page.getByRole('tab', { name: /^clientes/ }).click();
   await page.getByRole('tab', { name: 'Datos' }).click();
 });
 
@@ -233,6 +299,7 @@ test('exporta los datos a CSV', async () => {
 
 test('una tabla sin clave se edita identificando la fila por todos sus valores, con advertencia', async () => {
   await node(/^sin_clave/).dblclick();
+  await page.getByRole('tab', { name: 'Datos' }).click();
   await expect(grid()).toHaveAttribute('data-columns', 'a,b');
   await expect(grid()).toHaveAttribute('data-editable', 'true');
   await expect(page.getByTestId('keyless')).toHaveAttribute('title', /no tiene clave primaria/);

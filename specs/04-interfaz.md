@@ -192,9 +192,9 @@ Durante la ejecución: barra de progreso indeterminada de 2 px en `accent` bajo 
 - **Menú contextual del editor**: el de la app (mismo estilo que los demás menús, con borde y sombra), no el de Monaco: Cambiar todas las ocurrencias (Ctrl+F2), —, Ejecutar sentencia, Ejecutar script, Ejecutar selección, Explicar plan, Explicar y ejecutar, Separador de sentencias ▸, —, Formatear sentencia (Ctrl+Alt+F), Formatear documento (Shift+Alt+F), —, Nuevo script SQL, —, Cortar, Copiar, Pegar, —, Paleta de comandos.
 
 ## 9. Pestaña de objeto (tabla/vista)
-Barra superior con breadcrumb `PayBox Prod › paybox › public › CRendiciones_Conf_Generales` y subpestañas tipo "pill" pequeñas: **Datos** · **Estructura** · **DDL**.
+Barra superior con breadcrumb `PayBox Prod › paybox › public › CRendiciones_Conf_Generales` y subpestañas tipo "pill" pequeñas: **Estructura** · **Datos** · **DDL**. Al abrir una tabla (doble clic, Ctrl+P, diagrama) se muestra **Estructura** primero.
 - **Datos**: arriba un input de una línea con Monaco en modo SQL (con autocompletado de columnas) etiquetado `WHERE` y otro `ORDER BY`; debajo la grilla (misma que resultados, editable según D7).
-- **Estructura**: tres tablas simples: Columnas (#, nombre, tipo, nulo, default, PK, comentario), Índices, Claves/Restricciones.
+- **Estructura**: tres tablas: Columnas (#, nombre, tipo, nulo, default, PK, auto, comentario), Índices, Claves/Restricciones. **Las columnas se editan en línea** (como en DBeaver): nombre, tipo, nulo, default y comentario; agregar y eliminar columnas. Los cambios quedan marcados (fila nueva en verde, modificada en ámbar, eliminada tachada) hasta **Guardar** (Ctrl+S), que muestra el SQL (`ALTER TABLE …`) antes de aplicarlo; **Descartar** los revierte. Índices y restricciones son de solo lectura. **Nueva tabla…** (clic derecho en *Tablas*) abre una pestaña con la misma interfaz para diseñar la tabla (nombre, columnas, PK, autoincremental) y **Crear tabla** ejecuta el `CREATE TABLE`.
 - **DDL**: Monaco de solo lectura con el DDL + botón "Abrir en script".
 
 ## 10. Panel de resultados

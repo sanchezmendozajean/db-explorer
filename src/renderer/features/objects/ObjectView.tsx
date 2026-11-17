@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import type { TableDetails } from '@shared/metadata';
 import { quoteIdent } from '@shared/sql-quote';
 import { Button, IconButton } from '../../components/Button';
 import { Codicon } from '../../components/Codicon';
@@ -18,16 +17,17 @@ import { cancelExecution } from '../execution/execute';
 import { ResultSetView } from '../results/ResultsPanel';
 import { EMPTY_TAB_RESULTS, useResultsStore } from '../results/results-store';
 import { ClauseEditor } from './ClauseEditor';
-import { invalidateDetails, tableDetails } from './object-details';
+import { StructureView } from './StructureEditor';
 import { fetchDdl, loadObjectData, setObjectState, useObjectTabsStore } from './object-tabs';
+import { setTableName, useDesignStore } from './table-design';
 
 const t = es.objects;
 
 type View = NonNullable<EditorTab['objectView']>;
 
 const SUBTABS: { id: View; label: string }[] = [
-  { id: 'data', label: es.editor.object.data },
   { id: 'structure', label: es.editor.object.structure },
+  { id: 'data', label: es.editor.object.data },
   { id: 'ddl', label: es.editor.object.ddl },
 ];
 
@@ -35,7 +35,8 @@ const SUBTABS: { id: View; label: string }[] = [
 export function ObjectView({ tab }: { tab: EditorTab }): React.JSX.Element {
   const conn = connectionById(tab.connectionId);
   const connected = useConnectionsStore((s) => s.status[tab.connectionId ?? '']?.state === 'connected');
-  const view = tab.objectView ?? 'data';
+  const view = tab.objectView ?? 'structure';
+  const designName = useDesignStore((s) => s.byTab[tab.id]?.design.name);
   const object = tab.object;
   if (!object || !conn) {
     return (
@@ -69,17 +70,34 @@ export function ObjectView({ tab }: { tab: EditorTab }): React.JSX.Element {
           {crumbs.map((c) => (
             <span key={c.icon} className="breadcrumb-item">
               <Codicon name="chevron-right" size={14} className="breadcrumb-sep" />
-              <Codicon name={c.icon} size={14} color={c.icon === 'database' ? 'var(--icon-database)' : undefined} />
+              <Codicon
+                name={c.icon}
+                size={14}
+                color={c.icon === 'database' ? 'var(--icon-database)' : undefined}
+              />
               {c.label}
             </span>
           ))}
           <span className="breadcrumb-item">
             <Codicon name="chevron-right" size={14} className="breadcrumb-sep" />
             <Codicon name={objectIcon} size={14} color="var(--icon-table)" />
-            {object.name}
+            {tab.newTable ? (
+              <input
+                className="cell-input breadcrumb-name"
+                value={designName ?? ''}
+                placeholder={t.tableNamePlaceholder}
+                aria-label={t.tableName}
+                data-testid="table-name"
+                data-autofocus
+                spellCheck={false}
+                onChange={(e) => setTableName(tab.id, e.target.value)}
+              />
+            ) : (
+              object.name
+            )}
           </span>
         </nav>
-        <div className="pills" role="tablist">
+        <div className="pills" role="tablist" hidden={tab.newTable}>
           {SUBTABS.map((s) => (
             <button
               key={s.id}
@@ -180,142 +198,6 @@ function DataView({ tab }: { tab: EditorTab }): React.JSX.Element {
         </div>
       )}
     </>
-  );
-}
-
-function useDetails(tab: EditorTab): {
-  details: TableDetails | null;
-  error: string | null;
-  reload: () => void;
-} {
-  const [details, setDetails] = useState<TableDetails | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [version, setVersion] = useState(0);
-  useEffect(() => {
-    let alive = true;
-    const object = tab.object;
-    if (!object || !tab.connectionId) return;
-    tableDetails(tab.connectionId, object)
-      .then((d) => alive && (setDetails(d), setError(null)))
-      .catch((err: unknown) => alive && setError(err instanceof Error ? err.message : String(err)));
-    return () => {
-      alive = false;
-    };
-  }, [tab.connectionId, tab.object, version]);
-  return {
-    details,
-    error,
-    reload: () => {
-      if (tab.connectionId && tab.object) invalidateDetails(tab.connectionId, tab.object);
-      setVersion((v) => v + 1);
-    },
-  };
-}
-
-function StructureView({ tab }: { tab: EditorTab }): React.JSX.Element {
-  const { details, error, reload } = useDetails(tab);
-  if (error) {
-    return (
-      <div className="panel-body panel-empty">
-        <p className="object-error">
-          <Codicon name="error" color="var(--error)" /> {error}
-        </p>
-      </div>
-    );
-  }
-  if (!details) {
-    return (
-      <div className="panel-body panel-empty">
-        <p>{t.loading}</p>
-      </div>
-    );
-  }
-  const yes = (v: boolean): string => (v ? '✓' : '');
-  return (
-    <div className="structure" data-testid="structure">
-      <div className="structure-actions">
-        <IconButton icon="refresh" label={t.refresh} onClick={reload} />
-      </div>
-      <h3>{t.columns}</h3>
-      <table className="structure-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>{t.name}</th>
-            <th>{t.type}</th>
-            <th>{t.nullable}</th>
-            <th>{t.default}</th>
-            <th>PK</th>
-            <th>{t.comment}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {details.columns.map((c, i) => (
-            <tr key={c.name}>
-              <td className="num">{i + 1}</td>
-              <td>{c.name}</td>
-              <td className="mono">{c.nativeType}</td>
-              <td className="center">{yes(c.nullable)}</td>
-              <td className="mono">{c.defaultValue ?? ''}</td>
-              <td className="center">
-                {c.primaryKey ? <Codicon name="key" size={14} color="var(--warning)" /> : ''}
-              </td>
-              <td>{c.comment ?? ''}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <h3>{t.indexes}</h3>
-      {details.indexes.length === 0 ? (
-        <p className="structure-empty">{t.none}</p>
-      ) : (
-        <table className="structure-table">
-          <thead>
-            <tr>
-              <th>{t.name}</th>
-              <th>{t.indexColumns}</th>
-              <th>{t.unique}</th>
-              <th>{t.primary}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {details.indexes.map((x) => (
-              <tr key={x.name}>
-                <td>{x.name}</td>
-                <td className="mono">{x.columns.join(', ')}</td>
-                <td className="center">{yes(x.unique)}</td>
-                <td className="center">{yes(x.primary)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      <h3>{t.constraints}</h3>
-      {details.constraints.length === 0 ? (
-        <p className="structure-empty">{t.none}</p>
-      ) : (
-        <table className="structure-table">
-          <thead>
-            <tr>
-              <th>{t.name}</th>
-              <th>{t.constraintType}</th>
-              <th>{t.indexColumns}</th>
-              <th>{t.definition}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {details.constraints.map((c, i) => (
-              <tr key={`${c.type}:${c.name}:${i}`}>
-                <td>{c.name || '—'}</td>
-                <td>{t.constraintTypes[c.type]}</td>
-                <td className="mono">{c.columns.join(', ')}</td>
-                <td className="mono">{c.definition ?? ''}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
   );
 }
 

@@ -23,6 +23,8 @@ export interface EditorTab {
   /** Pestaña de objeto (specs/04 §9): tabla o vista y subpestaña elegida; en `routine`, la rutina editada. */
   object?: { database: string; schema: string; name: string; kind: ObjectKind };
   objectView?: 'data' | 'structure' | 'ddl';
+  /** Tabla que aún no existe: la pestaña Estructura la diseña y la crea al guardar. */
+  newTable?: boolean;
   /** Pestaña de diagrama ER (specs/13): tabla que se selecciona y centra al abrirla. */
   diagramFocus?: string;
   /** Grupo donde está la pestaña: sin valor, el principal; `1`, el dividido. */

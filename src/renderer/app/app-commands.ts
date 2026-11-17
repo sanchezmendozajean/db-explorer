@@ -58,6 +58,7 @@ import { activeDiagram } from '../features/diagram/diagram-actions';
 import { saveDiagram } from '../features/diagram/diagram-file';
 import { openDiagramTab, supportsDiagram } from '../features/diagram/diagram-tabs';
 import { saveRoutine } from '../features/objects/routine-tabs';
+import { isDesignDirty, saveDesign } from '../features/objects/table-design';
 
 /** Cambios pendientes de la grilla con foco. */
 function activeGridChanges(): number {
@@ -143,6 +144,11 @@ export function registerAppCommands(): () => void {
   const activeRoutine = (): string | undefined => {
     const tab = wb().tabs.find((t) => t.id === wb().activeId);
     return tab?.kind === 'routine' ? tab.id : undefined;
+  };
+  /** Pestaña de objeto con cambios de estructura sin guardar. */
+  const activeDesign = (): string | undefined => {
+    const tab = wb().tabs.find((t) => t.id === wb().activeId);
+    return tab?.kind === 'object' && isDesignDirty(tab.id) ? tab.id : undefined;
   };
   /** SQLite no tiene plan real (specs/12 §2). */
   const sqliteScript = (): boolean => {
@@ -236,7 +242,11 @@ export function registerAppCommands(): () => void {
     {
       id: 'db.save',
       category: cat.file,
-      enabled: () => hasScript() || activeRoutine() !== undefined || activeDiagramTab() !== undefined,
+      enabled: () =>
+        hasScript() ||
+        activeRoutine() !== undefined ||
+        activeDiagramTab() !== undefined ||
+        activeDesign() !== undefined,
       run: async () => {
         const diagram = activeDiagramTab();
         if (diagram) {
@@ -246,6 +256,11 @@ export function registerAppCommands(): () => void {
         const routine = activeRoutine();
         if (routine) {
           await saveRoutine(routine);
+          return;
+        }
+        const design = activeDesign();
+        if (design) {
+          await saveDesign(design);
           return;
         }
         const id = activeScript();

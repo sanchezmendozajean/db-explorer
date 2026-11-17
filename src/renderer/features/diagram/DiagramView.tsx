@@ -265,7 +265,7 @@ export function DiagramView({ tab }: { tab: EditorTab }): React.JSX.Element {
   const openTable = (id: string): void => {
     const box = model?.boxes.find((b) => b.id === id);
     if (!conn || !box || box.external) return;
-    openObjectTab(connectionId, { database, schema, name: box.id, kind: 'table' }, 'data', {
+    openObjectTab(connectionId, { database, schema, name: box.id, kind: 'table' }, 'structure', {
       preview: false,
     });
   };

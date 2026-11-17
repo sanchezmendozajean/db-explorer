@@ -1446,6 +1446,8 @@ button.statusbar-item:hover {
 .structure-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
 }
 
 .structure h3 {
@@ -2123,4 +2125,69 @@ button.plan-warnings:hover {
   color: var(--fg-muted);
   background: var(--bg-input);
   white-space: nowrap;
+}
+
+/* Estructura editable */
+.structure-table.is-editable td {
+  padding: 0 4px;
+}
+
+.cell-input {
+  width: 100%;
+  min-width: 80px;
+  height: 22px;
+  padding: 0 4px;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font: inherit;
+}
+
+.cell-input.mono {
+  font-family: var(--font-code);
+}
+
+.cell-input:hover:not(:disabled) {
+  border-color: var(--border);
+}
+
+.cell-input:focus {
+  outline: none;
+  border-color: var(--focus-border);
+  background: var(--bg-editor);
+}
+
+.cell-input:disabled {
+  opacity: 1;
+  color: var(--fg);
+}
+
+.structure-table .is-new td {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+.structure-table .is-changed td {
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+}
+
+.structure-table .is-deleted td {
+  background: color-mix(in srgb, var(--error) 12%, transparent);
+  text-decoration: line-through;
+  color: var(--fg-muted);
+}
+
+.structure-row-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.structure-issues {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.breadcrumb-name {
+  width: 220px;
+  border-color: var(--border);
 }

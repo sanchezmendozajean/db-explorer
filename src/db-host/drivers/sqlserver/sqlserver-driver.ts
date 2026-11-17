@@ -209,7 +209,8 @@ export class SqlServerDriver implements DbDriver {
                   JOIN ${db}.sys.indexes i ON i.object_id = ic.object_id AND i.index_id = ic.index_id
                  WHERE i.is_primary_key = 1 AND ic.object_id = c.object_id AND ic.column_id = c.column_id
               ), 1, 0) AS bit) AS pk,
-              CAST(ep.value AS nvarchar(4000)) AS comment
+              CAST(ep.value AS nvarchar(4000)) AS comment,
+              c.is_identity AS auto
          FROM ${db}.sys.columns c
          JOIN ${db}.sys.objects o ON o.object_id = c.object_id
          JOIN ${db}.sys.schemas s ON s.schema_id = o.schema_id
@@ -228,6 +229,7 @@ export class SqlServerDriver implements DbDriver {
       defaultValue: r['def'] === null ? undefined : String(r['def']),
       primaryKey: !!r['pk'],
       comment: r['comment'] === null ? undefined : String(r['comment']),
+      autoIncrement: !!r['auto'],
     }));
   }
 

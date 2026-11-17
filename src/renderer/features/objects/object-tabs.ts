@@ -78,7 +78,7 @@ export function disposeObjectTab(tabId: string): void {
 export function openObjectTab(
   connectionId: string,
   ref: ObjectRefData,
-  view: 'data' | 'structure' | 'ddl' = 'data',
+  view: 'data' | 'structure' | 'ddl' = 'structure',
   options: { preview?: boolean } = {},
 ): void {
   const conn = connectionById(connectionId);
@@ -96,7 +96,7 @@ export function openObjectTab(
     // La vista previa anterior (si es de objeto y sin cambios) se reemplaza: su sesión se cierra.
     const old = wb.tabs.find((t) => t.preview);
     if (old && old.kind === 'object') {
-      if (hasPendingChanges(old.id)) wb.pin(old.id);
+      if (hasPendingChanges(old.id) || old.dirty) wb.pin(old.id);
       else disposeObjectTab(old.id);
     }
   }
@@ -120,6 +120,32 @@ export function openObjectTab(
     objectView: view,
   };
   wb.open(tab);
+}
+
+/** Pestaña de una tabla nueva: solo Estructura, hasta que se guarda y pasa a ser la pestaña de la tabla. */
+export function openNewTableTab(connectionId: string, target: { database: string; schema: string }): void {
+  const conn = connectionById(connectionId);
+  if (!conn) return;
+  const crumbs = [
+    conn.name,
+    ...(conn.engine === 'sqlite' ? [] : [target.database]),
+    ...(conn.engine === 'postgres' || conn.engine === 'sqlserver' ? [target.schema] : []),
+    es.objects.newTableTitle,
+  ];
+  useWorkbenchStore.getState().open({
+    id: `object:new:${crypto.randomUUID()}`,
+    kind: 'object',
+    title: es.objects.newTableTitle,
+    tooltip: crumbs.join(' › '),
+    connectionId,
+    database: target.database,
+    schema: target.schema,
+    dirty: false,
+    preview: false,
+    object: { ...target, name: '', kind: 'table' },
+    objectView: 'structure',
+    newTable: true,
+  });
 }
 
 export function objectDataSql(engine: Engine, ref: ObjectRefData, where: string, order: string): string {
@@ -179,7 +205,7 @@ export function openCatalogObject(connectionId: string, object: CatalogObject): 
     openObjectTab(
       connectionId,
       { database: object.database, schema: object.schema, name: object.name, kind: object.kind },
-      'data',
+      'structure',
       { preview: false },
     );
   } else if (object.kind === 'function' || object.kind === 'procedure') {

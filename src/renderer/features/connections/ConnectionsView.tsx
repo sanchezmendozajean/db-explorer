@@ -21,7 +21,7 @@ import * as actions from './actions';
 import { newScript } from '../editor/scripts';
 import { countRows, newDdlScript, newTableScript, objectRef, targetOfRef } from './table-scripts';
 import { openDiagramTab, supportsDiagram } from '../diagram/diagram-tabs';
-import { openObjectTab } from '../objects/object-tabs';
+import { openNewTableTab, openObjectTab } from '../objects/object-tabs';
 import { openRoutineTab } from '../objects/routine-tabs';
 import { invalidateDetails } from '../objects/object-details';
 import * as dbAdmin from '../db-admin/db-admin-actions';
@@ -441,6 +441,23 @@ export function ConnectionsView(): React.JSX.Element {
       keybinding: 'F5',
       run: () => refresh(node),
     };
+    if (ref.kind === 'objectFolder' && ref.objectKind === 'table') {
+      return [
+        {
+          type: 'item',
+          id: 'new-table',
+          label: t.newTable,
+          disabled: connections.find((x) => x.id === node.connectionId)?.readOnly,
+          title: connections.find((x) => x.id === node.connectionId)?.readOnly
+            ? es.dbAdmin.readOnly
+            : undefined,
+          run: () => openNewTableTab(node.connectionId, { database: ref.database, schema: ref.schema }),
+        },
+        SEPARATOR,
+        refreshEntry,
+        copyName,
+      ];
+    }
     if (ref.kind === 'schema') {
       return [
         {
@@ -837,9 +854,9 @@ export function ConnectionsView(): React.JSX.Element {
               toggleOnClick={false}
               basePadding={6}
               onOpen={(row) => {
-                // Doble clic o Enter en una tabla o vista: pestaña de objeto en Datos (specs/04 §6).
+                // Doble clic o Enter en una tabla o vista: pestaña de objeto en Estructura (specs/04 §6).
                 if (row.node.type === 'meta' && isDataObject(row.node.data.ref)) {
-                  openObjectTab(row.node.connectionId, objectRef(row.node.data.ref), 'data');
+                  openObjectTab(row.node.connectionId, objectRef(row.node.data.ref), 'structure');
                 } else if (row.node.type === 'meta' && isRoutine(row.node.data.ref)) {
                   // Doble clic o Enter en un procedimiento o función: editor de su definición.
                   openRoutineTab(row.node.connectionId, objectRef(row.node.data.ref));

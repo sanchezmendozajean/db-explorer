@@ -242,6 +242,7 @@ export class PostgresDriver implements DbDriver {
       def: string | null;
       pk: boolean;
       comment: string | null;
+      auto: boolean;
     }>(
       ref.database,
       `SELECT a.attname AS name,
@@ -249,7 +250,8 @@ export class PostgresDriver implements DbDriver {
               NOT a.attnotnull AS nullable,
               pg_get_expr(d.adbin, d.adrelid) AS def,
               COALESCE(a.attnum = ANY(i.indkey), false) AS pk,
-              col_description(a.attrelid, a.attnum) AS comment
+              col_description(a.attrelid, a.attnum) AS comment,
+              (a.attidentity <> '' OR COALESCE(pg_get_expr(d.adbin, d.adrelid), '') LIKE 'nextval(%') AS auto
          FROM pg_attribute a
          JOIN pg_class c ON c.oid = a.attrelid
          JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -266,6 +268,7 @@ export class PostgresDriver implements DbDriver {
       defaultValue: r.def ?? undefined,
       primaryKey: r.pk,
       comment: r.comment ?? undefined,
+      autoIncrement: r.auto,
     }));
   }
 
