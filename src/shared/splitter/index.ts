@@ -246,6 +246,11 @@ export interface SplitOptions {
    * líneas en blanco dentro de cadenas, comentarios o bloques no cuentan.
    */
   blankLineSeparator?: boolean;
+  /**
+   * SQL Server: solo `GO` separa (el `;` no). Cada lote se envía completo, de modo que las
+   * variables declaradas con `DECLARE` viven hasta el siguiente `GO`, como en SSMS.
+   */
+  goOnly?: boolean;
 }
 
 /** ¿Hay una línea en blanco en el espacio entre dos tokens? Una línea con solo un comentario no está en blanco. */
@@ -371,7 +376,7 @@ export function splitStatements(
       }
     }
     const separates = blockDepth === 0 && !wholeBatch;
-    if (token.kind === 'semicolon' && delimiter === ';' && separates) {
+    if (token.kind === 'semicolon' && delimiter === ';' && separates && !(options.goOnly && dialect === 'sqlserver')) {
       if (first) flush(token.end, lastEnd());
       return;
     }

@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.2.2
+
+### Correcciones
+- SQL Server: al ejecutar como script (Alt+X / F5), solo `GO` separa lotes. Antes cada `;` cortaba el script y las variables declaradas con `DECLARE` se perdían ("Must declare the scalar variable"). "Ejecutar sentencia" no cambia.
+
 ## v0.2.1
 
 ### Cambios

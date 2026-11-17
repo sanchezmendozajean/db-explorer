@@ -65,7 +65,8 @@ function collectStatements(mode: ExecuteMode, dialect: SqlDialect): StatementMet
   };
   // Un script es un conjunto con relación entre sí: solo el `;` separa sus sentencias. La línea en
   // blanco como separador aplica a "Ejecutar sentencia" (cursor o selección de varias sentencias).
-  const options = mode === 'script' ? { blankLineSeparator: false } : splitOptions();
+  // En SQL Server las variables (`DECLARE @x`) viven solo dentro de un lote: en un script solo `GO` separa lotes.
+  const options = mode === 'script' ? { blankLineSeparator: false, goOnly: true } : splitOptions();
   if (selection && !selection.isEmpty()) {
     const base = model.getOffsetAt(selection.getStartPosition());
     return splitStatements(model.getValueInRange(selection), dialect, options).map((s) => toMeta(s, base));
