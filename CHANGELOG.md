@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.2.4
+
+### Novedades
+- **Generar DDL de una base**: nueva opción en el menú contextual de la base de datos que abre un script con la creación de todos sus objetos (esquemas, secuencias, tablas con índices y restricciones, vistas y rutinas). Las tablas se ordenan según sus claves foráneas.
+
 ## v0.2.3
 
 ### Novedades
