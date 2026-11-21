@@ -19,7 +19,7 @@ import { useConnectionsStore } from '../../stores/connections-store';
 import { Highlight, SideBarHeader } from '../side-bar/SideBarHeader';
 import * as actions from './actions';
 import { newScript } from '../editor/scripts';
-import { countRows, newDdlScript, newTableScript, objectRef, targetOfRef } from './table-scripts';
+import { countRows, newDatabaseDdlScript, newDdlScript, newTableScript, objectRef, targetOfRef } from './table-scripts';
 import { openDiagramTab, supportsDiagram } from '../diagram/diagram-tabs';
 import { openNewTableTab, openObjectTab } from '../objects/object-tabs';
 import { openRoutineTab } from '../objects/routine-tabs';
@@ -496,6 +496,12 @@ export function ConnectionsView(): React.JSX.Element {
               } satisfies MenuEntry,
             ]
           : []),
+        {
+          type: 'item',
+          id: 'generate-ddl',
+          label: t.generateDdl,
+          run: () => void newDatabaseDdlScript(node.connectionId, ref.database),
+        },
         SEPARATOR,
         {
           type: 'item',

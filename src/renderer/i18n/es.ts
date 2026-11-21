@@ -218,6 +218,7 @@ export const es = {
     scriptUpdate: 'UPDATE',
     scriptDelete: 'DELETE',
     scriptDdl: 'DDL',
+    generateDdl: 'Generar DDL',
     rootFolder: '(Raíz)',
   },
 

@@ -77,6 +77,7 @@ const api: DbExplorerApi = {
     table: invoke('meta:table'),
     ddl: invoke('meta:ddl'),
     diagram: invoke('meta:diagram'),
+    databaseDdl: invoke('meta:databaseDdl'),
     saveRoutine: invoke('meta:save-routine'),
   },
   query: {

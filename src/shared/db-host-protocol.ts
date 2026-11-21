@@ -55,6 +55,8 @@ export interface DbHostMethods {
     params: { connectionId: string; database: string; schema: string };
     result: SchemaDiagram;
   };
+  /** Script de creación de toda una base de datos. */
+  'meta.databaseDdl': { params: { connectionId: string; database: string }; result: string };
   'meta.saveRoutine': { params: ObjectTarget & { definition: string }; result: null };
   'admin.create': { params: { connectionId: string; name: string }; result: null };
   'admin.drop': { params: { connectionId: string; database: string }; result: null };

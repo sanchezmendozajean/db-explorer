@@ -90,6 +90,17 @@ export function objectRef(ref: ObjectNodeRef): ObjectRefData {
   return { database: ref.database, schema: ref.schema, name: ref.name, kind: ref.objectKind };
 }
 
+/** "Generar DDL" de una base: un script con la creación de todos sus objetos. */
+export async function newDatabaseDdlScript(connectionId: string, database: string): Promise<void> {
+  try {
+    const r = await window.api.meta.databaseDdl({ connectionId, database });
+    if (!r.ok) throw new Error(r.error.message);
+    await newScript({ connectionId, database }, r.data.ddl);
+  } catch (err) {
+    showToast('error', err instanceof Error ? err.message : String(err));
+  }
+}
+
 /** "Nuevo script ▸ DDL": un script con la sentencia de creación del objeto. */
 export async function newDdlScript(connectionId: string, ref: ObjectNodeRef): Promise<void> {
   try {

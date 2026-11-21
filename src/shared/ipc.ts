@@ -392,6 +392,10 @@ export const ipcInvokeContract = {
   },
   'meta:table': { request: ObjectTargetSchema, response: z.custom<TableDetails>() },
   'meta:ddl': { request: ObjectTargetSchema, response: z.object({ ddl: z.string() }) },
+  'meta:databaseDdl': {
+    request: z.object({ connectionId: Id, database: Name }),
+    response: z.object({ ddl: z.string() }),
+  },
   'meta:diagram': { request: SchemaTargetSchema, response: z.custom<SchemaDiagram>() },
   'meta:save-routine': {
     request: ObjectTargetSchema.extend({ definition: z.string().min(1).max(MAX_ROUTINE_LENGTH) }),

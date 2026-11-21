@@ -18,6 +18,7 @@ import { SqliteDriver } from './drivers/sqlite/sqlite-driver';
 import { SqlServerDriver } from './drivers/sqlserver/sqlserver-driver';
 import type { EmitQueryEvent } from './query-runner';
 import { QueryRunner } from './query-runner';
+import { databaseDdl } from './database-ddl';
 import { childrenOf } from './tree';
 
 export type DriverFactory = (engine: Engine) => DbDriver;
@@ -120,6 +121,10 @@ export class ConnectionManager {
 
   ddl(id: string, ref: ObjectRef, kind: ObjectKind): Promise<string> {
     return this.get(id).driver.getDDL(ref, kind);
+  }
+
+  databaseDdl(id: string, database: string): Promise<string> {
+    return databaseDdl(this.get(id).driver, database);
   }
 
   async saveRoutine(id: string, ref: ObjectRef, kind: ObjectKind, definition: string): Promise<void> {
