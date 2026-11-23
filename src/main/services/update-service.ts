@@ -1,3 +1,5 @@
+import { join } from 'node:path';
+import { app } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import type { UpdateStatus } from '@shared/updates';
 import { showUpdateProgress } from './update-progress';
@@ -91,6 +93,7 @@ export class UpdateService {
     showUpdateProgress({
       title: 'DB Explorer',
       message: `Actualizando a la versión ${this.status.version}…`,
+      logFile: join(app.getPath('userData'), 'actualizacion.log'),
     });
     autoUpdater.quitAndInstall(true, true);
   }

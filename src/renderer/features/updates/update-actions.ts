@@ -1,5 +1,6 @@
 import { es } from '../../i18n/es';
 import { showToast, useToastStore } from '../../stores/toast-store';
+import { useOverlayStore } from '../../stores/overlay-store';
 import { useUpdateStore } from '../../stores/update-store';
 
 const t = es.updates;
@@ -26,9 +27,22 @@ export async function checkForUpdate(): Promise<void> {
   else dismiss(id);
 }
 
+/** Tiempo que se ve el aviso antes de que main cierre el programa para instalar. */
+const INSTALL_NOTICE_MS = 1500;
+
 export async function installUpdate(): Promise<void> {
+  const status = useUpdateStore.getState().status;
+  const version = status.state === 'ready' ? status.version : '';
+  const overlay = useOverlayStore.getState();
+  if (version) {
+    overlay.openDialog({ id: 'updateInstall', version });
+    await new Promise((resolve) => setTimeout(resolve, INSTALL_NOTICE_MS));
+  }
   const r = await window.api.updates.install({});
-  if (!r.ok) showToast('error', r.error.message);
+  if (!r.ok) {
+    if (useOverlayStore.getState().dialog?.id === 'updateInstall') overlay.closeDialog();
+    showToast('error', r.error.message);
+  }
 }
 
 /** Estado inicial y suscripción a los cambios que informa main. */

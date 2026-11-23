@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { appendFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
@@ -52,8 +52,27 @@ $timer.Start()
 [void]$form.ShowDialog()
 `;
 
-/** Abre la ventana de avance de la actualización (solo Windows); los errores no impiden instalar. */
-export function showUpdateProgress(texts: { title: string; message: string }): void {
+/** Anota una línea en el registro de la actualización; nunca lanza (no debe impedir instalar). */
+function logLine(file: string | undefined, text: string): void {
+  if (!file) return;
+  try {
+    appendFileSync(
+      file,
+      `${new Date().toISOString()} ${text}
+`,
+      'utf8',
+    );
+  } catch {
+    // Sin registro la instalación sigue igual.
+  }
+}
+
+/**
+ * Abre la ventana de avance de la actualización (solo Windows); los errores no impiden instalar.
+ * Si PowerShell no arranca o termina enseguida (p. ej. un antivirus lo bloquea), queda anotado en
+ * `logFile` para poder diagnosticarlo.
+ */
+export function showUpdateProgress(texts: { title: string; message: string; logFile?: string }): void {
   if (process.platform !== 'win32') return;
   try {
     const file = join(tmpdir(), 'db-explorer-actualizando.ps1');
@@ -83,8 +102,24 @@ export function showUpdateProgress(texts: { title: string; message: string }): v
       ],
       { detached: true, stdio: 'ignore', windowsHide: true },
     );
+    const startedAt = Date.now();
+    logLine(texts.logFile, `Ventana de avance: PowerShell lanzado (pid ${child.pid ?? 'ninguno'})`);
+    child.on('error', (err) =>
+      logLine(texts.logFile, `Ventana de avance: no se pudo lanzar PowerShell: ${err.message}`),
+    );
+    child.on('exit', (code, signal) => {
+      const seconds = Math.round((Date.now() - startedAt) / 100) / 10;
+      // Debe vivir hasta que el programa vuelva a abrirse; si termina antes, algo la cerró.
+      logLine(
+        texts.logFile,
+        `Ventana de avance: PowerShell terminó tras ${seconds} s (código ${code}, señal ${signal})`,
+      );
+    });
     child.unref();
-  } catch {
-    // Sin ventana de avance la instalación sigue igual.
+  } catch (err) {
+    logLine(
+      texts.logFile,
+      `Ventana de avance: error al preparar la ventana: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 }

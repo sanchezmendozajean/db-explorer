@@ -126,6 +126,8 @@ export type DialogState =
   | { id: 'backup'; connectionId: string; database: string; kind: 'backup' | 'restore' }
   /** Pide los binarios auxiliares de una familia (pg_dump, mysqldump…); `onDone(true)` si quedaron todos. */
   | { id: 'tools'; family: ToolFamily; onDone: (ready: boolean) => void }
+  /** Aviso previo al reinicio que instala una actualización descargada. */
+  | { id: 'updateInstall'; version: string }
   /** Comparar el archivo en disco con el editor (aviso de cambio externo, specs/11 §4). */
   | { id: 'compare'; tabId: string; name: string; disk: string };
 

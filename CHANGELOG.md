@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.2
+
+### Cambios
+- Al elegir "Reiniciar para instalar nueva versión" se muestra un aviso con barra de progreso dentro del programa antes de cerrarlo, porque la ventana externa de avance puede quedar bloqueada por el antivirus.
+- Si esa ventana externa no puede abrirse, el motivo queda anotado en `actualizacion.log` (carpeta de datos del programa) para poder diagnosticarlo.
+
 ## v0.3.1
 
 ### Correcciones

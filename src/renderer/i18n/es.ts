@@ -169,6 +169,9 @@ export const es = {
     ready: (version: string) => `La versión ${version} está lista: reinicia para instalarla.`,
     failed: (message: string) => `No se pudo buscar la actualización: ${message}`,
     unsupported: 'La actualización automática no está disponible en la versión portable ni en desarrollo.',
+    installTitle: 'Instalando la actualización',
+    installing: (version: string) =>
+      `Se cerrará el programa para instalar la versión ${version} y volverá a abrirse solo.`,
   },
 
   sideBar: {

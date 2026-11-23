@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { IpcError, PingResult } from '@shared/ipc';
 import { Modal } from '../../components/Modal';
 import { Button } from '../../components/Button';
+import { Codicon } from '../../components/Codicon';
 import { TextInput } from '../../components/Inputs';
 import { commands, keybindings, useKeybindingsVersion } from '../../commands/service';
 import { DEFAULT_KEYBINDINGS } from '../../commands/default-keybindings';
@@ -152,6 +153,29 @@ function KeybindingsDialog({ onClose }: { onClose: () => void }): React.JSX.Elem
   );
 }
 
+/** Aviso sin cierre posible: el programa se reinicia solo en cuanto main empieza a instalar. */
+function UpdateInstallDialog({ version }: { version: string }): React.JSX.Element {
+  const t = es.updates;
+  return (
+    <Modal
+      title={t.installTitle}
+      icon="cloud-download"
+      dismissible={false}
+      closeOnBackdrop={false}
+      onClose={() => undefined}
+      width={460}
+    >
+      <div className="modal-progress" role="status" data-testid="update-installing">
+        <div className="modal-progress-row">
+          <Codicon name="loading" className="codicon-modifier-spin" />
+          {t.installing(version)}
+        </div>
+        <div className="modal-progress-bar" />
+      </div>
+    </Modal>
+  );
+}
+
 export function Dialogs(): React.JSX.Element | null {
   const dialog = useOverlayStore((s) => s.dialog);
   const close = useOverlayStore((s) => s.closeDialog);
@@ -195,6 +219,8 @@ export function Dialogs(): React.JSX.Element | null {
       );
     case 'tools':
       return <ToolsDialog family={dialog.family} onDone={dialog.onDone} onClose={close} />;
+    case 'updateInstall':
+      return <UpdateInstallDialog version={dialog.version} />;
     case 'compare':
       return <CompareDialog tabId={dialog.tabId} name={dialog.name} disk={dialog.disk} onClose={close} />;
   }
