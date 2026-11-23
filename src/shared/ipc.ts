@@ -392,7 +392,7 @@ export const ipcInvokeContract = {
   },
   'meta:table': { request: ObjectTargetSchema, response: z.custom<TableDetails>() },
   'meta:ddl': { request: ObjectTargetSchema, response: z.object({ ddl: z.string() }) },
-  'meta:databaseDdl': {
+  'meta:database-ddl': {
     request: z.object({ connectionId: Id, database: Name }),
     response: z.object({ ddl: z.string() }),
   },

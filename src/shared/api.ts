@@ -64,7 +64,7 @@ export interface DbExplorerApi {
     table: Invoke<'meta:table'>;
     ddl: Invoke<'meta:ddl'>;
     diagram: Invoke<'meta:diagram'>;
-    databaseDdl: Invoke<'meta:databaseDdl'>;
+    databaseDdl: Invoke<'meta:database-ddl'>;
     saveRoutine: Invoke<'meta:save-routine'>;
   };
   query: {

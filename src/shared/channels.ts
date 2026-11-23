@@ -51,7 +51,7 @@ export const IPC_INVOKE_CHANNELS = [
   'meta:table',
   'meta:ddl',
   'meta:diagram',
-  'meta:databaseDdl',
+  'meta:database-ddl',
   'meta:save-routine',
   'query:execute',
   'query:fetch-more',
