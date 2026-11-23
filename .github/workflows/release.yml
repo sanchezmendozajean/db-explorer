@@ -61,3 +61,23 @@ jobs:
         run: gh release edit "$GITHUB_REF_NAME" --notes-file notes.md
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Linux (AppImage y .deb). Espera al job de Windows, que crea el release y fija sus notas.
+  linux:
+    needs: windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: node node_modules/electron/install.js
+
+      - name: Compila y publica
+        run: npm run release:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
