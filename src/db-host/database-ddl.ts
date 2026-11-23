@@ -21,7 +21,8 @@ function supports(driver: DbDriver, kind: ObjectKind): boolean {
   }
 }
 
-const message = (err: unknown): string => (err instanceof Error ? err.message : String(err)).replace(/\s+/g, ' ');
+const message = (err: unknown): string =>
+  (err instanceof Error ? err.message : String(err)).replace(/\s+/g, ' ');
 
 /** Comentario de línea: los saltos del texto se aplanan para no escapar del comentario. */
 const comment = (text: string): string => `-- ${text.replace(/\s+/g, ' ')}`;

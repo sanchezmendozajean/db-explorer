@@ -376,7 +376,12 @@ export function splitStatements(
       }
     }
     const separates = blockDepth === 0 && !wholeBatch;
-    if (token.kind === 'semicolon' && delimiter === ';' && separates && !(options.goOnly && dialect === 'sqlserver')) {
+    if (
+      token.kind === 'semicolon' &&
+      delimiter === ';' &&
+      separates &&
+      !(options.goOnly && dialect === 'sqlserver')
+    ) {
       if (first) flush(token.end, lastEnd());
       return;
     }
