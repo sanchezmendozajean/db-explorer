@@ -30,11 +30,20 @@ jobs:
             echo "El tag $GITHUB_REF_NAME no coincide con la versión $v de package.json"; exit 1
           fi
 
+      # Las notas incluyen la sección del tag y las de todas las versiones intermedias que no llegaron a
+      # publicarse: desde el tag hasta (sin incluir) la sección de la última versión ya publicada.
       - name: Extrae las notas del CHANGELOG
         shell: bash
         run: |
-          awk -v v="## $GITHUB_REF_NAME" '$0==v{f=1;next} /^## /{f=0} f' CHANGELOG.md | sed '1{/^$/d}' > notes.md
+          prev=$(gh release list --limit 20 --json tagName -q '.[].tagName' | grep -vx "$GITHUB_REF_NAME" | head -n1 || true)
+          echo "Última versión publicada: ${prev:-ninguna}"
+          awk -v cur="## $GITHUB_REF_NAME" -v prev="## ${prev:-sin-version-previa}" '
+            $0==cur{f=1}
+            f && $0==prev{exit}
+            f' CHANGELOG.md | sed '1d' | sed '1{/^$/d}' > notes.md
           if [ ! -s notes.md ]; then echo "CHANGELOG.md no tiene la sección '## $GITHUB_REF_NAME'"; exit 1; fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - run: npm ci
       # Electron descarga su binario al primer uso; electron-builder lo toma de node_modules/electron/dist.

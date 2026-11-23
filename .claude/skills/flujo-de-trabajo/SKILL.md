@@ -17,6 +17,9 @@ Complementa `CLAUDE.md` (que sigue siendo la fuente de las reglas). Aquí va lo 
 ## Empaquetado
 - `npm run package` genera el instalador NSIS (por usuario) y el portable en `dist/`; `npm run package:dir`, solo `dist/win-unpacked`. Ícono: los archivos finales (`icon.svg`, `icon.ico`, `icon.png`) se editan a mano en `resources/`, con fuente en `specs/Icono para la app/`; no hay script que los regenere.
 - Las dependencias que necesitan main o el db-host en tiempo de ejecución van en `dependencies`; todo lo del renderer, en `devDependencies` (Vite lo empaqueta y así no entra en `app.asar`).
+- **Publicar una versión**: subir `version` (`npm version … --no-git-tag-version`), agregar la sección `## vX.Y.Z` al CHANGELOG, commit, `git tag vX.Y.Z`, `git push origin main` y `git push origin vX.Y.Z`. El flujo `Release` compila Windows y crea el release; antes corre `npm test`, typecheck y lint: **dejarlos en verde antes de taguear** (la 0.3.0 no se generó por una prueba del contrato IPC). Un fallo pasajero (p. ej. HTTP 500 al descargar Electron) se resuelve con `gh run rerun <id> --failed`.
+- **Notas del release acumuladas** (pedido del usuario, vale para todos los casos): las notas incluyen el CHANGELOG de la versión y el de las versiones intermedias que nunca se publicaron (hasta la última con release). Lo hace el paso "Extrae las notas" de `.github/workflows/release.yml`; si se edita un release a mano, `gh release edit <tag> --notes-file` con el mismo criterio.
+- Los releases son solo de Windows; el trabajo de Linux está escrito pero pendiente (ver `specs/NOTAS.md`).
 - El nombre "DB Explorer" sigue provisional (D1): cambiarlo es tocar `productName`/`appId` en `electron-builder.yml` y los textos de `es.ts`.
 
 ## Commits
