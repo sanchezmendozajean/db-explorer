@@ -82,7 +82,7 @@ Usar exactamente estos valores (tomados de VS Code *Dark Modern* / *Light Modern
 - Encabezados de sección de la side bar: 11 px, MAYÚSCULAS, `fg.muted`, peso 600, letter-spacing 0.5px.
 - Altura de fila: árbol 22 px, grilla 20 px, pestañas 35 px, toolbars 30 px.
 - Iconos: Codicons 16 px.
-- Radio de borde: 2 px en inputs y botones, 4 px en menús/diálogos, 0 en paneles.
+- Radio de borde: 2 px en inputs y botones, 4 px en menús, 8 px en diálogos (ver `14-modales.md`), 0 en paneles.
 
 ## 4. Title bar (35 px)
 - Ventana sin marco; controles de ventana propios a la derecha (estilo Windows 11: 46 px de ancho cada uno, cerrar se pone rojo `#C42B1C` al hover).
@@ -261,7 +261,9 @@ Estilo quick-open de VS Code: caja de 600 px arriba al centro, input + lista de 
 - `Ctrl+9`: cambiar conexión de la pestaña. `Ctrl+0`: cambiar base/esquema.
 
 ## 14. Diálogos y notificaciones
-- Confirmación de escritura en Producción: modal pequeño con borde superior de 3 px rojo, texto "Vas a ejecutar 1 sentencia que modifica datos en **PayBox Prod** (Producción)", vista previa de la sentencia en Monaco solo lectura (máx. 8 líneas), checkbox "No volver a preguntar en esta pestaña", botones **Cancelar** (foco por defecto) y **Ejecutar** (rojo).
+> El aspecto de todos los modales (encabezado tintado con ícono obligatorio, intenciones, chip de entorno) se define en `14-modales.md`, que prevalece sobre lo que diga esta sección del aspecto.
+
+- Confirmación de escritura en Producción: modal pequeño con encabezado de intención *peligro* y chip PROD (`14-modales.md`), texto "Vas a ejecutar 1 sentencia que modifica datos en **PayBox Prod** (Producción)", vista previa de la sentencia en Monaco solo lectura (máx. 8 líneas), checkbox "No volver a preguntar en esta pestaña", botones **Cancelar** (foco por defecto) y **Ejecutar** (rojo).
 - Vista previa de SQL a guardar (ediciones de grilla): modal con Monaco solo lectura con las sentencias generadas y botones Cancelar / Aplicar.
 - Notificaciones tipo toast abajo a la derecha (como VS Code): 400 px, icono de severidad, texto, acciones, se apilan y desaparecen a los 8 s salvo errores.
 

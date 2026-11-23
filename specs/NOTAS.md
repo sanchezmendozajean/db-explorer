@@ -706,3 +706,26 @@ La prueba común `devuelve el diagrama ER…` (en `common-suite.test.ts`) corre 
 ## Scripts de SQL Server: solo `GO` separa lotes
 - **Problema**: en SQL Server las variables (`DECLARE @x`) son del lote, no de la sesión. Al enviar cada sentencia (cortada por `;`) como un lote distinto, `DECLARE …; SELECT … @x` fallaba con "Must declare the scalar variable".
 - **Decisión**: en modo Script (Alt+X/F5) `splitStatements` recibe `goOnly: true` y, en SQL Server, solo `GO` separa; cada lote se envía completo, como en SSMS. "Ejecutar sentencia" (Ctrl+Enter) no cambia: sigue cortando por `;`.
+
+## M11 — Rediseño de modales (2026-11-23)
+| Criterio (`14` §8) | Estado |
+|---|---|
+| Todos los modales con encabezado tintado e ícono; sin borde superior de 3 px; `accentColor` eliminado | Cumplido (tipos obligan `icon`; `grep accentColor` solo queda en `ResultGrid`, que no es un modal) |
+| Respaldar: ícono azul, subtítulo con conexión · base · dirección, chip PROD y cuerpo sin repetirlos | Cumplido (e2e `db-admin.spec.ts`) |
+| Restaurar: rojo en Producción, ámbar en el resto | Cumplido (`intent` según `conn.environment`) |
+| Escritura en Producción: encabezado rojo, chip, aviso `.modal-callout.is-danger`, foco en Cancelar | Cumplido (el foco no se tocó) |
+| Respaldo en curso: sin botón cerrar y Esc no cierra | Cumplido con `dismissible={!running}`; verificado solo por lectura de código, no con prueba e2e |
+| Tema oscuro y claro; contraste | Pares de §3 añadidos a `contrast.test.ts` |
+
+- **Qué se construyó**: tokens de intención en ambos temas; `Modal` con `icon`, `intent`, `subtitle`, `connection`, `dismissible` (se conservaron `bodyClassName` y `closeOnBackdrop`); bloques `.modal-callout` y `.modal-progress`; migración de todos los diálogos de la tabla de §6 y de las llamadas a `askChoice`, confirmación y *prompt* (campos `icon` e `intent`, con `trash`, `discard`, `save`, `database`).
+- **Decisiones**:
+  - `connectionAddress` ya estaba en `@shared/connection`; no se movió.
+  - Los `data-testid` del subtítulo son genéricos (`modal-connection`, `modal-database`) en vez de `backup-connection` / `backup-database` / `restore-host`; se ajustaron los e2e.
+  - `WriteConfirmDialog` y `askWriteConfirm` reciben `connection: ConnectionConfig` en lugar de `connectionName`.
+  - El diálogo de contraseña se titula "Contraseña de la conexión" (la conexión va en el subtítulo).
+  - El cuerpo del respaldo conserva `is-grid` y `closeOnBackdrop={false}` pedidos antes por el usuario; los modales de respaldo y restauración no se cierran con un clic fuera.
+  - Los avisos `.dialog-warning` y `.form-hint.is-warning` dentro de modales pasaron a `.modal-callout.is-warning`; se eliminó `.dialog-warning` y `.backup-running`.
+- **Contraste**: `--intent-warning-fg` claro pasó de `#916702` a `#876100` para que el chip QA llegue a 4,5:1 sobre su baldosa.
+- **Íconos**: `keyboard` no existe en `@vscode/codicons`; Atajos de teclado usa `record-keys`.
+- **Corregido de paso**: ninguno. El prettier de `src`/`test` reformateó tres archivos ajenos (`database-ddl.ts`, `splitter/index.ts`, `ConnectionsView.tsx`), solo espacios; sin cambio de lógica.
+- **Avisos**: `test/unit/ipc-contract.test.ts` falla desde antes de este hito (`meta:databaseDdl` no cumple el prefijo); es ajeno a los modales. No se agregó nota de herramienta en el aviso de progreso (la spec no define texto para ella).

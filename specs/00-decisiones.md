@@ -83,3 +83,7 @@ Formato: marca con `[x]` la opción elegida.
 - [x] **Sí, de solo lectura y dibujado con SVG propio**, sin librerías de diagramas ni de disposición. Cajas movibles, zoom, posiciones recordadas y exportación a SVG que se guarda en el espacio de trabajo (ver `13`). Hito M10.
 - [ ] Con una librería (React Flow / ELK): más rápido de armar, pero agrega una dependencia pesada.
 - [ ] No en v1.
+
+### D19. Diseño de los modales (2026-11-23)
+- [x] **Encabezado tintado según la intención (info, advertencia, peligro, éxito) con ícono obligatorio**, subtítulo con la conexión y chip QA/PROD. Reemplaza el borde superior rojo de 3 px. Ver `14-modales.md`. Hito M11.
+- [ ] Mantener el modal actual (título simple y borde superior de color).

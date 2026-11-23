@@ -98,6 +98,13 @@ Va después de M9: es una funcionalidad añadida tras la primera versión empaqu
 
 **Aceptación**: en los cuatro motores, *Ver diagrama* de un esquema con claves foráneas (una compuesta) muestra todas las tablas y relaciones; arrastrar una caja mueve sus líneas, y la posición se conserva tras reiniciar; Ajustar muestra todo; Exportar SVG crea `Diagrama-<esquema>.svg` en la raíz del espacio de trabajo, visible en la vista Archivos y con todas las tablas; un esquema de más de 150 tablas pide elegir cuáles incluir y no congela la interfaz; el arranque sigue por debajo de 2 s (el componente se carga de forma perezosa).
 
+## M11 — Rediseño de modales
+Va después de M10: es un cambio visual sobre la versión empaquetada (D19).
+- Todo `14`: tokens de intención en ambos temas, nueva API de `Modal` (`icon` obligatorio, `intent`, `subtitle`, `connection`, `dismissible`; sin `accentColor`), bloques `.modal-callout` y `.modal-progress`, y migración de todos los diálogos según la tabla de `14` §6.
+- Ampliar `test/unit/contrast.test.ts` con los pares de `14` §3.
+
+**Aceptación**: se cumplen los criterios de `14` §8; las suites unitaria, de integración y e2e pasan; el arranque sigue por debajo de 2 s.
+
 ---
 
 ## Convenciones

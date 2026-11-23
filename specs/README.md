@@ -21,6 +21,7 @@ Cliente de escritorio para explorar y consultar bases de datos **PostgreSQL, Mar
 | Claude Code — scripts, espacio de trabajo y guardado automático | `11-scripts-y-espacio-de-trabajo.md` |
 | Claude Code — plan de ejecución | `12-plan-de-ejecucion.md` |
 | Claude Code — diagrama ER | `13-diagrama-er.md` |
+| Claude Code — diseño de modales | `14-modales.md` |
 
 ## Flujo sugerido
 
