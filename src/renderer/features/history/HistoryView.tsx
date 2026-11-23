@@ -98,6 +98,8 @@ export function HistoryView(): React.JSX.Element {
   const clearAll = async (): Promise<void> => {
     const answer = await askChoice({
       title: h.clearTitle,
+      icon: 'trash',
+      intent: 'danger',
       message: h.clearMessage,
       buttons: [
         { value: 'clear', label: h.clear, variant: 'danger' },

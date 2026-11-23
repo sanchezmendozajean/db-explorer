@@ -219,7 +219,7 @@ export function ConnectionDialog({
 
   if (!draft) {
     return (
-      <Modal title={d.newTitle} onClose={onClose} width={640}>
+      <Modal title={d.newTitle} icon="plug" onClose={onClose} width={640}>
         <p className="muted">{d.chooseEngine}</p>
         <div className="engine-cards">
           {ENGINES.map(({ engine, badge }, i) => (
@@ -303,7 +303,9 @@ export function ConnectionDialog({
 
   return (
     <Modal
-      title={`${existing ? d.editTitle : d.newTitle} — ${es.connections.engines[draft.engine]}`}
+      title={existing ? d.editTitle : d.newTitle}
+      icon="plug"
+      subtitle={es.connections.engines[draft.engine]}
       onClose={onClose}
       width={640}
       footer={footer}

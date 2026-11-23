@@ -433,6 +433,8 @@ export async function closeTabs(ids: readonly string[]): Promise<boolean> {
       } else {
         const answer = await askChoice({
           title: es.scripts.saveChangesTitle,
+          icon: 'save',
+          intent: 'warning',
           message: es.scripts.saveChanges(fileName(doc.path)),
           buttons: [
             { value: 'save', label: es.scripts.save, variant: 'primary' },

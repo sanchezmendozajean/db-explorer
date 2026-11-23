@@ -188,7 +188,7 @@ describe('SQL Server', () => {
   });
 
   it('con goOnly, el ; no separa y el lote (DECLARE + SELECT) llega completo hasta GO', () => {
-    const sql = "DECLARE @a int = 1;\n\nSELECT @a;\nGO\nSELECT 2;";
+    const sql = 'DECLARE @a int = 1;\n\nSELECT @a;\nGO\nSELECT 2;';
     expect(ms(sql, { goOnly: true })).toEqual(['DECLARE @a int = 1;\n\nSELECT @a;', 'SELECT 2;']);
   });
 

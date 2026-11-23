@@ -139,7 +139,8 @@ test('sin contraseña guardada la pide al conectar', async () => {
   await fillConnection('PG Sin clave', { savePassword: false });
   await dialog().getByRole('button', { name: 'Guardar' }).click();
   await node(/PG Sin clave/).dblclick();
-  await expect(dialog()).toContainText('Contraseña de PG Sin clave');
+  await expect(dialog()).toContainText('Contraseña de la conexión');
+  await expect(dialog().getByTestId('modal-connection')).toHaveText('PG Sin clave');
   await dialog().getByLabel('Contraseña', { exact: true }).fill(pg.password);
   await dialog().getByRole('button', { name: 'Conectar' }).click();
   await expect(node(new RegExp(`^${pg.database}`)).first()).toBeVisible();

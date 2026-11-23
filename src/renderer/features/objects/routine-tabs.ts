@@ -229,6 +229,8 @@ export async function saveRoutine(tabId: string): Promise<boolean> {
   const production = conn.environment === 'prod';
   const answer = await askChoice({
     title: es.routines.saveTitle,
+    icon: 'save',
+    intent: 'warning',
     message: `${es.routines.saveMessage(tab.object.name, how)}${production ? ` ${es.routines.production}` : ''}`,
     buttons: [
       { value: 'save', label: es.routines.apply, variant: production ? 'danger' : 'primary' },
@@ -284,6 +286,8 @@ export async function confirmRoutineChanges(ids: readonly string[]): Promise<boo
     useWorkbenchStore.getState().activate(id);
     const answer = await askChoice({
       title: es.routines.unsavedTitle,
+      icon: 'save',
+      intent: 'warning',
       message: `${es.routines.unsavedMessage(tab.title)}${connectionById(tab.connectionId)?.environment === 'prod' ? ` ${es.routines.production}` : ''}`,
       buttons: [
         { value: 'save', label: es.routines.apply, variant: 'primary' },

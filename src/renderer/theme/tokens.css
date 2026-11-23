@@ -66,6 +66,25 @@
   --editor-line-number-active: #cccccc;
   --editor-current-line: #282828;
   --editor-cursor: #aeafad;
+  /* (14-modales) Intenciones del encabezado de los modales. */
+  --intent-info-bg: #1c2831;
+  --intent-info-border: #143e5e;
+  --intent-info-tile: #193143;
+  --intent-info-fg: #4aa3ff;
+  --intent-warning-bg: #302d1c;
+  --intent-warning-border: #5b4f14;
+  --intent-warning-tile: #423a19;
+  --intent-warning-fg: #e2b714;
+  --intent-danger-bg: #392524;
+  --intent-danger-border: #6b302e;
+  --intent-danger-tile: #4b2928;
+  --intent-danger-fg: #f96b64;
+  --intent-success-bg: #212c23;
+  --intent-success-border: #2a5532;
+  --intent-success-tile: #223926;
+  --intent-success-fg: #3fb950;
+  --fg-strong: #ececec;
+  --env-chip-prod-fg: #ffb4ae;
 }
 
 :root[data-theme='light'] {
@@ -128,6 +147,25 @@
   --editor-line-number-active: #171184;
   --editor-current-line: #eeeeee;
   --editor-cursor: #000000;
+  /* (14-modales) Intenciones del encabezado de los modales. */
+  --intent-info-bg: #ebf3fa;
+  --intent-info-border: #b3d0ea;
+  --intent-info-tile: #d3e4f5;
+  --intent-info-fg: #005fb8;
+  --intent-warning-bg: #f7f3eb;
+  --intent-warning-border: #ded2b3;
+  --intent-warning-tile: #efe9db;
+  --intent-warning-fg: #876100; /* ajustado desde #916702 para el chip QA (4,5:1) */
+  --intent-danger-bg: #fdedeb;
+  --intent-danger-border: #f5b9b3;
+  --intent-danger-tile: #fadedb;
+  --intent-danger-fg: #dc1300;
+  --intent-success-bg: #f0f6ef;
+  --intent-success-border: #c4dcc3;
+  --intent-success-tile: #e3eee2;
+  --intent-success-fg: #388a34;
+  --fg-strong: #1f1f1f;
+  --env-chip-prod-fg: #a1260d;
 }
 
 :root {

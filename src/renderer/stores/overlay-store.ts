@@ -1,6 +1,8 @@
 import { create } from 'zustand';
+import type { ConnectionConfig } from '@shared/connection';
 import type { ToolFamily } from '@shared/db-admin';
 import type { ExportFormat } from '@shared/query';
+import type { ModalIntent } from '../components/Modal';
 import type { MenuEntry } from '../components/menu-types';
 import type { ExportChoice } from '../features/results/ExportDialog';
 
@@ -57,6 +59,8 @@ export type DialogState =
       message: string;
       confirmLabel: string;
       danger?: boolean;
+      icon?: string;
+      intent?: ModalIntent;
       onConfirm: () => void;
     }
   | {
@@ -68,6 +72,8 @@ export type DialogState =
       initialValue: string;
       confirmLabel: string;
       danger?: boolean;
+      icon?: string;
+      intent?: ModalIntent;
       /** Devuelve un mensaje de error o `null` si el valor es válido. */
       validate?: (value: string) => string | null;
       onSubmit: (value: string) => void;
@@ -80,12 +86,14 @@ export type DialogState =
       /** Lista opcional bajo el mensaje (p. ej. archivos modificados). */
       items?: string[];
       buttons: ChoiceButton[];
+      icon?: string;
+      intent?: ModalIntent;
       onResult: (value: string | null) => void;
     }
   /** Confirmación antes de ejecutar escrituras (Producción) o UPDATE/DELETE sin WHERE (specs/04 §14). */
   | {
       id: 'writeConfirm';
-      connectionName: string;
+      connection: ConnectionConfig;
       production: boolean;
       /** Sentencias que modifican datos o estructura. */
       statements: string[];

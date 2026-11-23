@@ -421,32 +421,225 @@
   max-height: calc(100vh - 64px);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: var(--bg-editor);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-popup);
+  border: 1px solid var(--border-menu);
+  border-radius: 8px;
   box-shadow: var(--shadow-dialog);
   outline: none;
   user-select: text;
 }
 
+/* (14-modales) Intención del diálogo: resuelve los tokens usados por el encabezado y los avisos. */
+.modal.is-info {
+  --intent-bg: var(--intent-info-bg);
+  --intent-border: var(--intent-info-border);
+  --intent-tile: var(--intent-info-tile);
+  --intent-fg: var(--intent-info-fg);
+}
+
+.modal.is-warning {
+  --intent-bg: var(--intent-warning-bg);
+  --intent-border: var(--intent-warning-border);
+  --intent-tile: var(--intent-warning-tile);
+  --intent-fg: var(--intent-warning-fg);
+}
+
+.modal.is-danger {
+  --intent-bg: var(--intent-danger-bg);
+  --intent-border: var(--intent-danger-border);
+  --intent-tile: var(--intent-danger-tile);
+  --intent-fg: var(--intent-danger-fg);
+}
+
+.modal.is-success {
+  --intent-bg: var(--intent-success-bg);
+  --intent-border: var(--intent-success-border);
+  --intent-tile: var(--intent-success-tile);
+  --intent-fg: var(--intent-success-fg);
+}
+
 .modal-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px 6px 16px;
+  gap: 12px;
+  padding: 14px 12px 14px 16px;
+  background: var(--intent-bg);
+  border-bottom: 1px solid var(--intent-border);
+}
+
+.modal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--intent-tile);
+  color: var(--intent-fg);
+}
+
+.modal-heading {
+  flex: 1;
+  min-width: 0;
 }
 
 .modal-header h2 {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
+  line-height: 18px;
+  color: var(--fg-strong);
+}
+
+.modal-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.modal-subtitle > .env-dot {
+  margin-right: 2px;
+}
+
+.modal-subtitle-name {
+  color: var(--fg);
+}
+
+.modal-subtitle-address {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modal-env-chip {
+  flex: none;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.modal-env-chip.is-prod {
+  background: var(--status-prod-bg);
+  color: var(--env-chip-prod-fg);
+}
+
+.modal-env-chip.is-qa {
+  background: var(--intent-warning-tile);
+  color: var(--intent-warning-fg);
+}
+
+.modal-header .icon-btn {
+  width: 28px;
+  height: 28px;
+}
+
+.modal-header .icon-btn:hover,
+.modal-header .icon-btn:focus-visible {
+  background: var(--intent-tile);
 }
 
 .modal-body {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 4px 16px 12px;
+  padding: 16px 20px;
+}
+
+.modal-body.is-grid {
+  display: grid;
+  gap: 8px;
+}
+
+/* Avisos dentro del cuerpo del modal. */
+.modal-callout {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--intent-info-border);
+  border-radius: 6px;
+  background: var(--intent-info-bg);
+}
+
+.modal-callout.is-warning {
+  border-color: var(--intent-warning-border);
+  background: var(--intent-warning-bg);
+}
+
+.modal-callout.is-danger {
+  border-color: var(--intent-danger-border);
+  background: var(--intent-danger-bg);
+}
+
+.modal-callout-title {
+  display: block;
+  font-weight: 600;
+  color: var(--intent-info-fg);
+}
+
+.modal-callout.is-warning .modal-callout-title {
+  color: var(--intent-warning-fg);
+}
+
+.modal-callout.is-danger .modal-callout-title {
+  color: var(--intent-danger-fg);
+}
+
+/* Estado "en curso": texto, barra indeterminada y nota. */
+.modal-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel);
+}
+
+.modal-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-progress-bar {
+  position: relative;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--border);
+}
+
+.modal-progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -30%;
+  width: 30%;
+  height: 100%;
+  background: var(--accent);
+  animation: progress-slide 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-progress-bar::after {
+    left: 0;
+    width: 35%;
+    animation: none;
+  }
+}
+
+.modal-progress-note {
+  font-size: 12px;
+  color: var(--fg-muted);
 }
 
 .modal-body p {
@@ -458,6 +651,7 @@
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 16px;
+  background: var(--bg-panel);
   border-top: 1px solid var(--border);
 }
 
@@ -885,11 +1079,6 @@ button.chip > span:not(.env-dot) {
   font-size: 12px;
 }
 
-.dialog-warning {
-  color: var(--warning);
-  font-weight: 600;
-}
-
 .sql-preview {
   margin: 10px 0;
   padding: 8px 10px;
@@ -999,13 +1188,6 @@ button.chip > span:not(.env-dot) {
   padding-left: 18px;
 }
 
-.backup-running {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--fg-muted);
-}
-
 .backup-error {
   margin: 8px 0 0;
   padding: 8px;
@@ -1082,4 +1264,17 @@ button.chip > span:not(.env-dot) {
   margin: 12px 0 4px;
   border: 0;
   background: var(--border);
+}
+
+.modal-footer .footer-notes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.footer-tool-version {
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--fg-muted);
 }

@@ -40,7 +40,14 @@ test.afterAll(async () => {
 
 test('muestra los seis grupos y el buscador filtra sin tildes', async () => {
   await page.keyboard.press('Control+,');
-  for (const group of ['Editor', 'Archivos', 'Resultados', 'Formatos de datos', 'Actualizaciones', 'Apariencia']) {
+  for (const group of [
+    'Editor',
+    'Archivos',
+    'Resultados',
+    'Formatos de datos',
+    'Actualizaciones',
+    'Apariencia',
+  ]) {
     await expect(prefs().getByRole('heading', { name: group, exact: true })).toBeVisible();
   }
   await prefs().getByRole('textbox', { name: 'Buscar preferencias' }).fill('separador decimal');

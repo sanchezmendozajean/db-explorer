@@ -1,3 +1,5 @@
+import type { ConnectionConfig } from '@shared/connection';
+import type { ModalIntent } from '../../components/Modal';
 import type { ChoiceButton } from '../../stores/overlay-store';
 import { useOverlayStore } from '../../stores/overlay-store';
 
@@ -7,6 +9,10 @@ export function askChoice(options: {
   message: string;
   items?: string[];
   buttons: ChoiceButton[];
+  /** Ícono del encabezado (por defecto `question`). */
+  icon?: string;
+  /** Intención del encabezado (por defecto `info`). */
+  intent?: ModalIntent;
 }): Promise<string | null> {
   return new Promise((resolve) => {
     useOverlayStore.getState().openDialog({ id: 'choice', ...options, onResult: resolve });
@@ -15,7 +21,7 @@ export function askChoice(options: {
 
 /** Confirmación de escritura (Producción / UPDATE-DELETE sin WHERE). */
 export function askWriteConfirm(options: {
-  connectionName: string;
+  connection: ConnectionConfig;
   production: boolean;
   statements: string[];
   unbounded: boolean;

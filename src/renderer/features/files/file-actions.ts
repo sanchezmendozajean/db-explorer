@@ -82,6 +82,8 @@ export async function trash(paths: readonly string[] = selected()): Promise<void
   const names = paths.map(fileName);
   const answer = await askChoice({
     title: es.files.deleteTitle,
+    icon: 'trash',
+    intent: 'danger',
     message: names.length === 1 ? es.files.deleteOne(names[0]!) : es.files.deleteMany(names.length),
     items: names.length > 1 ? names : undefined,
     buttons: [

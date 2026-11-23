@@ -65,6 +65,7 @@ export function CompareDialog({
   return (
     <Modal
       title={es.scripts.compareTitle(name)}
+      icon="diff"
       onClose={onClose}
       width={960}
       footer={

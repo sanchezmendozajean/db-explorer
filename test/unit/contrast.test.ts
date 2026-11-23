@@ -63,6 +63,9 @@ const RULES: [string, string[], number][] = [
   ['accent', ['bg-editor', 'bg-side-bar', 'bg-panel'], 3],
 ];
 
+const INTENTS = ['info', 'warning', 'danger', 'success'];
+const INTENT_BACKGROUNDS = INTENTS.map((i) => `intent-${i}-bg`);
+
 describe.each([
   ['oscuro', ":root[data-theme='dark']"],
   ['claro', ":root[data-theme='light']"],
@@ -75,6 +78,25 @@ describe.each([
       .filter(({ r }) => r < min)
       .map(({ bg, r }) => `${bg}: ${r.toFixed(2)}`);
     expect(failures).toEqual([]);
+  });
+
+  it.each(['fg', 'fg-muted', 'fg-strong'])('%s sobre los encabezados de intención (14-modales)', (fg) => {
+    const failures = INTENT_BACKGROUNDS.map((bg) => ({ bg, r: ratio(t[fg]!, t[bg]!) }))
+      .filter(({ r }) => r < 4.5)
+      .map(({ bg, r }) => `${bg}: ${r.toFixed(2)}`);
+    expect(failures).toEqual([]);
+  });
+
+  it('el ícono de cada intención sobre su baldosa (14-modales)', () => {
+    const failures = INTENTS.map((i) => ({ i, r: ratio(t[`intent-${i}-fg`]!, t[`intent-${i}-tile`]!) }))
+      .filter(({ r }) => r < 3)
+      .map(({ i, r }) => `${i}: ${r.toFixed(2)}`);
+    expect(failures).toEqual([]);
+  });
+
+  it('texto de los chips PROD y QA sobre su fondo (14-modales)', () => {
+    expect(ratio(t['env-chip-prod-fg']!, t['status-prod-bg']!)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(t['intent-warning-fg']!, t['intent-warning-tile']!)).toBeGreaterThanOrEqual(4.5);
   });
 
   it('texto sobre los botones primarios y la status bar de Producción', () => {

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ConnectionConfig } from '@shared/connection';
+import type { ModalIntent } from '../../components/Modal';
 import { Modal } from '../../components/Modal';
 import { Button } from '../../components/Button';
 import { Checkbox } from '../../components/Inputs';
@@ -21,6 +23,8 @@ export function ChoiceDialog({
   message,
   items,
   buttons,
+  icon = 'question',
+  intent = 'info',
   onResult,
   onClose,
 }: {
@@ -28,6 +32,8 @@ export function ChoiceDialog({
   message: string;
   items?: string[];
   buttons: ChoiceButton[];
+  icon?: string;
+  intent?: ModalIntent;
   onResult: (value: string | null) => void;
   onClose: () => void;
 }): React.JSX.Element {
@@ -39,6 +45,8 @@ export function ChoiceDialog({
   return (
     <Modal
       title={title}
+      icon={icon}
+      intent={intent}
       onClose={() => choose(null)}
       width={460}
       footer={buttons.map((b, i) => (
@@ -95,7 +103,7 @@ function SqlPreview({
 }
 
 export function WriteConfirmDialog({
-  connectionName,
+  connection,
   production,
   statements,
   unbounded,
@@ -105,7 +113,7 @@ export function WriteConfirmDialog({
   onResult,
   onClose,
 }: {
-  connectionName: string;
+  connection: ConnectionConfig;
   production: boolean;
   statements: string[];
   unbounded: boolean;
@@ -127,9 +135,11 @@ export function WriteConfirmDialog({
   return (
     <Modal
       title={production ? t.productionTitle : t.unboundedTitle}
+      icon="warning"
+      intent="danger"
+      connection={{ config: connection }}
       onClose={() => close(false)}
       width={560}
-      accentColor="var(--error)"
       footer={
         <>
           {/* Cancelar tiene el foco por defecto. */}
@@ -143,13 +153,13 @@ export function WriteConfirmDialog({
       }
     >
       {production && (
-        <p>
+        <p className="modal-callout is-danger">
           {t.productionBefore(statements.length)}
-          <strong>{connectionName}</strong>
+          <strong>{connection.name}</strong>
           {t.productionAfter}
         </p>
       )}
-      {unbounded && <p className="dialog-warning">{t.unbounded}</p>}
+      {unbounded && <p className="modal-callout is-warning">{t.unbounded}</p>}
       {rollbackNote && <p>{es.plan.rollbackNote}</p>}
       <SqlPreview sql={statements.join(';\n\n')} language={language} />
       {production && allowSkip && (
@@ -181,6 +191,8 @@ export function SqlPreviewDialog({
   return (
     <Modal
       title={es.results.edit.previewTitle}
+      icon="code"
+      intent={warning ? 'warning' : 'info'}
       onClose={() => close(false)}
       width={720}
       footer={
@@ -195,7 +207,7 @@ export function SqlPreviewDialog({
       }
     >
       {warning && (
-        <p className="dialog-warning" data-testid="keyless-warning">
+        <p className="modal-callout is-warning" data-testid="keyless-warning">
           {warning}
         </p>
       )}

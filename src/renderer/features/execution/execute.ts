@@ -181,7 +181,7 @@ async function confirmStatements(
   const production = conn.confirmWrites && writes.length > 0 && !skipProductionConfirm.has(tab.id);
   if (!production && unbounded.length === 0) return true;
   const result = await askWriteConfirm({
-    connectionName: conn.name,
+    connection: conn,
     production,
     statements: (production ? writes : unbounded).map((x) => x.s.text),
     unbounded: unbounded.length > 0,

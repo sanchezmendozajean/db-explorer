@@ -214,7 +214,7 @@ export async function saveDesign(tabId: string): Promise<boolean> {
   if (!(await previewSql(statements, language))) return false;
   if (conn.environment === 'prod' || conn.confirmWrites) {
     const answer = await askWriteConfirm({
-      connectionName: conn.name,
+      connection: conn,
       production: conn.environment === 'prod',
       statements,
       unbounded: false,
@@ -270,6 +270,8 @@ export async function confirmDiscardDesign(ids: readonly string[]): Promise<bool
     wb().activate(id);
     const answer = await askChoice({
       title: es.objects.discardTitle,
+      icon: 'discard',
+      intent: 'warning',
       message: es.objects.discardMessage(tabOf(id)?.title ?? ''),
       buttons: [
         { value: 'discard', label: es.objects.discard, variant: 'danger' },

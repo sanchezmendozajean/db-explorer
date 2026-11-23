@@ -45,6 +45,7 @@ function AboutDialog({ onClose }: { onClose: () => void }): React.JSX.Element {
   return (
     <Modal
       title={a.title}
+      icon="info"
       onClose={onClose}
       footer={
         <Button onClick={onClose} data-autofocus>
@@ -112,7 +113,7 @@ function KeybindingsDialog({ onClose }: { onClose: () => void }): React.JSX.Elem
   }, [filter, version]);
 
   return (
-    <Modal title={k.title} onClose={onClose} width={720}>
+    <Modal title={k.title} icon="record-keys" onClose={onClose} width={720}>
       <TextInput
         icon="search"
         placeholder={k.filter}

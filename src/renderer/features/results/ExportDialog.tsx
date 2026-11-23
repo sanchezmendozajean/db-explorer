@@ -54,6 +54,7 @@ export function ExportDialog({
   return (
     <Modal
       title={t.title(format.toUpperCase())}
+      icon="export"
       onClose={() => finish(null)}
       width={460}
       footer={

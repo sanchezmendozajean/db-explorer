@@ -90,7 +90,8 @@ test.describe('respaldo con herramientas auxiliares', () => {
     await expect(dialog().getByTestId('tool-libs').first()).toContainText('libpq.dll');
     await dialog().getByRole('button', { name: 'Continuar' }).click();
 
-    await expect(dialog()).toContainText('Respaldar "dbx_e2e_admin2"');
+    await expect(dialog()).toContainText('Respaldar base de datos');
+    await expect(dialog().getByTestId('modal-database')).toHaveText('dbx_e2e_admin2');
     await dialog().getByRole('button', { name: 'Examinar…' }).click();
     await expect(dialog().getByTestId('backup-path')).toHaveValue(target);
     await dialog().getByTestId('backup-start').click();

@@ -37,6 +37,7 @@ export function createDatabase(connectionId: string): void {
   overlay().openDialog({
     id: 'prompt',
     title: t.create.title,
+    icon: 'database',
     label: t.create.label,
     initialValue: '',
     confirmLabel: t.create.confirm,
@@ -80,7 +81,7 @@ export function renameDatabase(connectionId: string, database: string): void {
       if (conn.environment !== 'prod') return apply();
       // En Producción se muestra el SQL que se va a ejecutar y hay que confirmarlo.
       void askWriteConfirm({
-        connectionName: conn.name,
+        connection: conn,
         production: true,
         statements: renameDatabaseStatements(conn.engine, database, newName),
         unbounded: false,
@@ -99,6 +100,7 @@ export function dropDatabase(connectionId: string, database: string): void {
   overlay().openDialog({
     id: 'prompt',
     title: t.drop.title,
+    icon: 'trash',
     label: t.drop.label(database),
     message: [t.drop.message(database, closes), conn.environment === 'prod' ? t.drop.production : '']
       .filter(Boolean)

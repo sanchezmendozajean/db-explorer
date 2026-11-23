@@ -267,7 +267,7 @@ export const es = {
     skippedEntries: (n: number) =>
       `Se omitieron ${n} ${n === 1 ? 'conexión inválida' : 'conexiones inválidas'} de connections.json (hay una copia en connections.json.bak).`,
     notConnected: 'La conexión no está abierta',
-    passwordTitle: (name: string) => `Contraseña de ${name}`,
+    passwordTitle: 'Contraseña de la conexión',
     passwordPrompt: (user: string, address: string) => `Usuario ${user || '(sin usuario)'} en ${address}`,
     connect: 'Conectar',
     envFilterAll: 'Todos los entornos',
@@ -635,9 +635,8 @@ export const es = {
       production: 'Es una conexión de PRODUCCIÓN.',
     },
     backup: {
-      title: (name: string) => `Respaldar "${name}"`,
+      title: 'Respaldar base de datos',
       restoreTitle: 'Restauración de base de datos',
-      targetHost: 'Host de destino',
       file: 'Archivo de respaldo',
       serverFile: 'Ruta del archivo en el servidor',
       serverHint:
@@ -1215,6 +1214,7 @@ export const es = {
     ok: 'Aceptar',
     cancel: 'Cancelar',
     close: 'Cerrar',
+    envChip: { qa: 'QA', prod: 'PROD' },
     about: {
       title: 'Acerca de DB Explorer',
       description: 'Cliente de escritorio para explorar y consultar bases de datos.',

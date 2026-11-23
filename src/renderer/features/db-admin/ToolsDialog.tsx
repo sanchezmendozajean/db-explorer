@@ -97,6 +97,7 @@ export function ToolsDialog({
   return (
     <Modal
       title={t.title(familyName)}
+      icon="tools"
       onClose={() => finish(false)}
       width={560}
       footer={

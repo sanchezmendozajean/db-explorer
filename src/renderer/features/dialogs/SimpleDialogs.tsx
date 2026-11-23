@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { connectionAddress } from '@shared/connection';
+import type { ModalIntent } from '../../components/Modal';
 import { Modal } from '../../components/Modal';
 import { Button, IconButton } from '../../components/Button';
 import { Checkbox, TextInput } from '../../components/Inputs';
@@ -12,6 +13,8 @@ export function ConfirmDialog({
   message,
   confirmLabel,
   danger,
+  icon,
+  intent,
   onConfirm,
   onClose,
 }: {
@@ -19,15 +22,18 @@ export function ConfirmDialog({
   message: string;
   confirmLabel: string;
   danger?: boolean;
+  icon?: string;
+  intent?: ModalIntent;
   onConfirm: () => void;
   onClose: () => void;
 }): React.JSX.Element {
   return (
     <Modal
       title={title}
+      icon={icon ?? (danger ? 'warning' : 'question')}
+      intent={intent ?? (danger ? 'danger' : 'info')}
       onClose={onClose}
       width={440}
-      accentColor={danger ? 'var(--error)' : undefined}
       footer={
         <>
           {/* Cancelar tiene el foco por defecto (specs/04 §14). */}
@@ -58,6 +64,8 @@ export function PromptDialog({
   initialValue,
   confirmLabel,
   danger,
+  icon,
+  intent,
   validate,
   onSubmit,
   onClose,
@@ -68,6 +76,8 @@ export function PromptDialog({
   initialValue: string;
   confirmLabel: string;
   danger?: boolean;
+  icon?: string;
+  intent?: ModalIntent;
   validate?: (value: string) => string | null;
   onSubmit: (value: string) => void;
   onClose: () => void;
@@ -86,9 +96,10 @@ export function PromptDialog({
   return (
     <Modal
       title={title}
+      icon={icon ?? 'edit'}
+      intent={intent ?? (danger ? 'danger' : 'info')}
       onClose={onClose}
       width={420}
-      accentColor={danger ? 'var(--error)' : undefined}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -164,7 +175,9 @@ export function PasswordDialog({
 
   return (
     <Modal
-      title={es.connections.passwordTitle(conn.name)}
+      title={es.connections.passwordTitle}
+      icon="key"
+      connection={{ config: conn }}
       onClose={cancel}
       width={420}
       footer={

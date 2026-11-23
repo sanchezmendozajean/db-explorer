@@ -25,7 +25,14 @@ function fakeDriver(engine: 'postgres' | 'sqlserver'): DbDriver {
     getConstraints: (ref: { name: string }) =>
       Promise.resolve(
         ref.name === 'pedidos'
-          ? [{ name: 'fk', type: 'foreignKey', columns: ['c'], references: { schema: 'ventas', table: 'clientes', columns: ['id'] } }]
+          ? [
+              {
+                name: 'fk',
+                type: 'foreignKey',
+                columns: ['c'],
+                references: { schema: 'ventas', table: 'clientes', columns: ['id'] },
+              },
+            ]
           : [],
       ),
     getDDL: (ref: { name: string }) => Promise.resolve(`CREATE TABLE ${ref.name} ()`),

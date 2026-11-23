@@ -93,6 +93,7 @@ export function deleteConnection(id: string): void {
   overlay().openDialog({
     id: 'confirm',
     title: c.deleteConnectionTitle,
+    icon: 'trash',
     message: c.deleteConnection(conn.name),
     confirmLabel: c.delete,
     danger: true,
@@ -161,6 +162,7 @@ export function deleteFolder(folder: string): void {
   overlay().openDialog({
     id: 'confirm',
     title: c.deleteFolderTitle,
+    icon: 'trash',
     message: c.deleteFolder(folder),
     confirmLabel: c.delete,
     danger: true,

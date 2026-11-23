@@ -111,6 +111,8 @@ async function askPending(
   const tabs = useWorkbenchStore.getState().tabs;
   const answer = await askChoice({
     title: es.transactions.openTitle,
+    icon: 'warning',
+    intent: 'warning',
     message:
       open.length === 1
         ? es.transactions.openOne(transactionOf(open[0]).pending)

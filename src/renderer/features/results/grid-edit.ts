@@ -97,6 +97,8 @@ export async function confirmDiscardGridChanges(tabId: string): Promise<boolean>
   if (!hasPendingChanges(tabId)) return true;
   const answer = await askChoice({
     title: es.results.edit.discardTitle,
+    icon: 'discard',
+    intent: 'warning',
     message: es.results.edit.discardMessage,
     buttons: [
       { value: 'discard', label: es.results.edit.discard, variant: 'danger' },
@@ -144,7 +146,7 @@ export async function saveChanges(
   }
   if (conn.confirmWrites) {
     const answer = await askWriteConfirm({
-      connectionName: conn.name,
+      connection: conn,
       production: true,
       statements: literals.map((l) => l.replace(/;$/, '')),
       unbounded: false,

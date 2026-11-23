@@ -5,8 +5,6 @@ import { Button } from '../../components/Button';
 import { Checkbox, TextInput } from '../../components/Inputs';
 import { Codicon } from '../../components/Codicon';
 import { Modal } from '../../components/Modal';
-import { dotStyle } from '../../components/env-dot';
-import { connectionAddress } from '@shared/connection';
 import { es } from '../../i18n/es';
 import { connectionById, useConnectionsStore } from '../../stores/connections-store';
 import { showToast } from '../../stores/toast-store';
@@ -140,17 +138,22 @@ export function BackupDialog({
     !running && (isBackup || confirmed) && (mode === 'server' || path.trim() !== '') && restoreTarget !== '';
 
   const warning = !isBackup && (
-    <p className="form-hint is-warning">
+    <p className={`modal-callout ${production ? 'is-danger' : 'is-warning'}`}>
       {t.restoreWarning(restoreTarget || database)} {production && es.dbAdmin.drop.production}
     </p>
   );
 
   return (
     <Modal
-      title={isBackup ? t.title(database) : t.restoreTitle}
+      title={isBackup ? t.title : t.restoreTitle}
+      icon={isBackup ? 'cloud-download' : 'cloud-upload'}
+      intent={isBackup ? 'info' : production ? 'danger' : 'warning'}
+      connection={{ config: conn, database: isBackup ? database : restoreTarget || database }}
+      dismissible={!running}
       onClose={() => !running && onClose()}
       width={590}
-      accentColor={!isBackup && production ? 'var(--error)' : undefined}
+      closeOnBackdrop={false}
+      bodyClassName={isBackup ? 'is-grid' : undefined}
       footer={
         running ? (
           <>
@@ -165,13 +168,22 @@ export function BackupDialog({
           </>
         ) : (
           <>
-            {!isBackup && (
-              <Checkbox
-                className="form-checkbox footer-left"
-                label={t.restoreConfirm}
-                checked={confirmed}
-                onChange={(e) => setConfirmed(e.target.checked)}
-              />
+            {(!isBackup || toolFile?.installed) && (
+              <div className="footer-left footer-notes">
+                {!isBackup && (
+                  <Checkbox
+                    className="form-checkbox"
+                    label={t.restoreConfirm}
+                    checked={confirmed}
+                    onChange={(e) => setConfirmed(e.target.checked)}
+                  />
+                )}
+                {toolFile?.installed && (
+                  <span className="footer-tool-version">
+                    {t.toolVersion(toolFile.name, toolFile.version ?? '')}
+                  </span>
+                )}
+              </div>
             )}
             <Button variant="secondary" onClick={onClose}>
               {es.dialogs.cancel}
@@ -188,17 +200,6 @@ export function BackupDialog({
         )
       }
     >
-      {!isBackup && (
-        <div className="form-field">
-          <span className="form-label">{t.targetHost}</span>
-          <div className="restore-host" data-testid="restore-host">
-            <span className="env-dot" style={dotStyle(conn.color ?? `var(--env-${conn.environment})`)} />
-            <strong>{conn.name}</strong>
-            <span className="restore-host-address">{connectionAddress(conn)}</span>
-          </div>
-        </div>
-      )}
-
       <label className="form-field">
         <span className="form-label">{mode === 'server' ? t.serverFile : t.file}</span>
         <div className="form-inline">
@@ -226,11 +227,8 @@ export function BackupDialog({
       {mode === 'server' && <p className="form-hint">{t.serverHint}</p>}
       {engine === 'sqlserver' && warning}
 
-      {toolFile?.installed && (
-        <p className="form-hint">{t.toolVersion(toolFile.name, toolFile.version ?? '')}</p>
-      )}
       {olderTool && toolFile?.version && server && (
-        <p className="form-hint is-warning">{t.toolOlder(toolFile.version, server.version)}</p>
+        <p className="modal-callout is-warning">{t.toolOlder(toolFile.version, server.version)}</p>
       )}
 
       {myRestore && (
@@ -328,7 +326,7 @@ export function BackupDialog({
               <span className="form-hint">{t.noPrivileges.hint}</span>
             </div>
           </div>
-          {(!noOwner || !noPrivileges) && <p className="form-hint is-warning">{t.optionsHint}</p>}
+          {(!noOwner || !noPrivileges) && <p className="modal-callout is-warning">{t.optionsHint}</p>}
         </>
       )}
 
@@ -358,10 +356,13 @@ export function BackupDialog({
       )}
 
       {running && (
-        <p className="backup-running" role="status" data-testid="backup-running">
-          <Codicon name="loading" className="codicon-modifier-spin" />
-          {isBackup ? t.running : t.runningRestore}
-        </p>
+        <div className="modal-progress" role="status" data-testid="backup-running">
+          <div className="modal-progress-row">
+            <Codicon name="loading" className="codicon-modifier-spin" />
+            {isBackup ? t.running : t.runningRestore}
+          </div>
+          <div className="modal-progress-bar" />
+        </div>
       )}
       {phase.name === 'error' && (
         <pre className="backup-error" role="alert" data-testid="backup-error">
