@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.1
+
+### Correcciones
+- Se corrigió la publicación de la versión 0.3.0, que no llegó a generarse por una prueba del contrato IPC. Esta versión incluye todo lo de la 0.3.0 (rediseño de los modales) y las novedades de las versiones 0.2.2 a 0.2.4, que tampoco se habían publicado.
+
 ## v0.3.0
 
 ### Novedades
