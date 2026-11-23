@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.0
+
+### Novedades
+- **Rediseño de los modales**: todos los diálogos tienen un encabezado tintado según su intención (información, advertencia, peligro o éxito) con un ícono, y muestran en el subtítulo la conexión, la base y el chip QA/PROD cuando aplica. Los avisos y el progreso tienen bloques propios.
+- **Respaldar y Restaurar**: la conexión y la base van en el encabezado, y el diálogo no se cierra con un clic fuera ni mientras la operación está en curso. Restaurar en Producción se muestra en rojo.
+
 ## v0.2.4
 
 ### Novedades
